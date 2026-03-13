@@ -3,14 +3,24 @@ spring:
     url: jdbc:postgresql://localhost:5432/picook_db
     username: picook_user
     password: picook_local_pw
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     properties:
       hibernate:
         show_sql: true
+        
+server:
+  port: 8080
+  
+openai:
+  api-key: ${OPENAI_API_KEY:your-api-key-here}
 
+# JWT
 jwt:
-  secret: local-dev-secret-key-minimum-256-bit-do-not-use-in-production-12345
+  secret: ${JWT_SECRET:change-me-in-production-minimum-256-bit-secret-key-here}
+  access-expiration: 3600000      # 1h
+  refresh-expiration: 2592000000  # 30d
 
 aws:
   s3:
