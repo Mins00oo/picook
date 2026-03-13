@@ -1,0 +1,43 @@
+package com.picook.domain.shorts.controller;
+
+import com.picook.domain.shorts.dto.RecentShortsResponse;
+import com.picook.domain.shorts.dto.ShortsConvertRequest;
+import com.picook.domain.shorts.dto.ShortsConvertResponse;
+import com.picook.domain.shorts.service.ShortsConvertService;
+import com.picook.global.response.ApiResponse;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/v1/shorts")
+public class ShortsController {
+
+    private final ShortsConvertService shortsConvertService;
+
+    public ShortsController(ShortsConvertService shortsConvertService) {
+        this.shortsConvertService = shortsConvertService;
+    }
+
+    @PostMapping("/convert")
+    public ResponseEntity<ApiResponse<ShortsConvertResponse>> convert(
+            @Valid @RequestBody ShortsConvertRequest request) {
+        ShortsConvertResponse response = shortsConvertService.convert(getCurrentUserId(), request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/recent")
+    public ResponseEntity<ApiResponse<List<RecentShortsResponse>>> getRecentConversions() {
+        List<RecentShortsResponse> responses = shortsConvertService.getRecentConversions(getCurrentUserId());
+        return ResponseEntity.ok(ApiResponse.success(responses));
+    }
+
+    private UUID getCurrentUserId() {
+        String principal = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return UUID.fromString(principal);
+    }
+}
