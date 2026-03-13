@@ -1,0 +1,221 @@
+package com.picook.domain.shorts.service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.picook.domain.shorts.dto.ShortsConvertRequest;
+import com.picook.domain.shorts.dto.ShortsConvertResponse;
+import com.picook.domain.shorts.dto.ShortsRecipeResult;
+import com.picook.domain.shorts.dto.RecentShortsResponse;
+import com.picook.domain.shorts.entity.ShortsCache;
+import com.picook.domain.shorts.entity.ShortsConversionHistory;
+import com.picook.domain.shorts.repository.ShortsConversionHistoryRepository;
+import com.picook.global.exception.BusinessException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.lang.reflect.Field;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class ShortsConvertServiceTest {
+
+    @Mock private ShortsCacheService shortsCacheService;
+    @Mock private ShortsConversionHistoryRepository historyRepository;
+    @Mock private YtDlpService ytDlpService;
+    @Mock private WhisperService whisperService;
+    @Mock private RecipeStructurizer recipeStructurizer;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private ShortsConvertService shortsConvertService;
+    private UUID userId;
+
+    @BeforeEach
+    void setUp() {
+        shortsConvertService = new ShortsConvertService(
+                shortsCacheService, historyRepository,
+                ytDlpService, whisperService, recipeStructurizer, objectMapper
+        );
+        userId = UUID.randomUUID();
+    }
+
+    @Test
+    void 캐시_히트_시_즉시_반환() throws Exception {
+        String url = "https://www.youtube.com/shorts/abc123";
+        ShortsRecipeResult recipe = createRecipeResult();
+        String resultJson = objectMapper.writeValueAsString(recipe);
+        ShortsCache cache = new ShortsCache(url, "hash", "gpt-4o-2025", "김치찌개", null, resultJson);
+        setField(cache, "id", 1);
+        setField(cache, "createdAt", Instant.now());
+
+        when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
+        when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), eq("gpt-4o-2025")))
+                .thenReturn(Optional.of(cache));
+        when(historyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ShortsConvertResponse response = shortsConvertService.convert(userId, new ShortsConvertRequest(url));
+
+        assertThat(response.fromCache()).isTrue();
+        assertThat(response.recipe().title()).isEqualTo("김치찌개");
+        verify(ytDlpService, never()).extractAudio(anyString());
+        verify(whisperService, never()).transcribe(any());
+    }
+
+    @Test
+    void 캐시_미스_시_전체_파이프라인_실행() throws Exception {
+        String url = "https://www.youtube.com/shorts/abc123";
+        ShortsRecipeResult recipe = createRecipeResult();
+        String resultJson = objectMapper.writeValueAsString(recipe);
+        ShortsCache savedCache = new ShortsCache(url, "hash", "gpt-4o-2025", "김치찌개", null, resultJson);
+        setField(savedCache, "id", 1);
+        setField(savedCache, "createdAt", Instant.now());
+
+        when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
+        when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        when(ytDlpService.extractAudio(anyString())).thenReturn(Path.of("/tmp/test.mp3"));
+        when(whisperService.transcribe(any())).thenReturn("김치찌개 만드는 법...");
+        when(recipeStructurizer.structurize(anyString())).thenReturn(recipe);
+        when(shortsCacheService.save(any())).thenReturn(savedCache);
+        when(historyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ShortsConvertResponse response = shortsConvertService.convert(userId, new ShortsConvertRequest(url));
+
+        assertThat(response.fromCache()).isFalse();
+        assertThat(response.recipe().title()).isEqualTo("김치찌개");
+
+        var inOrder = inOrder(ytDlpService, whisperService, recipeStructurizer, shortsCacheService);
+        inOrder.verify(ytDlpService).extractAudio(anyString());
+        inOrder.verify(whisperService).transcribe(any());
+        inOrder.verify(recipeStructurizer).structurize(anyString());
+        inOrder.verify(shortsCacheService).save(any());
+    }
+
+    @Test
+    void 모델_버전_불일치_시_캐시_미스() throws Exception {
+        String url = "https://www.youtube.com/shorts/abc123";
+        ShortsRecipeResult recipe = createRecipeResult();
+        ShortsCache savedCache = new ShortsCache(url, "hash", "gpt-4o-2026", "김치찌개", null,
+                objectMapper.writeValueAsString(recipe));
+        setField(savedCache, "id", 1);
+        setField(savedCache, "createdAt", Instant.now());
+
+        when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2026");
+        when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), eq("gpt-4o-2026")))
+                .thenReturn(Optional.empty());
+        when(ytDlpService.extractAudio(anyString())).thenReturn(Path.of("/tmp/test.mp3"));
+        when(whisperService.transcribe(any())).thenReturn("transcript");
+        when(recipeStructurizer.structurize(anyString())).thenReturn(recipe);
+        when(shortsCacheService.save(any())).thenReturn(savedCache);
+        when(historyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ShortsConvertResponse response = shortsConvertService.convert(userId, new ShortsConvertRequest(url));
+
+        assertThat(response.fromCache()).isFalse();
+        verify(ytDlpService).extractAudio(anyString());
+    }
+
+    @Test
+    void 유효하지_않은_URL_에러() {
+        ShortsConvertRequest request = new ShortsConvertRequest("https://example.com/not-youtube");
+
+        assertThatThrownBy(() -> shortsConvertService.convert(userId, request))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo("INVALID_YOUTUBE_URL");
+                });
+    }
+
+    @Test
+    void 음성_추출_실패_에러() {
+        String url = "https://www.youtube.com/shorts/abc123";
+        when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
+        when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        when(ytDlpService.extractAudio(anyString()))
+                .thenThrow(new BusinessException("AUDIO_EXTRACTION_FAILED", "음성 추출에 실패했습니다",
+                        org.springframework.http.HttpStatus.BAD_GATEWAY));
+
+        assertThatThrownBy(() -> shortsConvertService.convert(userId, new ShortsConvertRequest(url)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo("AUDIO_EXTRACTION_FAILED");
+                });
+    }
+
+    @Test
+    void 요리_영상_아닌_경우_에러() {
+        String url = "https://www.youtube.com/shorts/abc123";
+        when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
+        when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        when(ytDlpService.extractAudio(anyString())).thenReturn(Path.of("/tmp/test.mp3"));
+        when(whisperService.transcribe(any())).thenReturn("게임 공략 영상입니다...");
+        when(recipeStructurizer.structurize(anyString()))
+                .thenThrow(new BusinessException("NOT_COOKING_VIDEO", "요리 영상이 아닙니다",
+                        org.springframework.http.HttpStatus.BAD_REQUEST));
+
+        assertThatThrownBy(() -> shortsConvertService.convert(userId, new ShortsConvertRequest(url)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo("NOT_COOKING_VIDEO");
+                });
+    }
+
+    @Test
+    void 최근_변환_목록_조회() {
+        ShortsCache cache = new ShortsCache("https://youtube.com/shorts/abc", "hash", "v1", "김치찌개", null, "{}");
+        setFieldSilent(cache, "id", 1);
+        setFieldSilent(cache, "createdAt", Instant.now());
+
+        ShortsConversionHistory history = new ShortsConversionHistory(userId, cache);
+        setFieldSilent(history, "id", 1);
+        setFieldSilent(history, "createdAt", Instant.now());
+
+        when(historyRepository.findTop20ByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(history));
+
+        List<RecentShortsResponse> responses = shortsConvertService.getRecentConversions(userId);
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).title()).isEqualTo("김치찌개");
+    }
+
+    private ShortsRecipeResult createRecipeResult() {
+        return new ShortsRecipeResult(
+                "김치찌개", "맛있는 김치찌개 레시피", 2, 30,
+                List.of("김치 300g", "돼지고기 200g", "두부 1모"),
+                List.of(
+                        new ShortsRecipeResult.ShortsRecipeStep(1, "김치를 썰어주세요", "active", null),
+                        new ShortsRecipeResult.ShortsRecipeStep(2, "끓여주세요", "wait", 600)
+                )
+        );
+    }
+
+    private static void setField(Object obj, String fieldName, Object value) throws Exception {
+        Field field = obj.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(obj, value);
+    }
+
+    private static void setFieldSilent(Object obj, String fieldName, Object value) {
+        try {
+            setField(obj, fieldName, value);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
