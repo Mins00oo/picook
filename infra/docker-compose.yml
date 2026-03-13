@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: picook-postgres
+    environment:
+      POSTGRES_DB: picook_db
+      POSTGRES_USER: picook_user
+      POSTGRES_PASSWORD: picook_local_pw
+    ports:
+      - "5432:5432"
+    volumes:
+      - picook_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  backend:
+    build: ../backend
+    container_name: picook-backend
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: picook_db
+      DB_USERNAME: picook_user
+      DB_PASSWORD: picook_local_pw
+      SPRING_PROFILES_ACTIVE: local
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  picook_pgdata:
