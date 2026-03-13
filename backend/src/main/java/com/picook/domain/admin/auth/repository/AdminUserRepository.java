@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface AdminUserRepository extends JpaRepository<AdminUser, Long> {
 
     Optional<AdminUser> findByEmail(String email);
+
+    boolean existsByEmail(String email);
 }

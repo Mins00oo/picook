@@ -2,6 +2,7 @@ package com.picook.domain.admin.auth.service;
 
 import com.picook.config.JwtProvider;
 import com.picook.domain.admin.auth.dto.AdminAuthResponse;
+import com.picook.domain.admin.auth.dto.AdminMeResponse;
 import com.picook.domain.admin.auth.entity.AdminUser;
 import com.picook.domain.admin.auth.repository.AdminUserRepository;
 import com.picook.global.exception.BusinessException;
@@ -54,5 +55,42 @@ public class AdminAuthService {
         String refreshToken = jwtProvider.generateAdminRefreshToken(admin.getId().toString());
 
         return AdminAuthResponse.of(accessToken, refreshToken, admin);
+    }
+
+    public AdminAuthResponse refresh(String refreshToken) {
+        if (!jwtProvider.validateToken(refreshToken)) {
+            throw new BusinessException("INVALID_TOKEN", "유효하지 않은 리프레시 토큰입니다", HttpStatus.UNAUTHORIZED);
+        }
+
+        String adminId = jwtProvider.getSubject(refreshToken);
+        AdminUser admin = adminUserRepository.findById(Long.parseLong(adminId))
+                .orElseThrow(() -> new BusinessException("ADMIN_NOT_FOUND", "관리자를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
+
+        String newAccessToken = jwtProvider.generateAccessToken(
+                admin.getId().toString(),
+                Map.of("role", admin.getRole().name())
+        );
+        String newRefreshToken = jwtProvider.generateAdminRefreshToken(admin.getId().toString());
+
+        return AdminAuthResponse.of(newAccessToken, newRefreshToken, admin);
+    }
+
+    public AdminMeResponse getMe(Long adminId) {
+        AdminUser admin = adminUserRepository.findById(adminId)
+                .orElseThrow(() -> new BusinessException("ADMIN_NOT_FOUND", "관리자를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
+        return AdminMeResponse.of(admin);
+    }
+
+    @Transactional
+    public void changePassword(Long adminId, String currentPassword, String newPassword) {
+        AdminUser admin = adminUserRepository.findById(adminId)
+                .orElseThrow(() -> new BusinessException("ADMIN_NOT_FOUND", "관리자를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
+
+        if (!passwordEncoder.matches(currentPassword, admin.getPasswordHash())) {
+            throw new BusinessException("INVALID_PASSWORD", "현재 비밀번호가 일치하지 않습니다", HttpStatus.BAD_REQUEST);
+        }
+
+        admin.setPasswordHash(passwordEncoder.encode(newPassword));
+        adminUserRepository.save(admin);
     }
 }
