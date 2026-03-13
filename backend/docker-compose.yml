@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: picook-postgres
+    environment:
+      POSTGRES_DB: picook_db
+      POSTGRES_USER: picook_user
+      POSTGRES_PASSWORD: picook_local_pw
+    ports:
+      - "5432:5432"
+    volumes:
+      - picook_pgdata:/var/lib/postgresql/data
+
+volumes:
+  picook_pgdata:

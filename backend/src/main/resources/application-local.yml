@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/picook_db
+    username: picook_user
+    password: picook_local_pw
+
+  jpa:
+    properties:
+      hibernate:
+        show_sql: true
+
+jwt:
+  secret: local-dev-secret-key-minimum-256-bit-do-not-use-in-production-12345
+
+aws:
+  s3:
+    bucket: picook-bucket-dev
+    region: ap-northeast-2
+    access-key: local-access-key
+    secret-key: local-secret-key
+
+logging:
+  level:
+    com.picook: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

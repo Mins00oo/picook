@@ -1,0 +1,67 @@
+spring:
+  application:
+    name: picook-backend
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:picook_db}
+    username: ${DB_USERNAME:picook_user}
+    password: ${DB_PASSWORD:picook_local_pw}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+server:
+  port: ${SERVER_PORT:8080}
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET:change-me-in-production-minimum-256-bit-secret-key-here}
+  access-expiration: 3600000      # 1h
+  refresh-expiration: 2592000000  # 30d
+
+# AWS S3
+aws:
+  s3:
+    bucket: ${S3_BUCKET:picook-bucket}
+    region: ${S3_REGION:ap-northeast-2}
+    access-key: ${S3_ACCESS_KEY:}
+    secret-key: ${S3_SECRET_KEY:}
+
+# OpenAI
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  whisper-model: whisper-1
+  chat-model: gpt-4o
+  ai-model-version: ${AI_MODEL_VERSION:gpt-4o-2025}
+
+# Shorts
+shorts:
+  ytdlp-path: ${YTDLP_PATH:yt-dlp}
+  ffmpeg-path: ${FFMPEG_PATH:ffmpeg}
+  temp-dir: ${SHORTS_TEMP_DIR:/tmp/picook-shorts}
+
+# Apple Sign-In
+apple:
+  bundle-id: ${APPLE_BUNDLE_ID:com.picook.app}
+
+logging:
+  level:
+    com.picook: DEBUG
+    org.hibernate.SQL: DEBUG
