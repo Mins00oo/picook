@@ -15,21 +15,40 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.picook.app",
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FF6B35",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
-      "package": "com.picook.app"
+      "package": "com.picook.app",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
       "expo-apple-authentication",
       "expo-image-picker",
-      "expo-notifications"
-    ]
+      "expo-notifications",
+      "expo-dev-client",
+      [
+        "./plugins/withKakaoLogin",
+        {
+          "nativeAppKey": "6acd28308e258039a2cb24c7b4b6a0a7"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "aef3f1f1-1899-4a2a-81ee-bf80926fcfc1"
+      }
+    }
   }
 }

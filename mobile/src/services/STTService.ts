@@ -1,18 +1,26 @@
-import Voice, { SpeechResultsEvent } from '@react-native-voice/voice';
-
 type VoiceCommand = 'next' | 'repeat' | null;
 type CommandCallback = (command: VoiceCommand) => void;
+
+let Voice: any = null;
+
+try {
+  Voice = require('@react-native-voice/voice').default;
+} catch {
+  // Native module not available (Expo Go)
+}
 
 class STTService {
   private callback: CommandCallback | null = null;
   private isListening = false;
+  private available = !!Voice;
 
   constructor() {
+    if (!Voice) return;
     Voice.onSpeechResults = this.onResults.bind(this);
     Voice.onSpeechError = this.onError.bind(this);
   }
 
-  private onResults(e: SpeechResultsEvent) {
+  private onResults(e: any) {
     const results = e.value ?? [];
     for (const text of results) {
       const lower = text.toLowerCase();
@@ -28,23 +36,24 @@ class STTService {
   }
 
   private onError() {
-    // Silently restart if still supposed to be listening
-    if (this.isListening) {
-      this.startListening(this.callback!);
+    if (this.isListening && this.callback) {
+      this.startListening(this.callback);
     }
   }
 
   async startListening(callback: CommandCallback) {
+    if (!this.available) return;
     this.callback = callback;
     this.isListening = true;
     try {
       await Voice.start('ko-KR');
     } catch {
-      // Voice might not be available in simulator
+      // ignore
     }
   }
 
   async stopListening() {
+    if (!this.available) return;
     this.isListening = false;
     this.callback = null;
     try {
@@ -57,7 +66,13 @@ class STTService {
   destroy() {
     this.isListening = false;
     this.callback = null;
-    Voice.destroy();
+    if (this.available) {
+      Voice.destroy();
+    }
+  }
+
+  isAvailable() {
+    return this.available;
   }
 }
 
