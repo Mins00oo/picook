@@ -214,3 +214,19 @@ const api = axios.create({
 - ✅ URL 입력 화면 (붙여넣기 + 검증 + 최근 목록)
 - ✅ useShortsConvert (mutation + polling)
 - ✅ 변환 결과 화면 (단계별 레시피)
+
+### 빌드 및 환경 설정
+- ✅ Expo SDK 55 → 54 다운그레이드 (Expo Go 최신 버전 호환)
+- ✅ react-native-web + react-dom 설치 (웹 번들링 지원)
+- ✅ react-native-worklets 설치 (reanimated 의존)
+- ✅ STTService lazy-load 처리 (@react-native-voice는 Expo Go 미지원 → 네이티브 빌드 전용)
+- ✅ EAS Build 설정 (eas.json — development/preview/production 프로필)
+- ✅ expo-dev-client 설치 (개발 빌드용)
+- ✅ 카카오 로그인 커스텀 config plugin (plugins/withKakaoLogin.js — @expo/config-plugins codeMod 호환 문제 해결)
+- ✅ 카카오 네이티브 앱 키 연동 (app.json plugins + iOS URL scheme/queries schemes)
+- ✅ Apple Sign-In 설정 (usesAppleSignIn: true)
+- ✅ .npmrc legacy-peer-deps=true (EAS 빌드 서버 peer dependency 충돌 해결)
+- ✅ @types/react ~19.1.0 업그레이드 (react-native 0.81.5 peer dep 호환)
+- ✅ Windows 방화벽 포트 8081 인바운드 규칙 추가
+- ✅ Expo Go 테스트: 폰 핫스팟 연결로 AP 격리 우회 확인
+- ⬜ EAS 네이티브 빌드 성공 대기 중 (iOS development profile)
