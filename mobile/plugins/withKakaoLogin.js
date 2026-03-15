@@ -2,11 +2,18 @@ const { withInfoPlist, withAppDelegate, createRunOncePlugin } = require('@expo/c
 
 const KAKAO_SCHEMES = ['kakaokompassauth', 'storykompassauth', 'kakaolink', 'kakaoplus'];
 
+const KAKAO_IMPORT = 'import kakao_login';
+const KAKAO_HANDLE_URL = 'if kakao_login.RNKakaoLogins.isKakaoTalkLoginUrl(url) { return kakao_login.RNKakaoLogins.handleOpen(url) }';
+const OPEN_URL_METHOD = `
+  override func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+    ${KAKAO_HANDLE_URL}
+    return super.application(app, open: url, options: options)
+  }`;
+
 function withKakaoLogin(config, { nativeAppKey }) {
-  // 1. Info.plist: URL scheme + queries schemes
+  // 1. Info.plist
   config = withInfoPlist(config, (cfg) => {
     const urlScheme = `kakao${nativeAppKey}`;
-
     cfg.modResults.KAKAO_APP_KEY = nativeAppKey;
 
     if (!Array.isArray(cfg.modResults.CFBundleURLTypes)) {
@@ -16,9 +23,7 @@ function withKakaoLogin(config, { nativeAppKey }) {
       (t) => t.CFBundleURLSchemes && t.CFBundleURLSchemes.includes(urlScheme),
     );
     if (!exists) {
-      cfg.modResults.CFBundleURLTypes.push({
-        CFBundleURLSchemes: [urlScheme],
-      });
+      cfg.modResults.CFBundleURLTypes.push({ CFBundleURLSchemes: [urlScheme] });
     }
 
     if (!Array.isArray(cfg.modResults.LSApplicationQueriesSchemes)) {
@@ -33,42 +38,65 @@ function withKakaoLogin(config, { nativeAppKey }) {
     return cfg;
   });
 
-  // 2. AppDelegate: import + handleOpenUrl
+  // 2. AppDelegate
   config = withAppDelegate(config, (cfg) => {
-    const contents = cfg.modResults.contents;
+    let contents = cfg.modResults.contents;
 
-    if (contents.includes('import Expo')) {
+    if (contents.includes('import Expo') || contents.includes('ExpoAppDelegate')) {
       // Swift AppDelegate
-      if (!contents.includes('import kakao_login')) {
-        cfg.modResults.contents = contents.replace(
-          'import Expo',
-          'import Expo\nimport kakao_login',
-        );
+      // Add import
+      if (!contents.includes(KAKAO_IMPORT)) {
+        if (contents.includes('import Expo')) {
+          contents = contents.replace('import Expo', `import Expo\n${KAKAO_IMPORT}`);
+        } else if (contents.includes('import UIKit')) {
+          contents = contents.replace('import UIKit', `import UIKit\n${KAKAO_IMPORT}`);
+        } else {
+          contents = `${KAKAO_IMPORT}\n${contents}`;
+        }
       }
-      if (!cfg.modResults.contents.includes('RNKakaoLogins.isKakaoTalkLoginUrl')) {
-        cfg.modResults.contents = cfg.modResults.contents.replace(
-          /func application\(_[^,]+, open url: URL, options[^)]+\)[^{]*\{/,
-          (match) =>
-            match +
-            '\n    if kakao_login.RNKakaoLogins.isKakaoTalkLoginUrl(url) { return kakao_login.RNKakaoLogins.handleOpen(url) }',
-        );
+
+      // Add URL handler
+      if (!contents.includes('RNKakaoLogins.isKakaoTalkLoginUrl')) {
+        // Try to find existing application(_:open:options:) method
+        const openUrlRegex = /func\s+application\s*\([^)]*open\s+url:\s*URL[^)]*\)[^{]*\{/;
+        const match = contents.match(openUrlRegex);
+
+        if (match) {
+          // Method exists — inject at the top of the method body
+          const insertPos = match.index + match[0].length;
+          contents =
+            contents.slice(0, insertPos) +
+            `\n    ${KAKAO_HANDLE_URL}` +
+            contents.slice(insertPos);
+        } else {
+          // Method doesn't exist — add it before the last closing brace of the class
+          const lastBraceIdx = contents.lastIndexOf('}');
+          if (lastBraceIdx !== -1) {
+            contents =
+              contents.slice(0, lastBraceIdx) +
+              OPEN_URL_METHOD +
+              '\n' +
+              contents.slice(lastBraceIdx);
+          }
+        }
       }
     } else {
       // ObjC AppDelegate
       if (!contents.includes('#import <RNKakaoLogins.h>')) {
-        cfg.modResults.contents = contents.replace(
+        contents = contents.replace(
           '#import <React/RCTLinkingManager.h>',
           '#import <React/RCTLinkingManager.h>\n#import <RNKakaoLogins.h>',
         );
       }
-      if (!cfg.modResults.contents.includes('[RNKakaoLogins isKakaoTalkLoginUrl')) {
-        cfg.modResults.contents = cfg.modResults.contents.replace(
+      if (!contents.includes('[RNKakaoLogins isKakaoTalkLoginUrl')) {
+        contents = contents.replace(
           'options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {',
           `options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {\n  if([RNKakaoLogins isKakaoTalkLoginUrl:url]) { return [RNKakaoLogins handleOpenUrl: url]; }`,
         );
       }
     }
 
+    cfg.modResults.contents = contents;
     return cfg;
   });
 
