@@ -1,8 +1,11 @@
 package com.picook.domain.user.service;
 
+import com.picook.domain.user.dto.UpdateProfileRequest;
 import com.picook.domain.user.dto.UserProfileResponse;
+import com.picook.domain.user.entity.CookingLevel;
 import com.picook.domain.user.entity.LoginType;
 import com.picook.domain.user.entity.User;
+import com.picook.domain.user.entity.UserStatus;
 import com.picook.domain.user.repository.UserRepository;
 import com.picook.global.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,11 +40,7 @@ class UserServiceTest {
 
     @Test
     void 프로필_조회_성공_등급_포함() throws Exception {
-        User user = new User(LoginType.KAKAO);
-        setField(user, "id", userId);
-        setField(user, "email", "test@test.com");
-        setField(user, "displayName", "테스트");
-        setField(user, "completedCookingCount", 10);
+        User user = createUser(10);
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
@@ -61,6 +61,84 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.getProfile(userId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("사용자를 찾을 수 없습니다");
+    }
+
+    @Test
+    void 프로필_수정_성공() throws Exception {
+        User user = createUser(0);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        UpdateProfileRequest request = new UpdateProfileRequest(
+                "새이름", "INTERMEDIATE", true, new BigDecimal("1.5"), true
+        );
+
+        UserProfileResponse response = userService.updateProfile(userId, request);
+
+        assertThat(response.displayName()).isEqualTo("새이름");
+        assertThat(response.cookingLevel()).isEqualTo("INTERMEDIATE");
+        assertThat(response.coachingEnabled()).isTrue();
+        assertThat(response.coachingVoiceSpeed()).isEqualByComparingTo(new BigDecimal("1.5"));
+        assertThat(response.isOnboarded()).isTrue();
+    }
+
+    @Test
+    void 프로필_수정_일부_필드만() throws Exception {
+        User user = createUser(0);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        UpdateProfileRequest request = new UpdateProfileRequest(
+                "새이름만", null, null, null, null
+        );
+
+        UserProfileResponse response = userService.updateProfile(userId, request);
+
+        assertThat(response.displayName()).isEqualTo("새이름만");
+        assertThat(response.cookingLevel()).isEqualTo("BEGINNER"); // 변경 안됨
+    }
+
+    @Test
+    void 프로필_수정_잘못된_CookingLevel() throws Exception {
+        User user = createUser(0);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        UpdateProfileRequest request = new UpdateProfileRequest(
+                null, "INVALID_LEVEL", null, null, null
+        );
+
+        assertThatThrownBy(() -> userService.updateProfile(userId, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("유효하지 않은 요리 수준");
+    }
+
+    @Test
+    void 계정_삭제_소프트삭제() throws Exception {
+        User user = createUser(0);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        userService.deleteAccount(userId);
+
+        assertThat(user.getStatus()).isEqualTo(UserStatus.DELETED);
+        assertThat(user.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    void 탈퇴한_사용자_프로필_조회_에러() throws Exception {
+        User user = createUser(0);
+        user.setStatus(UserStatus.DELETED);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.getProfile(userId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("탈퇴한 사용자");
+    }
+
+    private User createUser(int completedCookingCount) throws Exception {
+        User user = new User(LoginType.KAKAO);
+        setField(user, "id", userId);
+        setField(user, "email", "test@test.com");
+        setField(user, "displayName", "테스트");
+        setField(user, "completedCookingCount", completedCookingCount);
+        return user;
     }
 
     private static void setField(Object obj, String fieldName, Object value) throws Exception {
