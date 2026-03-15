@@ -10,14 +10,15 @@
 | react-native | 0.81.5 | SDK 54 호환 |
 | react-dom | 19.1.0 | 웹 번들링용 |
 | react-native-web | ~0.21.0 (0.21.2) | 웹 번들링용 |
-| typescript | ~5.8.0 (5.8.3) | |
+| typescript | ~5.9.2 (5.8.3 설치됨, minor 차이 빌드무관) | |
 | @types/react | ~19.1.0 (19.1.17) | react-native 0.81.5 peer dep |
 
 **Expo 패키지 (SDK 54 호환 — `npx expo install --fix`로 확인된 버전)**
 | 패키지 | 버전 | 비고 |
 |--------|------|------|
 | expo-router | ~6.0.23 | 파일 기반 라우팅 |
-| expo-dev-client | ~5.2.4 | 개발 빌드 (55.x는 SDK 55 전용, 사용 금지) |
+| expo-dev-client | ~6.0.20 | 개발 빌드 (expo doctor 권장 버전) |
+| expo-constants | ~18.0.13 | expo-router peer dep (필수) |
 | expo-secure-store | ~15.0.8 | JWT 토큰 저장 |
 | expo-image | ~3.0.11 | 이미지 렌더링 |
 | expo-image-picker | ~17.0.10 | 완성 사진 촬영 |
@@ -25,7 +26,7 @@
 | expo-clipboard | ~8.0.8 | 쇼츠 URL 붙여넣기 |
 | expo-notifications | ~0.32.16 | 타이머 완료 로컬 푸시 |
 | expo-keep-awake | ~15.0.8 | 코칭 중 화면잠금 방지 |
-| expo-av | ~15.1.7 | 오디오 |
+| expo-av | ~16.0.8 | 오디오 |
 | expo-apple-authentication | ~8.0.8 | Apple 로그인 |
 | expo-linking | ~8.0.11 | 딥링크 |
 | expo-splash-screen | ~31.0.13 | 스플래시 |
@@ -44,12 +45,12 @@
 | react-native-reanimated | ~4.1.1 (4.1.6) | 애니메이션 |
 | react-native-safe-area-context | ~5.6.0 (5.6.2) | SafeArea |
 | react-native-screens | ~4.16.0 | 네이티브 스크린 |
-| react-native-worklets | ~0.7.4 | reanimated 의존 |
+| react-native-worklets | 0.5.1 | reanimated 의존 (expo doctor 권장) |
 
 ## 패키지 버전 관리 규칙
 1. **새 패키지 추가 시**: 반드시 `npx expo install {패키지명}`으로 설치하여 SDK 호환 버전 자동 결정
 2. **SDK 업그레이드 시**: `npx expo install --fix`로 모든 expo 패키지 일괄 업데이트
-3. **expo-dev-client 주의**: SDK 메이저 버전과 반드시 일치시킬 것 (SDK 54 → 5.x, SDK 55 → 55.x)
+3. **버전 확인**: 수동 추측 금지. 반드시 `npx expo-doctor`로 권장 버전 확인 후 `npx expo install`로 설치
 4. **`*` 또는 `^` 버전 사용 금지**: 반드시 `~`로 고정
 5. **.npmrc**: `legacy-peer-deps=true` 유지 (EAS 빌드 서버 호환)
 
