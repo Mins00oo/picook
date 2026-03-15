@@ -301,3 +301,43 @@ http.authorizeHttpRequests(auth -> auth
 5. BulkUploadService (엑셀 파싱)
 6. AdminRecipeService (CRUD + 상태)
 7. AdminCategoryService (순서 변경)
+
+---
+
+## 개발 진행 상황
+
+### 백엔드 API
+- ✅ 인증 (JWT, 카카오, Apple, 관리자)
+- ✅ 재료/카테고리 CRUD + 엑셀 일괄등록
+- ✅ 레시피 CRUD + 추천 TOP 10
+- ✅ 즐겨찾기 + 검색기록 + S3
+- ✅ 코칭 로그 + 등급
+- ✅ 쇼츠 변환 + 캐싱
+- ✅ 피드백 도메인
+- ✅ 사용자 프로필 API (GET/PUT/DELETE /me)
+
+### 관리자(백오피스) API
+- ✅ Phase 1: Feedback 엔티티 + Repository 확장 + V5 마이그레이션
+- ✅ Phase 2: 관리자 계정 CRUD (/api/admin/accounts)
+- ✅ Phase 3: 사용자 관리 (/api/admin/users)
+- ✅ Phase 4: 쇼츠 캐시 관리 (/api/admin/shorts)
+- ✅ Phase 5: 피드백 관리 (/api/admin/feedback)
+- ✅ Phase 6: 대시보드 (/api/admin/dashboard)
+- ✅ Phase 7: 상세 통계 (/api/admin/stats)
+
+### Flyway 마이그레이션
+- ✅ V1: 초기 스키마
+- ✅ V2: 카테고리 시드 데이터
+- ✅ V3: 트리거
+- ✅ V4: 쇼츠 변환 이력 테이블
+- ✅ V5: Feedback updated_at 필드
+
+### 테스트 (17개 파일, 전체 통과)
+- ✅ JwtProvider, JwtAuthenticationFilter
+- ✅ AuthService, AdminAuthService
+- ✅ UserService, UserRank, User
+- ✅ RecommendService
+- ✅ CoachingService, FavoriteService, SearchHistoryService
+- ✅ ShortsConvertService, ShortsCacheService
+- ✅ AdminRecipeService, RecipeBulkUploadService
+- ✅ S3FileService
