@@ -9,9 +9,11 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+@Tag(name = "[관리자] 레시피", description = "레시피 CRUD, 엑셀 일괄등록, 이미지 관리")
 @RestController
 @RequestMapping("/api/admin/recipes")
 public class AdminRecipeController {

@@ -5,11 +5,13 @@ import com.picook.domain.searchhistory.service.SearchHistoryService;
 import com.picook.global.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "검색 기록", description = "검색 기록 조회/삭제")
 @RestController
 @RequestMapping("/api/v1/search-history")
 public class SearchHistoryController {

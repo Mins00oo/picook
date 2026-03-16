@@ -4,9 +4,11 @@ import com.picook.domain.file.dto.FileUploadResponse;
 import com.picook.domain.file.service.S3FileService;
 import com.picook.global.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+@Tag(name = "파일", description = "S3 파일 업로드")
 @RestController
 @RequestMapping("/api/v1/files")
 public class FileController {

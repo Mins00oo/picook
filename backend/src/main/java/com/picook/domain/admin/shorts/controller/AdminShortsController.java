@@ -7,8 +7,10 @@ import com.picook.domain.admin.shorts.service.AdminShortsService;
 import com.picook.global.response.ApiResponse;
 import com.picook.global.util.PageResponse;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "[관리자] 쇼츠 캐시", description = "쇼츠 캐시 관리, 재변환, 통계")
 @RestController
 @RequestMapping("/api/admin/shorts")
 public class AdminShortsController {

@@ -6,8 +6,10 @@ import com.picook.global.response.ApiResponse;
 import com.picook.global.util.PageResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "[관리자] 피드백", description = "피드백 조회/상태변경/메모, 요약 통계")
 @RestController
 @RequestMapping("/api/admin/feedback")
 public class AdminFeedbackController {

@@ -6,10 +6,12 @@ import com.picook.global.response.ApiResponse;
 import com.picook.global.util.PageResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "[관리자] 사용자 관리", description = "사용자 조회/정지/활성화 (SUPER_ADMIN)")
 @RestController
 @RequestMapping("/api/admin/users")
 public class AdminUserController {

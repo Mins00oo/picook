@@ -7,10 +7,12 @@ import com.picook.domain.admin.category.service.AdminCategoryService;
 import com.picook.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "[관리자] 카테고리", description = "재료 카테고리 CRUD, 순서 변경")
 @RestController
 @RequestMapping("/api/admin/categories")
 public class AdminCategoryController {

@@ -7,11 +7,13 @@ import com.picook.domain.auth.service.KakaoAuthService;
 import com.picook.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "인증", description = "카카오/Apple 소셜 로그인, 토큰 갱신")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {

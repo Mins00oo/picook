@@ -4,8 +4,10 @@ import com.picook.domain.admin.dashboard.dto.*;
 import com.picook.domain.admin.dashboard.service.AdminDashboardService;
 import com.picook.global.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "[관리자] 대시보드", description = "주요 지표, 차트, 랭킹")
 @RestController
 @RequestMapping("/api/admin/dashboard")
 public class AdminDashboardController {

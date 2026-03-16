@@ -6,10 +6,12 @@ import com.picook.domain.user.service.UserService;
 import com.picook.global.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "사용자", description = "프로필 조회/수정/탈퇴")
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {

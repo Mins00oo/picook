@@ -4,10 +4,12 @@ import com.picook.domain.admin.stats.dto.*;
 import com.picook.domain.admin.stats.service.AdminStatsService;
 import com.picook.global.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "[관리자] 상세 통계", description = "사용자/레시피/재료/코칭/쇼츠/등급 통계")
 @RestController
 @RequestMapping("/api/admin/stats")
 public class AdminStatsController {

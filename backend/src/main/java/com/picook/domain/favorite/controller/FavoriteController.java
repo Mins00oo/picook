@@ -8,11 +8,13 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "즐겨찾기", description = "즐겨찾기 추가/삭제/목록")
 @RestController
 @RequestMapping("/api/v1/favorites")
 public class FavoriteController {

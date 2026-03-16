@@ -8,11 +8,13 @@ import com.picook.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "쇼츠 변환", description = "유튜브 쇼츠 URL → 레시피 변환")
 @RestController
 @RequestMapping("/api/v1/shorts")
 public class ShortsController {
