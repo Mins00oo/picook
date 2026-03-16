@@ -77,8 +77,10 @@ export default function LoginScreen() {
       } else {
         router.replace('/(tabs)/home');
       }
-    } catch {
-      Alert.alert('로그인 실패', '카카오 로그인에 실패했습니다.');
+    } catch (e: any) {
+      console.error('카카오 로그인 에러:', e?.response?.data || e?.message || e);
+      const detail = e?.response?.data?.error?.message || e?.message || '알 수 없는 오류';
+      Alert.alert('로그인 실패', `카카오 로그인에 실패했습니다.\n${detail}`);
     } finally {
       setLoading(null);
     }
