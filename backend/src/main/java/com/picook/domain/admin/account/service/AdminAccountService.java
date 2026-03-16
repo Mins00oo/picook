@@ -56,7 +56,7 @@ public class AdminAccountService {
     }
 
     @Transactional
-    public AdminAccountListResponse updateAccount(Long id, AdminAccountUpdateRequest request) {
+    public AdminAccountListResponse updateAccount(Integer id, AdminAccountUpdateRequest request) {
         AdminUser adminUser = findOrThrow(id);
 
         AdminRole role;
@@ -71,7 +71,7 @@ public class AdminAccountService {
     }
 
     @Transactional
-    public void deleteAccount(Long id, Long currentAdminId) {
+    public void deleteAccount(Integer id, Integer currentAdminId) {
         if (id.equals(currentAdminId)) {
             throw new BusinessException("SELF_DELETE", "자기 자신을 삭제할 수 없습니다", HttpStatus.BAD_REQUEST);
         }
@@ -80,13 +80,13 @@ public class AdminAccountService {
     }
 
     @Transactional
-    public AdminAccountListResponse unlockAccount(Long id) {
+    public AdminAccountListResponse unlockAccount(Integer id) {
         AdminUser adminUser = findOrThrow(id);
         adminUser.resetFailedLogin();
         return AdminAccountListResponse.of(adminUser);
     }
 
-    private AdminUser findOrThrow(Long id) {
+    private AdminUser findOrThrow(Integer id) {
         return adminUserRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("ADMIN_NOT_FOUND", "관리자를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
     }

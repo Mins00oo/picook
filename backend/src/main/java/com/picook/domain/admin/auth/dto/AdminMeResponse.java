@@ -5,7 +5,7 @@ import com.picook.domain.admin.auth.entity.AdminUser;
 import java.time.Instant;
 
 public record AdminMeResponse(
-        Long id,
+        Integer id,
         String email,
         String role,
         Instant lastLoginAt,

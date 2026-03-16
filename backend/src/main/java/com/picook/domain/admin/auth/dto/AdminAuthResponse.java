@@ -8,7 +8,7 @@ public record AdminAuthResponse(
         AdminInfo admin
 ) {
     public record AdminInfo(
-            Long id,
+            Integer id,
             String email,
             String role
     ) {}

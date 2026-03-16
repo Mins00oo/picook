@@ -63,7 +63,7 @@ public class AdminAuthService {
         }
 
         String adminId = jwtProvider.getSubject(refreshToken);
-        AdminUser admin = adminUserRepository.findById(Long.parseLong(adminId))
+        AdminUser admin = adminUserRepository.findById(Integer.parseInt(adminId))
                 .orElseThrow(() -> new BusinessException("ADMIN_NOT_FOUND", "관리자를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
 
         String newAccessToken = jwtProvider.generateAccessToken(
@@ -75,14 +75,14 @@ public class AdminAuthService {
         return AdminAuthResponse.of(newAccessToken, newRefreshToken, admin);
     }
 
-    public AdminMeResponse getMe(Long adminId) {
+    public AdminMeResponse getMe(Integer adminId) {
         AdminUser admin = adminUserRepository.findById(adminId)
                 .orElseThrow(() -> new BusinessException("ADMIN_NOT_FOUND", "관리자를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
         return AdminMeResponse.of(admin);
     }
 
     @Transactional
-    public void changePassword(Long adminId, String currentPassword, String newPassword) {
+    public void changePassword(Integer adminId, String currentPassword, String newPassword) {
         AdminUser admin = adminUserRepository.findById(adminId)
                 .orElseThrow(() -> new BusinessException("ADMIN_NOT_FOUND", "관리자를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
 

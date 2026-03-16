@@ -9,7 +9,7 @@ public class AdminUser {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @Column(name = "email", nullable = false, unique = true)
     private String email;
@@ -71,7 +71,7 @@ public class AdminUser {
 
     // Getters & Setters
 
-    public Long getId() { return id; }
+    public Integer getId() { return id; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }

@@ -6,8 +6,10 @@ import com.picook.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "[관리자] 인증", description = "관리자 로그인/로그아웃, 토큰 갱신, 비밀번호 변경")
 @RestController
 @RequestMapping("/api/admin/auth")
 public class AdminAuthController {
@@ -37,14 +39,14 @@ public class AdminAuthController {
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<AdminMeResponse>> getMe() {
-        Long adminId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        Integer adminId = Integer.parseInt(SecurityContextHolder.getContext().getAuthentication().getName());
         AdminMeResponse response = adminAuthService.getMe(adminId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PutMapping("/password")
     public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody AdminPasswordChangeRequest request) {
-        Long adminId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        Integer adminId = Integer.parseInt(SecurityContextHolder.getContext().getAuthentication().getName());
         adminAuthService.changePassword(adminId, request.currentPassword(), request.newPassword());
         return ResponseEntity.ok(ApiResponse.success());
     }

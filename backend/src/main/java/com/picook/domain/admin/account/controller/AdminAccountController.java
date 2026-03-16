@@ -7,10 +7,12 @@ import com.picook.domain.admin.account.service.AdminAccountService;
 import com.picook.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "[관리자] 계정 관리", description = "관리자 계정 CRUD, 잠금 해제 (SUPER_ADMIN)")
 @RestController
 @RequestMapping("/api/admin/accounts")
 public class AdminAccountController {
@@ -36,7 +38,7 @@ public class AdminAccountController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<AdminAccountListResponse>> updateAccount(
-            @PathVariable Long id,
+            @PathVariable Integer id,
             @Valid @RequestBody AdminAccountUpdateRequest request) {
         AdminAccountListResponse response = adminAccountService.updateAccount(id, request);
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -44,14 +46,14 @@ public class AdminAccountController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteAccount(
-            @PathVariable Long id,
-            @RequestHeader("X-Admin-Id") Long currentAdminId) {
+            @PathVariable Integer id,
+            @RequestHeader("X-Admin-Id") Integer currentAdminId) {
         adminAccountService.deleteAccount(id, currentAdminId);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
     @PatchMapping("/{id}/unlock")
-    public ResponseEntity<ApiResponse<AdminAccountListResponse>> unlockAccount(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<AdminAccountListResponse>> unlockAccount(@PathVariable Integer id) {
         AdminAccountListResponse response = adminAccountService.unlockAccount(id);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
