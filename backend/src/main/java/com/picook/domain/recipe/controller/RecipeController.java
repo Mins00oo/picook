@@ -7,7 +7,8 @@ import com.picook.domain.recipe.service.RecipeService;
 import com.picook.domain.recipe.service.RecommendService;
 import com.picook.domain.searchhistory.service.SearchHistoryService;
 import com.picook.global.response.ApiResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Tag(name = "레시피", description = "레시피 추천, 상세 조회")
 @RestController
 @RequestMapping("/api/v1/recipes")
 public class RecipeController {

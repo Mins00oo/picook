@@ -1,7 +1,7 @@
 package com.picook.domain.shorts.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.picook.domain.shorts.dto.RecentShortsResponse;
 import com.picook.domain.shorts.dto.ShortsConvertRequest;
 import com.picook.domain.shorts.dto.ShortsConvertResponse;
@@ -91,7 +91,7 @@ public class ShortsConvertService {
             return ShortsConvertResponse.of(cache, recipe, false);
         } catch (BusinessException e) {
             throw e;
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("Failed to serialize recipe result", e);
             throw new BusinessException("AI_STRUCTURIZE_FAILED",
                     "레시피 결과 저장에 실패했습니다", HttpStatus.BAD_GATEWAY);
@@ -144,7 +144,7 @@ public class ShortsConvertService {
     private ShortsRecipeResult parseResult(String json) {
         try {
             return objectMapper.readValue(json, ShortsRecipeResult.class);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("Failed to parse cached result", e);
             throw new BusinessException("AI_STRUCTURIZE_FAILED",
                     "캐시된 결과 파싱에 실패했습니다", HttpStatus.BAD_GATEWAY);
@@ -173,7 +173,7 @@ public class ShortsConvertService {
             );
         } catch (BusinessException e) {
             throw e;
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("Failed to serialize recipe result during reconvert", e);
             throw new BusinessException("AI_STRUCTURIZE_FAILED",
                     "레시피 결과 저장에 실패했습니다", HttpStatus.BAD_GATEWAY);

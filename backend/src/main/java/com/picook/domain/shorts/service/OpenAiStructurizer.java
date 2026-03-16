@@ -1,7 +1,7 @@
 package com.picook.domain.shorts.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.picook.domain.shorts.dto.ShortsRecipeResult;
 import com.picook.global.exception.BusinessException;
 import org.slf4j.Logger;
@@ -100,7 +100,7 @@ public class OpenAiStructurizer implements RecipeStructurizer {
             log.error("OpenAI API error: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new BusinessException("AI_STRUCTURIZE_FAILED",
                     "AI 레시피 구조화에 실패했습니다", HttpStatus.BAD_GATEWAY);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("Failed to parse AI response", e);
             throw new BusinessException("AI_STRUCTURIZE_FAILED",
                     "AI 응답 파싱에 실패했습니다", HttpStatus.BAD_GATEWAY);
