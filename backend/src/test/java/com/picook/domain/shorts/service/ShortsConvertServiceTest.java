@@ -330,7 +330,7 @@ class ShortsConvertServiceTest {
         setFieldSilent(history, "id", 1);
         setFieldSilent(history, "createdAt", Instant.now());
 
-        when(historyRepository.findTop20ByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(history));
+        when(historyRepository.findRecentByUserIdDistinctUrl(userId)).thenReturn(List.of(history));
 
         List<RecentShortsResponse> responses = shortsConvertService.getRecentConversions(userId);
 

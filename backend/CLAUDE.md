@@ -212,6 +212,7 @@ com.picook/
 | POST /kakao | 카카오 로그인 |
 | POST /apple | Apple 로그인 |
 | POST /refresh | 토큰 갱신 |
+| POST /logout | 로그아웃 (JWT stateless — 서버는 200 반환) |
 
 ### 사용자 (/api/v1/users)
 | GET /me | 프로필+등급 |
@@ -237,7 +238,7 @@ com.picook/
 
 ### 쇼츠 (/api/v1/shorts)
 | POST /convert | 변환 |
-| GET /recent | 최근 변환 |
+| GET /recent | 최근 변환 (URL 기준 중복 제거, 최대 20건) |
 
 ### 검색 기록 (/api/v1/search-history)
 | GET / | 목록 | DELETE /{id} | 개별삭제 | DELETE / | 전체삭제 |

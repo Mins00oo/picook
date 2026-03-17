@@ -12,6 +12,16 @@ import java.util.UUID;
 public interface ShortsConversionHistoryRepository extends JpaRepository<ShortsConversionHistory, Integer> {
     List<ShortsConversionHistory> findTop20ByUserIdOrderByCreatedAtDesc(UUID userId);
 
+    @Query(value = "SELECT * FROM (" +
+            "SELECT DISTINCT ON (sc.youtube_url) h.* " +
+            "FROM shorts_conversion_history h " +
+            "JOIN shorts_cache sc ON h.shorts_cache_id = sc.id " +
+            "WHERE h.user_id = :userId " +
+            "ORDER BY sc.youtube_url, h.created_at DESC" +
+            ") sub ORDER BY created_at DESC LIMIT 20",
+            nativeQuery = true)
+    List<ShortsConversionHistory> findRecentByUserIdDistinctUrl(@Param("userId") UUID userId);
+
     long countByCreatedAtBetween(Instant start, Instant end);
 
     @Query(value = "SELECT CAST(created_at AS DATE) AS day, COUNT(*) FROM shorts_conversion_history WHERE created_at BETWEEN :start AND :end GROUP BY day ORDER BY day",

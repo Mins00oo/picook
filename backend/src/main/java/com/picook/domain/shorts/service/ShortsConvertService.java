@@ -178,7 +178,7 @@ public class ShortsConvertService {
 
     @Transactional(readOnly = true)
     public List<RecentShortsResponse> getRecentConversions(UUID userId) {
-        return historyRepository.findTop20ByUserIdOrderByCreatedAtDesc(userId)
+        return historyRepository.findRecentByUserIdDistinctUrl(userId)
                 .stream()
                 .map(RecentShortsResponse::of)
                 .toList();
