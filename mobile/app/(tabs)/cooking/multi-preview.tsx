@@ -64,7 +64,7 @@ export default function MultiPreviewScreen() {
             <View style={styles.timelineContent}>
               <Text style={styles.recipeLabel}>{item.recipeTitle}</Text>
               <Text style={styles.stepText}>
-                {item.step.type === 'WAIT' ? '⏱️' : '🔥'} Step {item.step.stepNumber}: {item.step.description}
+                {item.step.stepType === 'WAIT' ? '⏱️' : '🔥'} Step {item.step.stepNumber}: {item.step.description}
               </Text>
               {item.step.durationSeconds && (
                 <Text style={styles.duration}>{formatTime(item.step.durationSeconds)}</Text>

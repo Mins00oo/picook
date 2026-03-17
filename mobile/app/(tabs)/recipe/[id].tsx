@@ -5,20 +5,19 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Colors } from '../../../src/constants/colors';
 import { Button } from '../../../src/components/common/Button';
 import { Loading } from '../../../src/components/common/Loading';
 import { ErrorScreen } from '../../../src/components/common/ErrorScreen';
 import { recipeApi } from '../../../src/api/recipeApi';
-import { favoriteApi } from '../../../src/api/favoriteApi';
+import { favoriteApi, FavoriteItem } from '../../../src/api/favoriteApi';
 import { formatCookTime, formatDifficulty } from '../../../src/utils/format';
-import type { Recipe, RecipeStep } from '../../../src/types/recipe';
+import type { RecipeStep } from '../../../src/types/recipe';
 
 function StepIcon({ type }: { type: string }) {
   return (
@@ -31,7 +30,6 @@ function StepIcon({ type }: { type: string }) {
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['recipe', id],
@@ -42,33 +40,15 @@ export default function RecipeDetailScreen() {
     enabled: !!id,
   });
 
-  const favMutation = useMutation({
-    mutationFn: async () => {
-      if (data?.isFavorite) {
-        await favoriteApi.remove(Number(id));
-      } else {
-        await favoriteApi.add(Number(id));
-      }
-    },
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ['recipe', id] });
-      const previous = queryClient.getQueryData<Recipe>(['recipe', id]);
-      queryClient.setQueryData<Recipe>(['recipe', id], (old) =>
-        old ? { ...old, isFavorite: !old.isFavorite } : old,
-      );
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(['recipe', id], context.previous);
-      }
-      Alert.alert('오류', '즐겨찾기 처리에 실패했습니다.');
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['recipe', id] });
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
+  const { data: favorites } = useQuery({
+    queryKey: ['favorites'],
+    queryFn: async () => {
+      const res = await favoriteApi.getList();
+      return res.data.data;
     },
   });
+
+  const isFavorited = favorites?.some((fav: FavoriteItem) => fav.recipeId === Number(id)) ?? false;
 
   if (isLoading) return <Loading />;
   if (error || !data) return <ErrorScreen onRetry={() => refetch()} />;
@@ -81,9 +61,7 @@ export default function RecipeDetailScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.back}>← 뒤로</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => favMutation.mutate()}>
-          <Text style={styles.heart}>{recipe.isFavorite ? '❤️' : '🤍'}</Text>
-        </TouchableOpacity>
+        <Text style={styles.heart}>{isFavorited ? '❤️' : '🤍'}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -97,12 +75,14 @@ export default function RecipeDetailScreen() {
 
         <View style={styles.info}>
           <Text style={styles.title}>{recipe.title}</Text>
-          <Text style={styles.description}>{recipe.description}</Text>
+          {recipe.tips && (
+            <Text style={styles.description}>{recipe.tips}</Text>
+          )}
 
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
               <Text style={styles.metaLabel}>조리시간</Text>
-              <Text style={styles.metaValue}>{formatCookTime(recipe.cookTimeMinutes)}</Text>
+              <Text style={styles.metaValue}>{formatCookTime(recipe.cookingTimeMinutes)}</Text>
             </View>
             <View style={styles.metaItem}>
               <Text style={styles.metaLabel}>난이도</Text>
@@ -112,14 +92,6 @@ export default function RecipeDetailScreen() {
               <Text style={styles.metaLabel}>인분</Text>
               <Text style={styles.metaValue}>{recipe.servings}인분</Text>
             </View>
-            {recipe.matchRate != null && (
-              <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>매칭률</Text>
-                <Text style={[styles.metaValue, { color: Colors.primary }]}>
-                  {Math.round(recipe.matchRate)}%
-                </Text>
-              </View>
-            )}
           </View>
         </View>
 
@@ -127,16 +99,13 @@ export default function RecipeDetailScreen() {
           <Text style={styles.sectionTitle}>재료</Text>
           {recipe.ingredients.map((ing) => (
             <View key={ing.ingredientId} style={styles.ingredientRow}>
-              <Text
-                style={[
-                  styles.ingredientName,
-                  ing.isOwned && styles.ingredientOwned,
-                ]}
-              >
-                {ing.isOwned ? '✓ ' : ''}{ing.name}
-                {!ing.required && ' (선택)'}
+              <Text style={styles.ingredientName}>
+                {ing.ingredientName}
+                {!ing.isRequired && ' (선택)'}
               </Text>
-              <Text style={styles.ingredientAmount}>{ing.amount}</Text>
+              <Text style={styles.ingredientAmount}>
+                {ing.amount}{ing.unit ? ` ${ing.unit}` : ''}
+              </Text>
             </View>
           ))}
         </View>
@@ -146,7 +115,7 @@ export default function RecipeDetailScreen() {
           {recipe.steps.map((step: RecipeStep) => (
             <View key={step.stepNumber} style={styles.stepCard}>
               <View style={styles.stepHeader}>
-                <StepIcon type={step.type} />
+                <StepIcon type={step.stepType} />
                 <Text style={styles.stepNumber}>
                   Step {step.stepNumber}
                 </Text>
@@ -260,9 +229,6 @@ const styles = StyleSheet.create({
   ingredientName: {
     fontSize: 15,
     color: Colors.text,
-  },
-  ingredientOwned: {
-    color: Colors.success,
   },
   ingredientAmount: {
     fontSize: 14,

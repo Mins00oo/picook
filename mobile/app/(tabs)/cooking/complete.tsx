@@ -13,9 +13,10 @@ import { getLevelForCount, getNextLevel } from '../../../src/constants/levels';
 import { formatTime } from '../../../src/utils/format';
 
 export default function CompleteScreen() {
-  const { recipeId, elapsed } = useLocalSearchParams<{
+  const { recipeId, elapsed, coachingId } = useLocalSearchParams<{
     recipeId: string;
     elapsed: string;
+    coachingId: string;
   }>();
   const router = useRouter();
   const { user, setUser } = useAuthStore();
@@ -32,8 +33,8 @@ export default function CompleteScreen() {
         name: 'cooking_photo.jpg',
         type: 'image/jpeg',
       } as any);
-      const res = await coachingApi.uploadPhoto(formData);
-      return res.data.data.url;
+      const res = await coachingApi.uploadPhoto(Number(coachingId), formData);
+      return res.data.data.photoUrl;
     },
     onSuccess: (url) => setPhotoUrl(url),
     onError: () => Alert.alert('오류', '사진 업로드에 실패했습니다.'),
@@ -41,17 +42,14 @@ export default function CompleteScreen() {
 
   const completeMutation = useMutation({
     mutationFn: async () => {
-      const res = await coachingApi.complete({
-        recipeId: Number(recipeId),
-        completedSteps: 0, // Will be filled by backend
-        totalTimeSeconds: Number(elapsed),
-        photoUrl: photoUrl ?? undefined,
+      const res = await coachingApi.complete(Number(coachingId), {
+        actualSeconds: Number(elapsed),
       });
       return res.data.data;
     },
     onSuccess: () => {
       if (user) {
-        const updatedUser = { ...user, completedCount: user.completedCount + 1 };
+        const updatedUser = { ...user, completedCookingCount: user.completedCookingCount + 1 };
         setUser(updatedUser);
       }
       queryClient.invalidateQueries({ queryKey: ['recipe'] });
@@ -81,7 +79,7 @@ export default function CompleteScreen() {
     completeMutation.mutate();
   };
 
-  const count = (user?.completedCount ?? 0) + 1;
+  const count = (user?.completedCookingCount ?? 0) + 1;
   const level = getLevelForCount(count);
   const prevLevel = getLevelForCount(count - 1);
   const leveledUp = level.level > prevLevel.level;

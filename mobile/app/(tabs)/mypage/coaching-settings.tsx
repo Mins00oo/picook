@@ -26,13 +26,13 @@ export default function CoachingSettingsScreen() {
   const router = useRouter();
   const { user, setUser } = useAuthStore();
   const [coachingEnabled, setCoachingEnabled] = useState(user?.coachingEnabled ?? true);
-  const [coachingSpeed, setCoachingSpeed] = useState(user?.coachingSpeed ?? 1.0);
+  const [coachingSpeed, setCoachingSpeed] = useState(user?.coachingVoiceSpeed ?? 1.0);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { data } = await userApi.updateMe({ coachingEnabled, coachingSpeed });
+      const { data } = await userApi.updateMe({ coachingEnabled, coachingVoiceSpeed: coachingSpeed });
       setUser(data.data);
       await SecureStore.setItemAsync(Config.USER_KEY, JSON.stringify(data.data));
       Alert.alert('완료', '코칭 설정이 저장되었습니다.');

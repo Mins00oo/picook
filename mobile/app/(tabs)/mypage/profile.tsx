@@ -21,7 +21,7 @@ const LEVEL_OPTIONS: { value: CookingLevel; label: string }[] = [
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, setUser } = useAuthStore();
-  const [nickname, setNickname] = useState(user?.nickname ?? '');
+  const [nickname, setNickname] = useState(user?.displayName ?? '');
   const [cookingLevel, setCookingLevel] = useState<CookingLevel>(user?.cookingLevel ?? 'BEGINNER');
   const [saving, setSaving] = useState(false);
 
@@ -32,7 +32,7 @@ export default function ProfileScreen() {
     }
     setSaving(true);
     try {
-      const { data } = await userApi.updateMe({ nickname: nickname.trim(), cookingLevel });
+      const { data } = await userApi.updateMe({ displayName: nickname.trim(), cookingLevel });
       setUser(data.data);
       await SecureStore.setItemAsync(Config.USER_KEY, JSON.stringify(data.data));
       Alert.alert('완료', '프로필이 수정되었습니다.');

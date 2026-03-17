@@ -58,7 +58,7 @@ export default function SetupScreen() {
       const { data } = await userApi.updateMe({
         cookingLevel,
         coachingEnabled,
-        coachingSpeed,
+        coachingVoiceSpeed: coachingSpeed,
       });
       const user = data.data;
       setUser(user);

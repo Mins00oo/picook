@@ -23,33 +23,26 @@ export default function ShortsResultScreen() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['shorts', id],
     queryFn: async () => {
-      const res = await shortsApi.getStatus(Number(id));
+      const res = await shortsApi.getDetail(Number(id));
       return res.data.data;
-    },
-    refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      return status === 'PENDING' || status === 'PROCESSING' ? 3000 : false;
     },
     enabled: !!id,
   });
 
-  if (isLoading) return <Loading message="변환 결과를 불러오는 중..." />;
-  if (error) return <ErrorScreen onRetry={() => refetch()} />;
-
-  if (!data || data.status === 'PENDING' || data.status === 'PROCESSING') {
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Loading message="레시피로 변환 중..." />
+        <Loading message="변환 결과를 불러오는 중..." />
       </SafeAreaView>
     );
   }
 
-  if (data.status === 'FAILED') {
+  if (error || !data) {
     return (
       <SafeAreaView style={styles.container}>
         <ErrorScreen
-          message={data.errorMessage ?? '변환에 실패했습니다'}
-          onRetry={() => router.back()}
+          message="변환 결과를 불러오지 못했어요"
+          onRetry={() => refetch()}
         />
       </SafeAreaView>
     );
@@ -94,7 +87,7 @@ export default function ShortsResultScreen() {
                   </Text>
                 )}
               </View>
-              <Text style={styles.stepDesc}>{step.description}</Text>
+              <Text style={styles.stepDesc}>{step.instruction}</Text>
             </View>
           ))}
         </View>

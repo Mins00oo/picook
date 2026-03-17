@@ -7,6 +7,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { Colors } from '../../../src/constants/colors';
 import { Loading } from '../../../src/components/common/Loading';
 import { recipeApi } from '../../../src/api/recipeApi';
+import { coachingApi } from '../../../src/api/coachingApi';
 import { TimelineEngine, TimelineItem } from '../../../src/engines/TimelineEngine';
 import { ttsService } from '../../../src/services/TTSService';
 import { TimerManager } from '../../../src/engines/TimerManager';
@@ -20,6 +21,7 @@ export default function MultiCookingScreen() {
   const user = useAuthStore((s) => s.user);
   const recipeIds = (ids ?? '').split(',').map(Number);
   const timerRef = useRef(new TimerManager());
+  const coachingIdRef = useRef<number | null>(null);
 
   const [currentIdx, setCurrentIdx] = useState(0);
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -45,6 +47,16 @@ export default function MultiCookingScreen() {
       recipes.map((r) => ({ title: r!.title, steps: r!.steps })),
     );
     setTimeline(tl);
+
+    // Start coaching log on the server
+    coachingApi.start({
+      mode: 'multi',
+      recipeIds,
+    }).then((res) => {
+      coachingIdRef.current = res.data.data.id;
+    }).catch(() => {
+      // Non-blocking: coaching log creation failure shouldn't prevent cooking
+    });
   }, [recipes.length]);
 
   useEffect(() => {
@@ -60,7 +72,7 @@ export default function MultiCookingScreen() {
         `${item.recipeTitle}. ${item.step.stepNumber}단계. ${item.step.description}`,
       );
     }
-    if (item.step.type === 'WAIT' && item.step.durationSeconds) {
+    if (item.step.stepType === 'WAIT' && item.step.durationSeconds) {
       timerRef.current.start(
         item.step.durationSeconds,
         (r) => setRemaining(r),
@@ -81,7 +93,11 @@ export default function MultiCookingScreen() {
     if (currentIdx >= timeline.length - 1) {
       router.replace({
         pathname: '/(tabs)/cooking/complete',
-        params: { recipeId: String(recipeIds[0]), elapsed: String(elapsed) },
+        params: {
+          recipeId: String(recipeIds[0]),
+          elapsed: String(elapsed),
+          coachingId: String(coachingIdRef.current ?? ''),
+        },
       });
       return;
     }
@@ -147,11 +163,11 @@ export default function MultiCookingScreen() {
         <View
           style={[
             styles.typeBadge,
-            item.step.type === 'WAIT' ? styles.typeWait : styles.typeActive,
+            item.step.stepType === 'WAIT' ? styles.typeWait : styles.typeActive,
           ]}
         >
           <Text style={styles.typeText}>
-            {item.step.type === 'WAIT' ? '⏱️ 대기' : '🔥 조리'}
+            {item.step.stepType === 'WAIT' ? '⏱️ 대기' : '🔥 조리'}
           </Text>
         </View>
         <Text style={styles.stepDesc}>{item.step.description}</Text>

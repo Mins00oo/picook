@@ -35,7 +35,7 @@ export default function ResultsScreen() {
     queryFn: async () => {
       const res = await recipeApi.recommend({
         ingredientIds: getIds(),
-        maxCookTimeMinutes: maxCookTimeMinutes ?? undefined,
+        maxTime: maxCookTimeMinutes ?? undefined,
         difficulty: difficulty ?? undefined,
         servings: servings ?? undefined,
       });
@@ -62,7 +62,7 @@ export default function ResultsScreen() {
   if (isLoading) return <Loading message="레시피를 찾는 중..." />;
   if (error) return <ErrorScreen message="추천 결과를 불러오지 못했습니다" onRetry={() => refetch()} />;
 
-  const recipes = data?.recipes ?? [];
+  const recipes = data ?? [];
 
   const renderRecipe = ({ item }: { item: RecipeSummary }) => {
     const isChecked = multiSelected.includes(item.id);
@@ -95,22 +95,22 @@ export default function ResultsScreen() {
             {item.title}
           </Text>
           <View style={styles.cardMeta}>
-            <Text style={styles.metaText}>{formatCookTime(item.cookTimeMinutes)}</Text>
+            <Text style={styles.metaText}>{formatCookTime(item.cookingTimeMinutes)}</Text>
             <Text style={styles.metaDot}>·</Text>
             <Text style={styles.metaText}>{formatDifficulty(item.difficulty)}</Text>
             <Text style={styles.metaDot}>·</Text>
             <Text style={styles.metaText}>{item.servings}인분</Text>
           </View>
-          {item.matchRate != null && (
+          {item.matchingRate != null && (
             <View style={[
               styles.matchBadge,
-              item.matchRate >= 100 && styles.matchBadgePerfect,
+              item.matchingRate >= 100 && styles.matchBadgePerfect,
             ]}>
               <Text style={[
                 styles.matchText,
-                item.matchRate >= 100 && styles.matchTextPerfect,
+                item.matchingRate >= 100 && styles.matchTextPerfect,
               ]}>
-                {item.matchRate >= 100 ? '재료 완벽!' : `매칭률 ${formatMatchRate(item.matchRate)}`}
+                {item.matchingRate >= 100 ? '재료 완벽!' : `매칭률 ${formatMatchRate(item.matchingRate)}`}
               </Text>
             </View>
           )}

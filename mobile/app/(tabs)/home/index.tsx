@@ -11,9 +11,9 @@ import { getLevelForCount, getNextLevel, getLevelProgress } from '../../../src/c
 export default function HomeScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const level = getLevelForCount(user?.completedCount ?? 0);
+  const level = getLevelForCount(user?.completedCookingCount ?? 0);
   const nextLevel = getNextLevel(level);
-  const progress = getLevelProgress(user?.completedCount ?? 0);
+  const progress = getLevelProgress(user?.completedCookingCount ?? 0);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -22,7 +22,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.greeting}>
-              안녕하세요{user?.nickname ? `, ${user.nickname}님` : ''} 👋
+              안녕하세요{user?.displayName ? `, ${user.displayName}님` : ''} 👋
             </Text>
           </View>
           <View style={styles.rankBadge}>
@@ -58,7 +58,7 @@ export default function HomeScreen() {
               <Text style={styles.levelTitle}>Lv.{level.level} {level.title}</Text>
               {nextLevel ? (
                 <Text style={styles.levelNext}>
-                  다음 레벨까지 {nextLevel.min - (user?.completedCount ?? 0)}개
+                  다음 레벨까지 {nextLevel.min - (user?.completedCookingCount ?? 0)}개
                 </Text>
               ) : (
                 <Text style={styles.levelNext}>최고 레벨 달성!</Text>

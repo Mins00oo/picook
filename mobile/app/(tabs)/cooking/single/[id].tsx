@@ -14,6 +14,7 @@ import { Colors } from '../../../../src/constants/colors';
 import { Loading } from '../../../../src/components/common/Loading';
 import { ErrorScreen } from '../../../../src/components/common/ErrorScreen';
 import { recipeApi } from '../../../../src/api/recipeApi';
+import { coachingApi } from '../../../../src/api/coachingApi';
 import { CoachingEngine } from '../../../../src/engines/CoachingEngine';
 import { ttsService } from '../../../../src/services/TTSService';
 import { sttService } from '../../../../src/services/STTService';
@@ -32,6 +33,7 @@ export default function SingleCookingScreen() {
   const [status, setStatus] = useState<CoachingStatus>('IDLE');
   const [remaining, setRemaining] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const coachingIdRef = useRef<number | null>(null);
 
   const { data: recipe, isLoading, error } = useQuery({
     queryKey: ['recipe', id],
@@ -44,6 +46,17 @@ export default function SingleCookingScreen() {
 
   useEffect(() => {
     if (!recipe) return;
+
+    // Start coaching log on the server
+    coachingApi.start({
+      mode: 'single',
+      recipeIds: [Number(id)],
+    }).then((res) => {
+      coachingIdRef.current = res.data.data.id;
+    }).catch(() => {
+      // Non-blocking: coaching log creation failure shouldn't prevent cooking
+    });
+
     const engine = engineRef.current;
     engine.init(recipe.steps);
 
@@ -74,7 +87,11 @@ export default function SingleCookingScreen() {
         case 'COMPLETED':
           router.replace({
             pathname: '/(tabs)/cooking/complete',
-            params: { recipeId: id, elapsed: String(elapsed) },
+            params: {
+              recipeId: id,
+              elapsed: String(elapsed),
+              coachingId: String(coachingIdRef.current ?? ''),
+            },
           });
           break;
       }
@@ -102,12 +119,12 @@ export default function SingleCookingScreen() {
       ttsService.stop();
       sttService.stopListening();
     };
-  }, [recipe, id, user?.coachingEnabled, user?.coachingSpeed]);
+  }, [recipe, id, user?.coachingEnabled, user?.coachingVoiceSpeed]);
 
   // Set TTS speed
   useEffect(() => {
-    ttsService.setSpeed(user?.coachingSpeed ?? 1.0);
-  }, [user?.coachingSpeed]);
+    ttsService.setSpeed(user?.coachingVoiceSpeed ?? 1.0);
+  }, [user?.coachingVoiceSpeed]);
 
   const handleQuit = () => {
     Alert.alert('코칭 종료', '정말 코칭을 종료하시겠어요?', [
@@ -151,14 +168,14 @@ export default function SingleCookingScreen() {
         <View
           style={[
             styles.typeIcon,
-            step?.type === 'WAIT' ? styles.typeWait : styles.typeActive,
+            step?.stepType === 'WAIT' ? styles.typeWait : styles.typeActive,
           ]}
         >
           <Text style={styles.typeEmoji}>
-            {step?.type === 'WAIT' ? '⏱️' : '🔥'}
+            {step?.stepType === 'WAIT' ? '⏱️' : '🔥'}
           </Text>
           <Text style={styles.typeLabel}>
-            {step?.type === 'WAIT' ? '대기' : '조리'}
+            {step?.stepType === 'WAIT' ? '대기' : '조리'}
           </Text>
         </View>
 

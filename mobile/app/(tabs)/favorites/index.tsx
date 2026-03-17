@@ -13,9 +13,8 @@ import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { Colors } from '../../../src/constants/colors';
 import { Loading } from '../../../src/components/common/Loading';
-import { favoriteApi } from '../../../src/api/favoriteApi';
+import { favoriteApi, FavoriteItem } from '../../../src/api/favoriteApi';
 import { formatCookTime, formatDifficulty } from '../../../src/utils/format';
-import type { RecipeSummary } from '../../../src/types/recipe';
 
 export default function FavoritesScreen() {
   const router = useRouter();
@@ -30,20 +29,20 @@ export default function FavoritesScreen() {
   });
 
   const removeMutation = useMutation({
-    mutationFn: (recipeId: number) => favoriteApi.remove(recipeId),
+    mutationFn: (favoriteId: number) => favoriteApi.remove(favoriteId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['favorites'] });
     },
   });
 
-  const handleRemove = (recipeId: number, title: string) => {
+  const handleRemove = (favoriteId: number, title: string) => {
     Alert.alert('즐겨찾기 삭제', `"${title}"을(를) 삭제할까요?`, [
       { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: () => removeMutation.mutate(recipeId) },
+      { text: '삭제', style: 'destructive', onPress: () => removeMutation.mutate(favoriteId) },
     ]);
   };
 
-  const favorites = data?.content ?? [];
+  const favorites = data ?? [];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -65,15 +64,15 @@ export default function FavoritesScreen() {
       ) : (
         <FlashList
           data={favorites}
-          keyExtractor={(item: RecipeSummary) => String(item.id)}
-          renderItem={({ item }: { item: RecipeSummary }) => (
+          keyExtractor={(item: FavoriteItem) => String(item.id)}
+          renderItem={({ item }: { item: FavoriteItem }) => (
             <TouchableOpacity
               style={styles.card}
-              onPress={() => router.push(`/(tabs)/recipe/${item.id}`)}
+              onPress={() => router.push(`/(tabs)/recipe/${item.recipeId}`)}
               activeOpacity={0.7}
             >
-              {item.imageUrl ? (
-                <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+              {item.recipeThumbnailUrl ? (
+                <Image source={{ uri: item.recipeThumbnailUrl }} style={styles.cardImage} />
               ) : (
                 <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
                   <Text style={styles.placeholderEmoji}>🍽️</Text>
@@ -81,15 +80,15 @@ export default function FavoritesScreen() {
               )}
               <View style={styles.cardContent}>
                 <Text style={styles.cardTitle} numberOfLines={2}>
-                  {item.title}
+                  {item.recipeTitle}
                 </Text>
                 <Text style={styles.cardMeta}>
-                  {formatCookTime(item.cookTimeMinutes)} · {formatDifficulty(item.difficulty)}
+                  {formatCookTime(item.cookingTimeMinutes)} · {formatDifficulty(item.recipeDifficulty)}
                 </Text>
               </View>
               <TouchableOpacity
                 style={styles.removeBtn}
-                onPress={() => handleRemove(item.id, item.title)}
+                onPress={() => handleRemove(item.id, item.recipeTitle)}
               >
                 <Text style={styles.removeText}>❤️</Text>
               </TouchableOpacity>

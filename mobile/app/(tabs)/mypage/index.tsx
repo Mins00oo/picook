@@ -9,7 +9,7 @@ import { getLevelForCount, getLevelProgress, getNextLevel } from '../../../src/c
 export default function MypageScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const count = user?.completedCount ?? 0;
+  const count = user?.completedCookingCount ?? 0;
   const level = getLevelForCount(count);
   const nextLevel = getNextLevel(level);
   const progress = getLevelProgress(count);
@@ -29,7 +29,7 @@ export default function MypageScreen() {
         <View style={styles.profileCard}>
           <Text style={styles.profileEmoji}>{level.emoji}</Text>
           <View style={styles.profileInfo}>
-            <Text style={styles.nickname}>{user?.nickname ?? '사용자'}</Text>
+            <Text style={styles.nickname}>{user?.displayName ?? '사용자'}</Text>
             <Text style={styles.levelText}>
               Lv.{level.level} {level.title}
             </Text>
