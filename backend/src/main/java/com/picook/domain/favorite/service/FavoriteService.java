@@ -48,6 +48,11 @@ public class FavoriteService {
         Recipe recipe = recipeRepository.findByIdAndIsDeletedFalse(request.recipeId())
                 .orElseThrow(() -> new BusinessException("RECIPE_NOT_FOUND", "레시피를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
 
+        // draft/hidden 레시피 즐겨찾기 방지
+        if (!"published".equals(recipe.getStatus())) {
+            throw new BusinessException("RECIPE_NOT_FOUND", "레시피를 찾을 수 없습니다", HttpStatus.NOT_FOUND);
+        }
+
         Favorite favorite = new Favorite(userId, recipe);
         favoriteRepository.save(favorite);
 

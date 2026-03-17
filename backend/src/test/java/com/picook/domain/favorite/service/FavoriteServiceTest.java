@@ -44,6 +44,7 @@ class FavoriteServiceTest {
         userId = UUID.randomUUID();
         recipe = new Recipe("김치찌개", "한식", "easy", 30, 2);
         setField(recipe, "id", 1);
+        setField(recipe, "status", "published");
     }
 
     @Test
