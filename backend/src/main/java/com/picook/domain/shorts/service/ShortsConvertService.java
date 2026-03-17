@@ -6,6 +6,7 @@ import com.picook.domain.shorts.dto.RecentShortsResponse;
 import com.picook.domain.shorts.dto.ShortsConvertRequest;
 import com.picook.domain.shorts.dto.ShortsConvertResponse;
 import com.picook.domain.shorts.dto.ShortsRecipeResult;
+import com.picook.domain.shorts.dto.YtDlpResult;
 import com.picook.domain.shorts.entity.ShortsCache;
 import com.picook.domain.shorts.entity.ShortsConversionHistory;
 import com.picook.domain.shorts.entity.ShortsConversionLog;
@@ -103,7 +104,8 @@ public class ShortsConvertService {
         try {
             // 외부 API 호출 — TX 밖에서 수행 (DB 커넥션 점유 없음)
             long t0 = System.currentTimeMillis();
-            audioPath = ytDlpService.extractAudio(normalizedUrl);
+            YtDlpResult ytResult = ytDlpService.fetchMetadataAndExtractAudio(normalizedUrl);
+            audioPath = ytResult.audioPath();
             long extractMs = System.currentTimeMillis() - t0;
 
             long t1 = System.currentTimeMillis();
@@ -119,7 +121,7 @@ public class ShortsConvertService {
             // DB 저장만 트랜잭션으로 — 짧은 TX (~수십ms)
             ShortsCache cache = saveConversionResult(
                     userId, normalizedUrl, urlHash, modelVersion,
-                    recipe.title(), resultJson, startTime,
+                    recipe.title(), resultJson, ytResult, startTime,
                     extractMs, transcribeMs, structurizeMs);
 
             return ShortsConvertResponse.of(cache, recipe, false);
@@ -142,11 +144,15 @@ public class ShortsConvertService {
     private ShortsCache saveConversionResult(UUID userId, String normalizedUrl,
                                               String urlHash, String modelVersion,
                                               String title, String resultJson,
+                                              YtDlpResult ytResult,
                                               long startTime,
                                               long extractMs, long transcribeMs, long structurizeMs) {
         return transactionTemplate.execute(status -> {
             ShortsCache cache = shortsCacheService.save(
-                    new ShortsCache(normalizedUrl, urlHash, modelVersion, title, null, resultJson));
+                    new ShortsCache(normalizedUrl, urlHash, modelVersion, title,
+                            ytResult.thumbnailUrl(),
+                            ytResult.channelName(), ytResult.originalTitle(), ytResult.durationSeconds(),
+                            resultJson));
             historyRepository.save(new ShortsConversionHistory(userId, cache));
             long totalMs = System.currentTimeMillis() - startTime;
             conversionLogRepository.save(
@@ -196,6 +202,18 @@ public class ShortsConvertService {
     }
 
     @Transactional
+    public void deleteHistory(UUID userId, Integer historyId) {
+        ShortsConversionHistory history = historyRepository.findByIdAndUserId(historyId, userId)
+                .orElseThrow(() -> new BusinessException("SHORTS_NOT_FOUND", "변환 기록을 찾을 수 없습니다", HttpStatus.NOT_FOUND));
+        historyRepository.delete(history);
+    }
+
+    @Transactional
+    public void deleteAllHistory(UUID userId) {
+        historyRepository.deleteAllByUserId(userId);
+    }
+
+    @Transactional
     public ShortsCache reconvertFromCache(ShortsCache existing) {
         String url = existing.getYoutubeUrl();
         String modelVersion = recipeStructurizer.getModelVersion();
@@ -204,12 +222,15 @@ public class ShortsConvertService {
         // 현재는 기존 동작 유지 (관리자 기능이라 빈도가 낮음)
         Path audioPath = null;
         try {
-            audioPath = ytDlpService.extractAudio(url);
+            YtDlpResult ytResult = ytDlpService.fetchMetadataAndExtractAudio(url);
+            audioPath = ytResult.audioPath();
             String transcript = whisperService.transcribe(audioPath);
             ShortsRecipeResult recipe = recipeStructurizer.structurize(transcript);
 
             String resultJson = objectMapper.writeValueAsString(recipe);
             existing.update(modelVersion, recipe.title(), resultJson);
+            existing.updateMetadata(ytResult.channelName(), ytResult.originalTitle(),
+                    ytResult.durationSeconds(), ytResult.thumbnailUrl());
             return shortsCacheService.save(existing);
         } catch (BusinessException e) {
             throw e;

@@ -9,6 +9,7 @@ public record RecentShortsResponse(
         String youtubeUrl,
         String title,
         String thumbnailUrl,
+        String channelName,
         Instant convertedAt
 ) {
     public static RecentShortsResponse of(ShortsConversionHistory history) {
@@ -18,6 +19,7 @@ public record RecentShortsResponse(
                 cache.getYoutubeUrl(),
                 cache.getTitle(),
                 cache.getThumbnailUrl(),
+                cache.getChannelName(),
                 history.getCreatedAt()
         );
     }

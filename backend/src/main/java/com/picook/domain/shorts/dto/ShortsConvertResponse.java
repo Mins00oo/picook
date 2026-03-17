@@ -9,6 +9,9 @@ public record ShortsConvertResponse(
         String youtubeUrl,
         String title,
         String thumbnailUrl,
+        String channelName,
+        String originalTitle,
+        Integer durationSeconds,
         ShortsRecipeResult recipe,
         boolean fromCache,
         Instant convertedAt
@@ -19,6 +22,9 @@ public record ShortsConvertResponse(
                 cache.getYoutubeUrl(),
                 cache.getTitle(),
                 cache.getThumbnailUrl(),
+                cache.getChannelName(),
+                cache.getOriginalTitle(),
+                cache.getDurationSeconds(),
                 recipe,
                 fromCache,
                 cache.getCreatedAt()

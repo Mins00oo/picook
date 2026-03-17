@@ -5,6 +5,7 @@ import com.picook.domain.shorts.dto.ShortsConvertRequest;
 import com.picook.domain.shorts.dto.ShortsConvertResponse;
 import com.picook.domain.shorts.dto.ShortsRecipeResult;
 import com.picook.domain.shorts.dto.RecentShortsResponse;
+import com.picook.domain.shorts.dto.YtDlpResult;
 import com.picook.domain.shorts.entity.ShortsCache;
 import com.picook.domain.shorts.entity.ShortsConversionHistory;
 import com.picook.domain.shorts.repository.ShortsConversionHistoryRepository;
@@ -78,7 +79,7 @@ class ShortsConvertServiceTest {
 
         assertThat(response.fromCache()).isTrue();
         assertThat(response.recipe().title()).isEqualTo("김치찌개");
-        verify(ytDlpService, never()).extractAudio(anyString());
+        verify(ytDlpService, never()).fetchMetadataAndExtractAudio(anyString());
         verify(whisperService, never()).transcribe(any());
     }
 
@@ -94,7 +95,8 @@ class ShortsConvertServiceTest {
         when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
         when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), anyString()))
                 .thenReturn(Optional.empty());
-        when(ytDlpService.extractAudio(anyString())).thenReturn(Path.of("/tmp/test.mp3"));
+        when(ytDlpService.fetchMetadataAndExtractAudio(anyString()))
+                .thenReturn(new YtDlpResult(Path.of("/tmp/test.mp3"), "요리채널", "김치찌개 만들기", 60, "https://img.youtube.com/thumb.jpg"));
         when(whisperService.transcribe(any())).thenReturn("김치찌개 만드는 법...");
         when(recipeStructurizer.structurize(anyString())).thenReturn(recipe);
         when(shortsCacheService.save(any())).thenReturn(savedCache);
@@ -106,7 +108,7 @@ class ShortsConvertServiceTest {
         assertThat(response.recipe().title()).isEqualTo("김치찌개");
 
         var inOrder = inOrder(ytDlpService, whisperService, recipeStructurizer, shortsCacheService);
-        inOrder.verify(ytDlpService).extractAudio(anyString());
+        inOrder.verify(ytDlpService).fetchMetadataAndExtractAudio(anyString());
         inOrder.verify(whisperService).transcribe(any());
         inOrder.verify(recipeStructurizer).structurize(anyString());
         inOrder.verify(shortsCacheService).save(any());
@@ -124,7 +126,8 @@ class ShortsConvertServiceTest {
         when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2026");
         when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), eq("gpt-4o-2026")))
                 .thenReturn(Optional.empty());
-        when(ytDlpService.extractAudio(anyString())).thenReturn(Path.of("/tmp/test.mp3"));
+        when(ytDlpService.fetchMetadataAndExtractAudio(anyString()))
+                .thenReturn(new YtDlpResult(Path.of("/tmp/test.mp3"), null, null, null, null));
         when(whisperService.transcribe(any())).thenReturn("transcript");
         when(recipeStructurizer.structurize(anyString())).thenReturn(recipe);
         when(shortsCacheService.save(any())).thenReturn(savedCache);
@@ -133,7 +136,7 @@ class ShortsConvertServiceTest {
         ShortsConvertResponse response = shortsConvertService.convert(userId, new ShortsConvertRequest(url));
 
         assertThat(response.fromCache()).isFalse();
-        verify(ytDlpService).extractAudio(anyString());
+        verify(ytDlpService).fetchMetadataAndExtractAudio(anyString());
     }
 
     @Test
@@ -154,7 +157,7 @@ class ShortsConvertServiceTest {
         when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
         when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), anyString()))
                 .thenReturn(Optional.empty());
-        when(ytDlpService.extractAudio(anyString()))
+        when(ytDlpService.fetchMetadataAndExtractAudio(anyString()))
                 .thenThrow(new BusinessException("AUDIO_EXTRACTION_FAILED", "음성 추출에 실패했습니다",
                         org.springframework.http.HttpStatus.BAD_GATEWAY));
 
@@ -172,7 +175,8 @@ class ShortsConvertServiceTest {
         when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
         when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), anyString()))
                 .thenReturn(Optional.empty());
-        when(ytDlpService.extractAudio(anyString())).thenReturn(Path.of("/tmp/test.mp3"));
+        when(ytDlpService.fetchMetadataAndExtractAudio(anyString()))
+                .thenReturn(new YtDlpResult(Path.of("/tmp/test.mp3"), null, null, null, null));
         when(whisperService.transcribe(any())).thenReturn("게임 공략 영상입니다...");
         when(recipeStructurizer.structurize(anyString()))
                 .thenThrow(new BusinessException("NOT_COOKING_VIDEO", "요리 영상이 아닙니다",
@@ -202,7 +206,7 @@ class ShortsConvertServiceTest {
                     BusinessException be = (BusinessException) ex;
                     assertThat(be.getErrorCode()).isEqualTo("VIDEO_TOO_LONG");
                 });
-        verify(ytDlpService, never()).extractAudio(anyString());
+        verify(ytDlpService, never()).fetchMetadataAndExtractAudio(anyString());
     }
 
     @Test
@@ -218,7 +222,7 @@ class ShortsConvertServiceTest {
                     BusinessException be = (BusinessException) ex;
                     assertThat(be.getErrorCode()).isEqualTo("RATE_LIMIT_EXCEEDED");
                 });
-        verify(ytDlpService, never()).extractAudio(anyString());
+        verify(ytDlpService, never()).fetchMetadataAndExtractAudio(anyString());
     }
 
     @Test
@@ -251,7 +255,8 @@ class ShortsConvertServiceTest {
         when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
         when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), anyString()))
                 .thenReturn(Optional.empty());
-        when(ytDlpService.extractAudio(anyString())).thenReturn(Path.of("/tmp/test.mp3"));
+        when(ytDlpService.fetchMetadataAndExtractAudio(anyString()))
+                .thenReturn(new YtDlpResult(Path.of("/tmp/test.mp3"), "요리채널", "김치찌개 만들기", 60, null));
         when(whisperService.transcribe(any())).thenReturn("김치찌개 만드는 법...");
         when(recipeStructurizer.structurize(anyString())).thenReturn(recipe);
         when(shortsCacheService.save(any())).thenReturn(savedCache);
@@ -304,7 +309,7 @@ class ShortsConvertServiceTest {
         when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
         when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), anyString()))
                 .thenReturn(Optional.empty());
-        when(ytDlpService.extractAudio(anyString()))
+        when(ytDlpService.fetchMetadataAndExtractAudio(anyString()))
                 .thenThrow(new BusinessException("AUDIO_EXTRACTION_FAILED", "음성 추출에 실패했습니다",
                         org.springframework.http.HttpStatus.BAD_GATEWAY));
 

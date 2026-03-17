@@ -1,5 +1,6 @@
 package com.picook.domain.shorts.service;
 
+import com.picook.domain.shorts.dto.YtDlpResult;
 import com.picook.global.exception.BusinessException;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -7,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,6 +30,8 @@ public class YtDlpService {
 
     @Value("${shorts.temp-dir}")
     private String tempDir;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @PostConstruct
     void init() throws IOException {
@@ -136,5 +141,60 @@ public class YtDlpService {
             throw new BusinessException("AUDIO_EXTRACTION_FAILED",
                     "음성 추출에 실패했습니다", HttpStatus.BAD_GATEWAY);
         }
+    }
+
+    /**
+     * yt-dlp --dump-json으로 메타데이터를 가져온 뒤 음성 추출까지 수행.
+     * 메타데이터 파싱 실패 시에도 음성 추출은 계속 진행한다.
+     */
+    public YtDlpResult fetchMetadataAndExtractAudio(String url) {
+        String channelName = null;
+        String originalTitle = null;
+        Integer durationSeconds = null;
+        String thumbnailUrl = null;
+
+        // 1) --dump-json 으로 메타데이터 조회
+        try {
+            ProcessBuilder pb = new ProcessBuilder(
+                    ytdlpPath, "--no-warnings", "--dump-json", "--no-download", url
+            );
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            String output = new String(process.getInputStream().readAllBytes()).strip();
+            boolean finished = process.waitFor(20, TimeUnit.SECONDS);
+
+            if (!finished) {
+                process.destroyForcibly();
+                log.warn("Metadata fetch timed out for {}", url);
+            } else if (process.exitValue() == 0 && !output.isBlank()) {
+                JsonNode json = objectMapper.readTree(output);
+                channelName = getTextOrNull(json, "channel");
+                if (channelName == null) {
+                    channelName = getTextOrNull(json, "uploader");
+                }
+                originalTitle = getTextOrNull(json, "title");
+                if (json.has("duration") && !json.get("duration").isNull()) {
+                    durationSeconds = json.get("duration").asInt();
+                }
+                thumbnailUrl = getTextOrNull(json, "thumbnail");
+                log.debug("YouTube metadata: channel={}, title={}, duration={}s",
+                        channelName, originalTitle, durationSeconds);
+            }
+        } catch (Exception e) {
+            log.warn("Metadata fetch failed for {}: {}", url, e.getMessage());
+        }
+
+        // 2) 기존 음성 추출
+        Path audioPath = extractAudio(url);
+
+        return new YtDlpResult(audioPath, channelName, originalTitle, durationSeconds, thumbnailUrl);
+    }
+
+    private String getTextOrNull(JsonNode node, String field) {
+        if (node.has(field) && !node.get(field).isNull()) {
+            String text = node.get(field).asText();
+            return text.isBlank() ? null : text;
+        }
+        return null;
     }
 }

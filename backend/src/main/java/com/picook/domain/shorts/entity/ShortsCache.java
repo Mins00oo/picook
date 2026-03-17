@@ -29,6 +29,15 @@ public class ShortsCache {
     @Column(name = "thumbnail_url")
     private String thumbnailUrl;
 
+    @Column(name = "channel_name", length = 200)
+    private String channelName;
+
+    @Column(name = "original_title", length = 500)
+    private String originalTitle;
+
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "result", nullable = false, columnDefinition = "jsonb")
     private String result;
@@ -51,6 +60,21 @@ public class ShortsCache {
         this.result = result;
     }
 
+    public ShortsCache(String youtubeUrl, String urlHash, String aiModelVersion,
+                       String title, String thumbnailUrl,
+                       String channelName, String originalTitle, Integer durationSeconds,
+                       String result) {
+        this.youtubeUrl = youtubeUrl;
+        this.urlHash = urlHash;
+        this.aiModelVersion = aiModelVersion;
+        this.title = title;
+        this.thumbnailUrl = thumbnailUrl;
+        this.channelName = channelName;
+        this.originalTitle = originalTitle;
+        this.durationSeconds = durationSeconds;
+        this.result = result;
+    }
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();
@@ -68,12 +92,24 @@ public class ShortsCache {
         this.result = result;
     }
 
+    public void updateMetadata(String channelName, String originalTitle, Integer durationSeconds, String thumbnailUrl) {
+        this.channelName = channelName;
+        this.originalTitle = originalTitle;
+        this.durationSeconds = durationSeconds;
+        if (thumbnailUrl != null) {
+            this.thumbnailUrl = thumbnailUrl;
+        }
+    }
+
     public Integer getId() { return id; }
     public String getYoutubeUrl() { return youtubeUrl; }
     public String getUrlHash() { return urlHash; }
     public String getAiModelVersion() { return aiModelVersion; }
     public String getTitle() { return title; }
     public String getThumbnailUrl() { return thumbnailUrl; }
+    public String getChannelName() { return channelName; }
+    public String getOriginalTitle() { return originalTitle; }
+    public Integer getDurationSeconds() { return durationSeconds; }
     public String getResult() { return result; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
