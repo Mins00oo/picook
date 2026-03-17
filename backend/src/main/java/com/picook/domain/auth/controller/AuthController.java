@@ -47,4 +47,10 @@ public class AuthController {
         AuthResponse response = appleAuthService.login(request.identityToken());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout() {
+        // JWT는 stateless — 클라이언트에서 토큰 삭제로 처리
+        return ResponseEntity.ok(ApiResponse.success());
+    }
 }
