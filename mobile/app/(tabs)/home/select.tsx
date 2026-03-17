@@ -31,9 +31,10 @@ import type { Ingredient, IngredientCategory } from '../../../src/types/ingredie
 
 const GRID_COLUMNS = 3;
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const GRID_PADDING = spacing.lg;
-const GRID_GAP = spacing.sm;
-const ITEM_SIZE = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
+const GRID_PADDING = spacing.md; // 16px
+const GRID_COL_GAP = 12;
+const GRID_ROW_GAP = 16;
+const ITEM_SIZE = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_COL_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
 
 export default function SelectScreen() {
   const router = useRouter();
@@ -133,6 +134,7 @@ export default function SelectScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.categoryScroll}
         contentContainerStyle={styles.categoryChips}
       >
         <TouchableOpacity
@@ -204,11 +206,16 @@ export default function SelectScreen() {
               );
             })}
           </View>
-        ) : (
+        ) : searchQuery.trim() ? (
           <EmptyState
             emoji="🔍"
             title="검색 결과가 없어요"
             description="다른 키워드로 검색해보세요"
+          />
+        ) : (
+          <EmptyState
+            emoji="🥬"
+            title="이 카테고리에 등록된 재료가 없어요"
           />
         )}
       </ScrollView>
@@ -307,6 +314,10 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
   },
   // Categories
+  categoryScroll: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   categoryChips: {
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
@@ -345,17 +356,18 @@ const styles = StyleSheet.create({
   },
   gridContent: {
     paddingHorizontal: GRID_PADDING,
+    paddingTop: spacing.md,
     paddingBottom: spacing.lg,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: GRID_GAP,
+    columnGap: GRID_COL_GAP,
+    rowGap: GRID_ROW_GAP,
   },
   gridItem: {
     width: ITEM_SIZE,
     alignItems: 'center',
-    paddingVertical: spacing.sm,
     gap: spacing.xs,
   },
   iconCircle: {
