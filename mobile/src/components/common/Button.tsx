@@ -7,7 +7,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { Colors } from '../../constants/colors';
+import { colors, borderRadius, shadow } from '../../constants/theme';
 
 interface ButtonProps {
   title: string;
@@ -57,7 +57,7 @@ export function Button({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? Colors.white : Colors.primary}
+          color={variant === 'primary' ? colors.textInverse : colors.primary}
           size="small"
         />
       ) : (
@@ -75,52 +75,64 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     gap: 8,
+    ...shadow.md,
   },
   primary: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
   },
   secondary: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.secondaryLight,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   outline: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   ghost: {
     backgroundColor: 'transparent',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   size_small: {
     paddingVertical: 8,
     paddingHorizontal: 16,
+    height: 36,
   },
   size_medium: {
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 24,
+    height: 44,
   },
   size_large: {
-    paddingVertical: 18,
+    paddingVertical: 14,
     paddingHorizontal: 32,
+    height: 52,
   },
   disabled: {
     opacity: 0.5,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   label: {
     fontWeight: '600',
   },
   label_primary: {
-    color: Colors.white,
+    color: colors.textInverse,
   },
   label_secondary: {
-    color: Colors.text,
+    color: colors.secondary,
   },
   label_outline: {
-    color: Colors.text,
+    color: colors.textPrimary,
   },
   label_ghost: {
-    color: Colors.primary,
+    color: colors.primary,
   },
   labelSize_small: {
     fontSize: 14,
@@ -129,9 +141,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   labelSize_large: {
-    fontSize: 18,
+    fontSize: 17,
   },
   labelDisabled: {
-    opacity: 0.5,
+    opacity: 0.7,
   },
 });
