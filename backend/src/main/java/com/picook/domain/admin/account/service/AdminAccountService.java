@@ -76,6 +76,14 @@ public class AdminAccountService {
             throw new BusinessException("SELF_DELETE", "자기 자신을 삭제할 수 없습니다", HttpStatus.BAD_REQUEST);
         }
         AdminUser adminUser = findOrThrow(id);
+
+        // 마지막 SUPER_ADMIN 삭제 방지
+        if (adminUser.getRole() == AdminRole.SUPER_ADMIN
+                && adminUserRepository.countByRole(AdminRole.SUPER_ADMIN) <= 1) {
+            throw new BusinessException("LAST_SUPER_ADMIN",
+                    "마지막 SUPER_ADMIN은 삭제할 수 없습니다", HttpStatus.BAD_REQUEST);
+        }
+
         adminUserRepository.delete(adminUser);
     }
 
