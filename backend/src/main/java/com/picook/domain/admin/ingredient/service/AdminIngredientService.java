@@ -16,6 +16,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 @Service
 @Transactional(readOnly = true)
 public class AdminIngredientService {
@@ -32,12 +36,28 @@ public class AdminIngredientService {
         this.entityManager = entityManager;
     }
 
+    @SuppressWarnings("unchecked")
     public PageResponse<AdminIngredientResponse> getIngredients(Integer categoryId, String keyword, int page, int size) {
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by("name").ascending());
         Page<Ingredient> ingredientPage = ingredientRepository.searchIngredientsPage(categoryId, keyword, pageRequest);
 
+        // 배치 쿼리로 레시피 사용 수 조회 (N+1 방지)
+        List<Integer> ingredientIds = ingredientPage.getContent().stream()
+                .map(Ingredient::getId).toList();
+        Map<Integer, Integer> recipeCounts = new HashMap<>();
+        if (!ingredientIds.isEmpty()) {
+            List<Object[]> rows = entityManager.createNativeQuery(
+                    "SELECT ingredient_id, COUNT(DISTINCT recipe_id) FROM recipe_ingredients " +
+                    "WHERE ingredient_id IN (:ids) GROUP BY ingredient_id")
+                    .setParameter("ids", ingredientIds)
+                    .getResultList();
+            for (Object[] row : rows) {
+                recipeCounts.put((Integer) row[0], ((Number) row[1]).intValue());
+            }
+        }
+
         Page<AdminIngredientResponse> responsePage = ingredientPage.map(ingredient ->
-                AdminIngredientResponse.of(ingredient, getUsedRecipeCount(ingredient.getId()))
+                AdminIngredientResponse.of(ingredient, recipeCounts.getOrDefault(ingredient.getId(), 0))
         );
         return PageResponse.from(responsePage);
     }

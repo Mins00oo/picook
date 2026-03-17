@@ -1,7 +1,5 @@
 package com.picook.domain.recipe.service;
 
-import com.picook.domain.ingredient.entity.Ingredient;
-import com.picook.domain.ingredient.repository.IngredientRepository;
 import com.picook.domain.recipe.dto.RecommendRequest;
 import com.picook.domain.recipe.dto.RecommendResponse;
 import com.picook.domain.recipe.dto.RecommendResponse.MissingIngredient;
@@ -21,14 +19,11 @@ public class RecommendService {
 
     private final EntityManager entityManager;
     private final RecipeIngredientRepository recipeIngredientRepository;
-    private final IngredientRepository ingredientRepository;
 
     public RecommendService(EntityManager entityManager,
-                            RecipeIngredientRepository recipeIngredientRepository,
-                            IngredientRepository ingredientRepository) {
+                            RecipeIngredientRepository recipeIngredientRepository) {
         this.entityManager = entityManager;
         this.recipeIngredientRepository = recipeIngredientRepository;
-        this.ingredientRepository = ingredientRepository;
     }
 
     public List<RecommendResponse> recommend(RecommendRequest request) {
@@ -80,6 +75,15 @@ public class RecommendService {
 
         Set<Integer> userIngredientSet = new HashSet<>(ingredientIds);
 
+        // 전체 레시피의 필수 재료를 1회 쿼리로 배치 로드 (N+1 방지)
+        List<Integer> recipeIds = results.stream()
+                .map(row -> (Integer) row[0])
+                .toList();
+        Map<Integer, List<RecipeIngredient>> requiredByRecipe = recipeIds.isEmpty()
+                ? Map.of()
+                : recipeIngredientRepository.findRequiredByRecipeIds(recipeIds).stream()
+                        .collect(Collectors.groupingBy(ri -> ri.getRecipe().getId()));
+
         List<RecommendResponse> responses = new ArrayList<>();
         for (Object[] row : results) {
             Integer recipeId = (Integer) row[0];
@@ -94,11 +98,7 @@ public class RecommendService {
             long totalRequired = ((Number) row[9]).longValue();
             double matchingRate = totalRequired > 0 ? (double) matchedCount / totalRequired * 100 : 0;
 
-            // 부족 재료 목록 조회
-            List<RecipeIngredient> requiredIngredients = recipeIngredientRepository.findByRecipeId(recipeId)
-                    .stream()
-                    .filter(ri -> ri.getIsRequired())
-                    .toList();
+            List<RecipeIngredient> requiredIngredients = requiredByRecipe.getOrDefault(recipeId, List.of());
 
             List<MissingIngredient> missing = requiredIngredients.stream()
                     .filter(ri -> !userIngredientSet.contains(ri.getIngredient().getId()))

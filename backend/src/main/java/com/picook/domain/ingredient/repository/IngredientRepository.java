@@ -43,6 +43,9 @@ public interface IngredientRepository extends JpaRepository<Ingredient, Integer>
 
     int countByCategoryId(Integer categoryId);
 
+    @Query("SELECT i.category.id, COUNT(i) FROM Ingredient i GROUP BY i.category.id")
+    List<Object[]> countGroupByCategoryId();
+
     boolean existsByCategoryId(Integer categoryId);
 
     @Query("SELECT i FROM Ingredient i WHERE i.id NOT IN (SELECT DISTINCT ri.ingredient.id FROM RecipeIngredient ri)")

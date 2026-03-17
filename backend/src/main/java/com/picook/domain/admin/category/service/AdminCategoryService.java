@@ -30,10 +30,18 @@ public class AdminCategoryService {
 
     public List<AdminCategoryResponse> getAllCategories() {
         List<IngredientCategory> categories = categoryRepository.findAllByOrderBySortOrderAsc();
+
+        // 배치 쿼리로 카테고리별 재료 수 조회 (N+1 방지)
+        Map<Integer, Long> countMap = ingredientRepository.countGroupByCategoryId().stream()
+                .collect(Collectors.toMap(
+                        row -> (Integer) row[0],
+                        row -> (Long) row[1]
+                ));
+
         return categories.stream()
                 .map(category -> AdminCategoryResponse.of(
                         category,
-                        ingredientRepository.countByCategoryId(category.getId())
+                        countMap.getOrDefault(category.getId(), 0L).intValue()
                 ))
                 .toList();
     }

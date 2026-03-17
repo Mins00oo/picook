@@ -30,15 +30,26 @@ public class JwtProvider {
     }
 
     public String generateAccessToken(String subject, Map<String, Object> claims) {
-        return buildToken(subject, claims, accessExpiration);
+        Map<String, Object> allClaims = new java.util.HashMap<>(claims);
+        allClaims.put("type", "access");
+        return buildToken(subject, allClaims, accessExpiration);
     }
 
     public String generateRefreshToken(String subject) {
-        return buildToken(subject, Map.of(), refreshExpiration);
+        return buildToken(subject, Map.of("type", "refresh"), refreshExpiration);
     }
 
     public String generateAdminRefreshToken(String subject) {
-        return buildToken(subject, Map.of(), 8 * 60 * 60 * 1000L); // 8h
+        return buildToken(subject, Map.of("type", "admin_refresh"), 8 * 60 * 60 * 1000L); // 8h
+    }
+
+    public boolean isAccessToken(String token) {
+        try {
+            Claims claims = getClaims(token);
+            return "access".equals(claims.get("type", String.class));
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private String buildToken(String subject, Map<String, Object> claims, long expiration) {

@@ -16,7 +16,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -31,7 +33,6 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 @Service
-@Transactional(readOnly = true)
 public class ShortsConvertService {
 
     private static final Logger log = LoggerFactory.getLogger(ShortsConvertService.class);
@@ -48,6 +49,7 @@ public class ShortsConvertService {
     private final RecipeStructurizer recipeStructurizer;
     private final ObjectMapper objectMapper;
     private final ShortsRateLimiter rateLimiter;
+    private final TransactionTemplate transactionTemplate;
 
     public ShortsConvertService(ShortsCacheService shortsCacheService,
                                 ShortsConversionHistoryRepository historyRepository,
@@ -56,7 +58,8 @@ public class ShortsConvertService {
                                 WhisperService whisperService,
                                 RecipeStructurizer recipeStructurizer,
                                 ObjectMapper objectMapper,
-                                ShortsRateLimiter rateLimiter) {
+                                ShortsRateLimiter rateLimiter,
+                                PlatformTransactionManager txManager) {
         this.shortsCacheService = shortsCacheService;
         this.historyRepository = historyRepository;
         this.conversionLogRepository = conversionLogRepository;
@@ -65,9 +68,12 @@ public class ShortsConvertService {
         this.recipeStructurizer = recipeStructurizer;
         this.objectMapper = objectMapper;
         this.rateLimiter = rateLimiter;
+        this.transactionTemplate = new TransactionTemplate(txManager);
     }
 
-    @Transactional
+    /**
+     * 쇼츠 변환 — 외부 API 호출은 TX 밖에서, DB 저장만 TX 안에서 수행
+     */
     public ShortsConvertResponse convert(UUID userId, ShortsConvertRequest request) {
         long startTime = System.currentTimeMillis();
         String normalizedUrl = normalizeUrl(request.youtubeUrl());
@@ -79,26 +85,23 @@ public class ShortsConvertService {
         String urlHash = sha256(normalizedUrl);
         String modelVersion = recipeStructurizer.getModelVersion();
 
-        // Cache hit
+        // Cache hit — DB 조회만 하므로 짧은 TX
         Optional<ShortsCache> cached = shortsCacheService.findByUrlHashAndModelVersion(urlHash, modelVersion);
         if (cached.isPresent()) {
             ShortsCache cache = cached.get();
-            recordHistory(userId, cache);
+            saveHistoryAndLog(userId, cache, normalizedUrl, startTime, true);
             ShortsRecipeResult recipe = parseResult(cache.getResult());
-            long totalMs = System.currentTimeMillis() - startTime;
-            conversionLogRepository.save(
-                    ShortsConversionLog.success(userId, normalizedUrl, true, totalMs, null, null, null));
-            log.info("Shorts conversion cache hit: url={}, totalMs={}", normalizedUrl, totalMs);
             return ShortsConvertResponse.of(cache, recipe, true);
         }
 
-        // Video length check
+        // Video length check — 외부 프로세스, TX 밖
         ytDlpService.checkDuration(normalizedUrl);
 
         // Concurrent slot
         rateLimiter.acquireConcurrentSlot();
         Path audioPath = null;
         try {
+            // 외부 API 호출 — TX 밖에서 수행 (DB 커넥션 점유 없음)
             long t0 = System.currentTimeMillis();
             audioPath = ytDlpService.extractAudio(normalizedUrl);
             long extractMs = System.currentTimeMillis() - t0;
@@ -112,29 +115,21 @@ public class ShortsConvertService {
             long structurizeMs = System.currentTimeMillis() - t2;
 
             String resultJson = objectMapper.writeValueAsString(recipe);
-            ShortsCache cache = shortsCacheService.save(
-                    new ShortsCache(normalizedUrl, urlHash, modelVersion,
-                            recipe.title(), null, resultJson)
-            );
 
-            recordHistory(userId, cache);
-            long totalMs = System.currentTimeMillis() - startTime;
-            conversionLogRepository.save(
-                    ShortsConversionLog.success(userId, normalizedUrl, false,
-                            totalMs, extractMs, transcribeMs, structurizeMs));
-            log.info("Shorts conversion success: url={}, totalMs={}, extractMs={}, transcribeMs={}, structurizeMs={}",
-                    normalizedUrl, totalMs, extractMs, transcribeMs, structurizeMs);
+            // DB 저장만 트랜잭션으로 — 짧은 TX (~수십ms)
+            ShortsCache cache = saveConversionResult(
+                    userId, normalizedUrl, urlHash, modelVersion,
+                    recipe.title(), resultJson, startTime,
+                    extractMs, transcribeMs, structurizeMs);
+
             return ShortsConvertResponse.of(cache, recipe, false);
         } catch (BusinessException e) {
             long totalMs = System.currentTimeMillis() - startTime;
-            conversionLogRepository.save(
-                    ShortsConversionLog.failure(userId, normalizedUrl, e.getErrorCode(), e.getMessage(), totalMs));
-            log.warn("Shorts conversion failed: url={}, error={}, totalMs={}", normalizedUrl, e.getErrorCode(), totalMs);
+            saveFailureLog(userId, normalizedUrl, e.getErrorCode(), e.getMessage(), totalMs);
             throw e;
         } catch (JacksonException e) {
             long totalMs = System.currentTimeMillis() - startTime;
-            conversionLogRepository.save(
-                    ShortsConversionLog.failure(userId, normalizedUrl, "AI_STRUCTURIZE_FAILED", e.getMessage(), totalMs));
+            saveFailureLog(userId, normalizedUrl, "AI_STRUCTURIZE_FAILED", e.getMessage(), totalMs);
             log.error("Failed to serialize recipe result", e);
             throw new BusinessException("AI_STRUCTURIZE_FAILED",
                     "레시피 결과 저장에 실패했습니다", HttpStatus.BAD_GATEWAY);
@@ -144,6 +139,44 @@ public class ShortsConvertService {
         }
     }
 
+    private ShortsCache saveConversionResult(UUID userId, String normalizedUrl,
+                                              String urlHash, String modelVersion,
+                                              String title, String resultJson,
+                                              long startTime,
+                                              long extractMs, long transcribeMs, long structurizeMs) {
+        return transactionTemplate.execute(status -> {
+            ShortsCache cache = shortsCacheService.save(
+                    new ShortsCache(normalizedUrl, urlHash, modelVersion, title, null, resultJson));
+            historyRepository.save(new ShortsConversionHistory(userId, cache));
+            long totalMs = System.currentTimeMillis() - startTime;
+            conversionLogRepository.save(
+                    ShortsConversionLog.success(userId, normalizedUrl, false,
+                            totalMs, extractMs, transcribeMs, structurizeMs));
+            log.info("Shorts conversion success: url={}, totalMs={}, extractMs={}, transcribeMs={}, structurizeMs={}",
+                    normalizedUrl, totalMs, extractMs, transcribeMs, structurizeMs);
+            return cache;
+        });
+    }
+
+    private void saveHistoryAndLog(UUID userId, ShortsCache cache, String normalizedUrl,
+                                    long startTime, boolean cacheHit) {
+        transactionTemplate.executeWithoutResult(status -> {
+            historyRepository.save(new ShortsConversionHistory(userId, cache));
+            long totalMs = System.currentTimeMillis() - startTime;
+            conversionLogRepository.save(
+                    ShortsConversionLog.success(userId, normalizedUrl, cacheHit, totalMs, null, null, null));
+            log.info("Shorts conversion cache hit: url={}, totalMs={}", normalizedUrl, totalMs);
+        });
+    }
+
+    private void saveFailureLog(UUID userId, String normalizedUrl, String errorCode, String message, long totalMs) {
+        transactionTemplate.executeWithoutResult(status -> {
+            conversionLogRepository.save(ShortsConversionLog.failure(userId, normalizedUrl, errorCode, message, totalMs));
+            log.warn("Shorts conversion failed: url={}, error={}, totalMs={}", normalizedUrl, errorCode, totalMs);
+        });
+    }
+
+    @Transactional(readOnly = true)
     public List<RecentShortsResponse> getRecentConversions(UUID userId) {
         return historyRepository.findTop20ByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
@@ -151,8 +184,31 @@ public class ShortsConvertService {
                 .toList();
     }
 
-    private void recordHistory(UUID userId, ShortsCache cache) {
-        historyRepository.save(new ShortsConversionHistory(userId, cache));
+    @Transactional
+    public ShortsCache reconvertFromCache(ShortsCache existing) {
+        String url = existing.getYoutubeUrl();
+        String modelVersion = recipeStructurizer.getModelVersion();
+
+        // 외부 API 호출은 reconvert 호출자(AdminShortsService)가 TX 밖에서 호출하도록 구조 변경 필요
+        // 현재는 기존 동작 유지 (관리자 기능이라 빈도가 낮음)
+        Path audioPath = null;
+        try {
+            audioPath = ytDlpService.extractAudio(url);
+            String transcript = whisperService.transcribe(audioPath);
+            ShortsRecipeResult recipe = recipeStructurizer.structurize(transcript);
+
+            String resultJson = objectMapper.writeValueAsString(recipe);
+            existing.update(modelVersion, recipe.title(), resultJson);
+            return shortsCacheService.save(existing);
+        } catch (BusinessException e) {
+            throw e;
+        } catch (JacksonException e) {
+            log.error("Failed to serialize recipe result during reconvert", e);
+            throw new BusinessException("AI_STRUCTURIZE_FAILED",
+                    "레시피 결과 저장에 실패했습니다", HttpStatus.BAD_GATEWAY);
+        } finally {
+            deleteQuietly(audioPath);
+        }
     }
 
     private String normalizeUrl(String url) {
@@ -196,31 +252,6 @@ public class ShortsConvertService {
             log.error("Failed to parse cached result", e);
             throw new BusinessException("AI_STRUCTURIZE_FAILED",
                     "캐시된 결과 파싱에 실패했습니다", HttpStatus.BAD_GATEWAY);
-        }
-    }
-
-    @Transactional
-    public ShortsCache reconvertFromCache(ShortsCache existing) {
-        String url = existing.getYoutubeUrl();
-        String modelVersion = recipeStructurizer.getModelVersion();
-
-        Path audioPath = null;
-        try {
-            audioPath = ytDlpService.extractAudio(url);
-            String transcript = whisperService.transcribe(audioPath);
-            ShortsRecipeResult recipe = recipeStructurizer.structurize(transcript);
-
-            String resultJson = objectMapper.writeValueAsString(recipe);
-            existing.update(modelVersion, recipe.title(), resultJson);
-            return shortsCacheService.save(existing);
-        } catch (BusinessException e) {
-            throw e;
-        } catch (JacksonException e) {
-            log.error("Failed to serialize recipe result during reconvert", e);
-            throw new BusinessException("AI_STRUCTURIZE_FAILED",
-                    "레시피 결과 저장에 실패했습니다", HttpStatus.BAD_GATEWAY);
-        } finally {
-            deleteQuietly(audioPath);
         }
     }
 

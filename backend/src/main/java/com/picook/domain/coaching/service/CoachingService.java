@@ -13,9 +13,15 @@ import com.picook.domain.user.dto.RankInfo;
 import com.picook.domain.user.entity.User;
 import com.picook.domain.user.repository.UserRepository;
 import com.picook.global.exception.BusinessException;
+import jakarta.persistence.EntityManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -25,22 +31,30 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class CoachingService {
 
+    private static final Logger log = LoggerFactory.getLogger(CoachingService.class);
+
     private final CoachingLogRepository coachingLogRepository;
     private final CookingCompletionRepository cookingCompletionRepository;
     private final RecipeRepository recipeRepository;
     private final UserRepository userRepository;
     private final S3FileService s3FileService;
+    private final TransactionTemplate transactionTemplate;
+    private final EntityManager entityManager;
 
     public CoachingService(CoachingLogRepository coachingLogRepository,
                            CookingCompletionRepository cookingCompletionRepository,
                            RecipeRepository recipeRepository,
                            UserRepository userRepository,
-                           S3FileService s3FileService) {
+                           S3FileService s3FileService,
+                           PlatformTransactionManager txManager,
+                           EntityManager entityManager) {
         this.coachingLogRepository = coachingLogRepository;
         this.cookingCompletionRepository = cookingCompletionRepository;
         this.recipeRepository = recipeRepository;
         this.userRepository = userRepository;
         this.s3FileService = s3FileService;
+        this.transactionTemplate = new TransactionTemplate(txManager);
+        this.entityManager = entityManager;
     }
 
     @Transactional
@@ -69,12 +83,16 @@ public class CoachingService {
         return CoachingLogResponse.of(log);
     }
 
-    @Transactional
+    /**
+     * 완성 사진 업로드 — S3는 TX 밖, DB 저장만 TX 안에서 수행
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CookingCompletionResponse uploadCompletionPhoto(UUID userId, Integer coachingLogId, MultipartFile file) {
-        CoachingLog log = coachingLogRepository.findByIdAndUserId(coachingLogId, userId)
+        // 1. 유효성 검증 (각 조회가 자체 readOnly TX로 실행)
+        CoachingLog coachingLog = coachingLogRepository.findByIdAndUserId(coachingLogId, userId)
                 .orElseThrow(() -> new BusinessException("COACHING_NOT_FOUND", "코칭 세션을 찾을 수 없습니다", HttpStatus.NOT_FOUND));
 
-        if (!log.getCompleted()) {
+        if (!coachingLog.getCompleted()) {
             throw new BusinessException("COACHING_NOT_COMPLETED", "코칭이 아직 완료되지 않았습니다", HttpStatus.BAD_REQUEST);
         }
 
@@ -82,20 +100,50 @@ public class CoachingService {
             throw new BusinessException("COMPLETION_DUPLICATE", "이미 완성 사진이 등록된 코칭 세션입니다", HttpStatus.CONFLICT);
         }
 
+        // 2. S3 업로드 — TX 밖 (DB 커넥션 점유 없음)
         FileUploadResponse uploaded = s3FileService.upload(file);
 
-        Integer recipeId = log.getRecipeIds().get(0);
-        CookingCompletion completion = new CookingCompletion(userId, recipeId, coachingLogId, uploaded.url());
-        cookingCompletionRepository.save(completion);
+        // 3. DB 저장 — TransactionTemplate으로 짧은 TX
+        try {
+            return transactionTemplate.execute(status -> {
+                // Race condition 방지: TX 안에서 중복 재확인
+                if (cookingCompletionRepository.existsByCoachingLogId(coachingLogId)) {
+                    throw new BusinessException("COMPLETION_DUPLICATE",
+                            "이미 완성 사진이 등록된 코칭 세션입니다", HttpStatus.CONFLICT);
+                }
 
-        // DB trigger increments completed_cooking_count; re-query to get fresh value
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "사용자를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
-        userRepository.flush();
+                Integer recipeId = coachingLog.getRecipeIds().get(0);
+                CookingCompletion completion = new CookingCompletion(userId, recipeId, coachingLogId, uploaded.url());
+                cookingCompletionRepository.save(completion);
 
-        RankInfo rankInfo = RankInfo.of(user.getCompletedCookingCount() + 1);
+                // flush로 INSERT 실행 → DB 트리거가 completed_cooking_count 증가
+                cookingCompletionRepository.flush();
 
-        return CookingCompletionResponse.of(completion, rankInfo);
+                // refresh로 트리거가 갱신한 count를 정확히 읽기 (+1 수동 계산 제거)
+                User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new BusinessException("USER_NOT_FOUND",
+                                "사용자를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
+                entityManager.refresh(user);
+
+                RankInfo rankInfo = RankInfo.of(user.getCompletedCookingCount());
+                return CookingCompletionResponse.of(completion, rankInfo);
+            });
+        } catch (BusinessException e) {
+            // DB 실패 시 S3 파일 정리
+            cleanupS3Quietly(uploaded.url());
+            throw e;
+        } catch (Exception e) {
+            cleanupS3Quietly(uploaded.url());
+            throw e;
+        }
+    }
+
+    private void cleanupS3Quietly(String url) {
+        try {
+            s3FileService.delete(url);
+        } catch (Exception e) {
+            log.warn("Failed to cleanup S3 file after DB failure: {}", url, e);
+        }
     }
 
     private void validateMode(String mode, List<Integer> recipeIds) {

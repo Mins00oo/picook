@@ -17,9 +17,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -59,22 +59,33 @@ public class AdminFeedbackService {
 
         var pageRequest = PageRequest.of(page, size, Sort.by("createdAt").descending());
         var feedbackPage = feedbackRepository.searchFeedback(feedbackStatus, feedbackRating, recipeId, pageRequest);
+
+        // 배치 로드: 사용자 + 레시피 (N+1 방지)
+        Set<UUID> userIds = feedbackPage.getContent().stream()
+                .map(f -> f.getUserId()).collect(Collectors.toSet());
+        Set<Integer> recipeIds = feedbackPage.getContent().stream()
+                .map(f -> f.getRecipeId()).collect(Collectors.toSet());
+        Map<UUID, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+        Map<Integer, Recipe> recipeMap = recipeRepository.findAllById(recipeIds).stream()
+                .collect(Collectors.toMap(Recipe::getId, Function.identity()));
+
         var responsePage = feedbackPage.map(feedback -> {
-            String userDisplayName = userRepository.findById(feedback.getUserId())
+            String userDisplayName = Optional.ofNullable(userMap.get(feedback.getUserId()))
                     .map(User::getDisplayName).orElse(null);
-            String recipeTitle = recipeRepository.findById(feedback.getRecipeId())
+            String recTitle = Optional.ofNullable(recipeMap.get(feedback.getRecipeId()))
                     .map(Recipe::getTitle).orElse(null);
-            return AdminFeedbackListResponse.of(feedback, userDisplayName, recipeTitle);
+            return AdminFeedbackListResponse.of(feedback, userDisplayName, recTitle);
         });
         return PageResponse.from(responsePage);
     }
 
     public AdminFeedbackDetailResponse getFeedback(Integer id) {
         Feedback feedback = findOrThrow(id);
-        String userDisplayName = userRepository.findById(feedback.getUserId())
-                .map(User::getDisplayName).orElse(null);
-        String userEmail = userRepository.findById(feedback.getUserId())
-                .map(User::getEmail).orElse(null);
+        // 사용자 1회 조회 (기존: 동일 userId로 2회 조회)
+        Optional<User> user = userRepository.findById(feedback.getUserId());
+        String userDisplayName = user.map(User::getDisplayName).orElse(null);
+        String userEmail = user.map(User::getEmail).orElse(null);
         String recipeTitle = recipeRepository.findById(feedback.getRecipeId())
                 .map(Recipe::getTitle).orElse(null);
         return AdminFeedbackDetailResponse.of(feedback, userDisplayName, userEmail, recipeTitle);
@@ -111,14 +122,20 @@ public class AdminFeedbackService {
             ratingDistribution.put(r.getValue(), feedbackRepository.countByRating(r));
         }
 
-        // Top difficult recipes
+        // Top difficult recipes — 배치 로드 (N+1 방지)
         var topDifficult = feedbackRepository.findTopRecipesByRating(
                 FeedbackRating.DIFFICULT, PageRequest.of(0, 5));
+        List<Integer> difficultRecipeIds = topDifficult.stream()
+                .map(row -> (Integer) row[0]).toList();
+        Map<Integer, String> recipeTitleMap = difficultRecipeIds.isEmpty()
+                ? Map.of()
+                : recipeRepository.findAllById(difficultRecipeIds).stream()
+                        .collect(Collectors.toMap(Recipe::getId, Recipe::getTitle));
         List<AdminFeedbackSummaryResponse.DifficultRecipe> difficultRecipes = topDifficult.stream()
                 .map(row -> {
                     Integer rid = (Integer) row[0];
                     Long cnt = (Long) row[1];
-                    String title = recipeRepository.findById(rid).map(Recipe::getTitle).orElse("Unknown");
+                    String title = recipeTitleMap.getOrDefault(rid, "Unknown");
                     return new AdminFeedbackSummaryResponse.DifficultRecipe(rid, title, cnt);
                 }).toList();
 

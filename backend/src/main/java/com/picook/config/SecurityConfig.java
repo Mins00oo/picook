@@ -36,7 +36,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/admin/stats/**").hasAnyRole("SUPER_ADMIN", "CONTENT_ADMIN", "VIEWER")
                         .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "CONTENT_ADMIN")
                         .requestMatchers("/api/v1/**").authenticated()
-                        .anyRequest().permitAll()
+                        .anyRequest().denyAll()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
