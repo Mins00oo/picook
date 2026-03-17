@@ -2,7 +2,6 @@ package com.picook.domain.recipe.service;
 
 import com.picook.domain.ingredient.entity.Ingredient;
 import com.picook.domain.ingredient.entity.IngredientCategory;
-import com.picook.domain.ingredient.repository.IngredientRepository;
 import com.picook.domain.recipe.dto.RecommendRequest;
 import com.picook.domain.recipe.dto.RecommendResponse;
 import com.picook.domain.recipe.entity.Recipe;
@@ -35,16 +34,14 @@ class RecommendServiceTest {
     private RecipeIngredientRepository recipeIngredientRepository;
 
     @Mock
-    private IngredientRepository ingredientRepository;
-
-    @Mock
     private Query nativeQuery;
 
     private RecommendService recommendService;
 
     @BeforeEach
     void setUp() {
-        recommendService = new RecommendService(entityManager, recipeIngredientRepository, ingredientRepository);
+        allRecipeIngredients.clear();
+        recommendService = new RecommendService(entityManager, recipeIngredientRepository);
     }
 
     @Test
@@ -183,8 +180,9 @@ class RecommendServiceTest {
         assertThat(results).isEmpty();
     }
 
+    private final List<RecipeIngredient> allRecipeIngredients = new ArrayList<>();
+
     private void mockRecipeIngredients(Integer recipeId, List<Integer> ingredientIds) {
-        List<RecipeIngredient> ingredients = new ArrayList<>();
         IngredientCategory category = new IngredientCategory("채소", 0);
 
         for (Integer ingredientId : ingredientIds) {
@@ -196,13 +194,13 @@ class RecommendServiceTest {
                 setField(recipe, "id", recipeId);
 
                 RecipeIngredient ri = new RecipeIngredient(recipe, ingredient, BigDecimal.ONE, "개", true, 0);
-                ingredients.add(ri);
+                allRecipeIngredients.add(ri);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
 
-        when(recipeIngredientRepository.findByRecipeId(recipeId)).thenReturn(ingredients);
+        when(recipeIngredientRepository.findRequiredByRecipeIds(any())).thenReturn(allRecipeIngredients);
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {

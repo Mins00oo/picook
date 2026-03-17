@@ -47,7 +47,7 @@ class AdminAuthServiceTest {
     void login_shouldReturnTokensOnSuccess() throws Exception {
         String rawPassword = "password123";
         AdminUser admin = new AdminUser("admin@test.com", passwordEncoder.encode(rawPassword), AdminRole.SUPER_ADMIN);
-        setField(admin, "id", 1L);
+        setField(admin, "id", 1);
 
         when(adminUserRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(admin));
         when(adminUserRepository.save(any())).thenReturn(admin);
@@ -63,7 +63,7 @@ class AdminAuthServiceTest {
     @Test
     void login_shouldThrowForWrongPassword() throws Exception {
         AdminUser admin = new AdminUser("admin@test.com", passwordEncoder.encode("correct"), AdminRole.CONTENT_ADMIN);
-        setField(admin, "id", 1L);
+        setField(admin, "id", 1);
 
         when(adminUserRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(admin));
         when(adminUserRepository.save(any())).thenReturn(admin);
@@ -86,7 +86,7 @@ class AdminAuthServiceTest {
     void login_shouldLockAfterFiveFailedAttempts() throws Exception {
         String encoded = passwordEncoder.encode("correct");
         AdminUser admin = new AdminUser("admin@test.com", encoded, AdminRole.CONTENT_ADMIN);
-        setField(admin, "id", 1L);
+        setField(admin, "id", 1);
 
         when(adminUserRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(admin));
         when(adminUserRepository.save(any())).thenReturn(admin);
@@ -106,7 +106,7 @@ class AdminAuthServiceTest {
     void login_shouldResetFailedCountOnSuccess() throws Exception {
         String rawPassword = "correct";
         AdminUser admin = new AdminUser("admin@test.com", passwordEncoder.encode(rawPassword), AdminRole.CONTENT_ADMIN);
-        setField(admin, "id", 1L);
+        setField(admin, "id", 1);
 
         when(adminUserRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(admin));
         when(adminUserRepository.save(any())).thenReturn(admin);

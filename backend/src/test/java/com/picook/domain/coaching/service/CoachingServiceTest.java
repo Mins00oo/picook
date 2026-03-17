@@ -13,11 +13,14 @@ import com.picook.domain.user.entity.LoginType;
 import com.picook.domain.user.entity.User;
 import com.picook.domain.user.repository.UserRepository;
 import com.picook.global.exception.BusinessException;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.lang.reflect.Field;
@@ -31,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 class CoachingServiceTest {
 
     @Mock private CoachingLogRepository coachingLogRepository;
@@ -38,6 +42,8 @@ class CoachingServiceTest {
     @Mock private RecipeRepository recipeRepository;
     @Mock private UserRepository userRepository;
     @Mock private S3FileService s3FileService;
+    @Mock private PlatformTransactionManager txManager;
+    @Mock private EntityManager entityManager;
 
     private CoachingService coachingService;
     private UUID userId;
@@ -45,9 +51,11 @@ class CoachingServiceTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        when(txManager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
         coachingService = new CoachingService(
                 coachingLogRepository, cookingCompletionRepository,
-                recipeRepository, userRepository, s3FileService);
+                recipeRepository, userRepository, s3FileService,
+                txManager, entityManager);
         userId = UUID.randomUUID();
         recipe = new Recipe("김치찌개", "한식", "easy", 30, 2);
         setField(recipe, "id", 1);
@@ -180,9 +188,10 @@ class CoachingServiceTest {
         setField(log, "id", 1);
         log.complete(2000);
 
+        // DB 트리거가 증가시킨 후의 값 (refresh로 읽어오는 값)
         User user = new User(LoginType.KAKAO);
         setField(user, "id", userId);
-        setField(user, "completedCookingCount", 5);
+        setField(user, "completedCookingCount", 6);
 
         MultipartFile mockFile = mock(MultipartFile.class);
 
@@ -197,8 +206,9 @@ class CoachingServiceTest {
         assertThat(response.photoUrl()).isEqualTo("https://s3.com/photo.jpg");
         assertThat(response.recipeId()).isEqualTo(1);
         assertThat(response.rankInfo()).isNotNull();
-        assertThat(response.rankInfo().level()).isEqualTo(3); // count 5+1=6 -> LV3
+        assertThat(response.rankInfo().level()).isEqualTo(3); // count 6 -> LV3
         verify(cookingCompletionRepository).save(any(CookingCompletion.class));
+        verify(entityManager).refresh(user);
     }
 
     @Test

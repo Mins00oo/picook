@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 import java.lang.reflect.Field;
 import java.nio.file.Path;
@@ -40,6 +42,7 @@ class ShortsConvertServiceTest {
     @Mock private WhisperService whisperService;
     @Mock private RecipeStructurizer recipeStructurizer;
     @Mock private ShortsRateLimiter rateLimiter;
+    @Mock private PlatformTransactionManager txManager;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private ShortsConvertService shortsConvertService;
@@ -47,9 +50,11 @@ class ShortsConvertServiceTest {
 
     @BeforeEach
     void setUp() {
+        when(txManager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
         shortsConvertService = new ShortsConvertService(
                 shortsCacheService, historyRepository, conversionLogRepository,
-                ytDlpService, whisperService, recipeStructurizer, objectMapper, rateLimiter
+                ytDlpService, whisperService, recipeStructurizer, objectMapper, rateLimiter,
+                txManager
         );
         userId = UUID.randomUUID();
         when(conversionLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
