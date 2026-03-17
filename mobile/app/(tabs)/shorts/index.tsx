@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,12 @@ import {
   Alert,
   FlatList,
   TouchableOpacity,
-  Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
-import { Swipeable } from 'react-native-gesture-handler';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   colors,
@@ -49,10 +48,11 @@ export default function ShortsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [url, setUrl] = useState('');
-  const swipeableRefs = useRef<Map<number, Swipeable>>(new Map());
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const isSelectMode = selectedIds.size > 0;
 
   // ─── Queries ───
-  const { data: historyData } = useQuery({
+  const { data: historyData, isLoading: isHistoryLoading } = useQuery({
     queryKey: ['shorts-history'],
     queryFn: async () => {
       const res = await shortsApi.getRecent();
@@ -89,7 +89,6 @@ export default function ShortsScreen() {
     mutationFn: (historyId: number) => shortsApi.deleteHistory(historyId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shorts-history'] });
-      Alert.alert('완료', '변환 기록을 삭제했어요');
     },
     onError: () => {
       Alert.alert('오류', '삭제에 실패했어요');
@@ -100,6 +99,7 @@ export default function ShortsScreen() {
     mutationFn: () => shortsApi.deleteAllHistory(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shorts-history'] });
+      setSelectedIds(new Set());
     },
   });
 
@@ -108,7 +108,6 @@ export default function ShortsScreen() {
   const isValid = isValidShortsUrl(url);
   const showUrlError = hasInput && !isValid;
 
-  // URL 중복 제거: 같은 youtubeUrl은 최신 1건만
   const uniqueHistory = useMemo(() => {
     const list = historyData ?? [];
     return list.filter(
@@ -116,6 +115,8 @@ export default function ShortsScreen() {
         arr.findIndex((x: ShortsHistory) => x.youtubeUrl === item.youtubeUrl) === idx,
     );
   }, [historyData]);
+
+  const isAllSelected = uniqueHistory.length > 0 && selectedIds.size === uniqueHistory.length;
 
   // ─── Handlers ───
   const handlePaste = async () => {
@@ -135,73 +136,90 @@ export default function ShortsScreen() {
     convertMutation.mutate(url);
   };
 
-  const handleDeleteOne = useCallback((item: ShortsHistory) => {
-    swipeableRefs.current.get(item.cacheId)?.close();
-    deleteMutation.mutate(item.cacheId);
-  }, [deleteMutation]);
+  const toggleSelect = useCallback((cacheId: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(cacheId)) next.delete(cacheId);
+      else next.add(cacheId);
+      return next;
+    });
+  }, []);
 
-  const handleDeleteAll = useCallback(() => {
-    Alert.alert(
-      '전체 삭제',
-      '모든 변환 기록을 삭제할까요?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: () => deleteAllMutation.mutate(),
+  const toggleSelectAll = useCallback(() => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(uniqueHistory.map((item) => item.cacheId)));
+    }
+  }, [isAllSelected, uniqueHistory]);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedIds.size === 0) return;
+
+    const count = selectedIds.size;
+    const isAll = count === uniqueHistory.length;
+    const message = isAll
+      ? '모든 기록을 삭제할까요?'
+      : `선택한 ${count}개를 삭제할까요?`;
+
+    Alert.alert('삭제', message, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          if (isAll) {
+            deleteAllMutation.mutate();
+          } else {
+            const ids = Array.from(selectedIds);
+            for (const id of ids) {
+              await shortsApi.deleteHistory(id);
+            }
+            queryClient.invalidateQueries({ queryKey: ['shorts-history'] });
+            setSelectedIds(new Set());
+          }
         },
-      ],
-    );
-  }, [deleteAllMutation]);
-
-  // ─── Swipe delete action ───
-  const renderRightActions = useCallback(
-    (item: ShortsHistory) =>
-      (_progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
-        const scale = dragX.interpolate({
-          inputRange: [-80, 0],
-          outputRange: [1, 0.5],
-          extrapolate: 'clamp',
-        });
-
-        return (
-          <TouchableOpacity
-            style={styles.swipeDeleteBtn}
-            onPress={() => handleDeleteOne(item)}
-            activeOpacity={0.7}
-          >
-            <Animated.Text style={[styles.swipeDeleteText, { transform: [{ scale }] }]}>
-              삭제
-            </Animated.Text>
-          </TouchableOpacity>
-        );
       },
-    [handleDeleteOne],
+    ]);
+  }, [selectedIds, uniqueHistory.length, deleteAllMutation, queryClient]);
+
+  const handleCardPress = useCallback(
+    (item: ShortsHistory) => {
+      if (isSelectMode) {
+        toggleSelect(item.cacheId);
+      } else {
+        router.push({
+          pathname: '/(tabs)/shorts/result',
+          params: { id: String(item.cacheId) },
+        });
+      }
+    },
+    [isSelectMode, toggleSelect, router],
   );
 
   // ─── Card render ───
   const renderHistoryCard = useCallback(
-    ({ item }: { item: ShortsHistory }) => (
-      <Swipeable
-        ref={(ref) => {
-          if (ref) swipeableRefs.current.set(item.cacheId, ref);
-          else swipeableRefs.current.delete(item.cacheId);
-        }}
-        renderRightActions={renderRightActions(item)}
-        overshootRight={false}
-        rightThreshold={40}
-      >
+    ({ item }: { item: ShortsHistory }) => {
+      const selected = selectedIds.has(item.cacheId);
+
+      return (
         <TouchableOpacity
-          style={styles.card}
+          style={[styles.card, selected && styles.cardSelected]}
           activeOpacity={0.7}
-          onPress={() =>
-            router.push({
-              pathname: '/(tabs)/shorts/result',
-              params: { id: String(item.cacheId) },
-            })
-          }
+          onPress={() => handleCardPress(item)}
+          onLongPress={() => {
+            if (!isSelectMode) toggleSelect(item.cacheId);
+          }}
         >
+          {/* Checkbox */}
+          <TouchableOpacity
+            style={[styles.checkbox, selected && styles.checkboxSelected]}
+            onPress={() => toggleSelect(item.cacheId)}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            {selected && <Text style={styles.checkmark}>✓</Text>}
+          </TouchableOpacity>
+
           {/* Thumbnail */}
           <View style={styles.thumbnailBox}>
             {item.thumbnailUrl ? (
@@ -220,7 +238,7 @@ export default function ShortsScreen() {
           {/* Info */}
           <View style={styles.cardInfo}>
             <Text style={styles.cardTitle} numberOfLines={1}>
-              {item.title ?? '변환된 레시피'}
+              {item.title ?? '레시피'}
             </Text>
             {item.channelName ? (
               <Text style={styles.cardChannel} numberOfLines={1}>
@@ -230,12 +248,12 @@ export default function ShortsScreen() {
             <Text style={styles.cardTime}>{formatTimeAgo(item.convertedAt)}</Text>
           </View>
 
-          {/* Arrow */}
-          <Text style={styles.cardArrow}>›</Text>
+          {/* Arrow (선택 모드가 아닐 때만) */}
+          {!isSelectMode && <Text style={styles.cardArrow}>›</Text>}
         </TouchableOpacity>
-      </Swipeable>
-    ),
-    [renderRightActions, router],
+      );
+    },
+    [selectedIds, isSelectMode, handleCardPress, toggleSelect],
   );
 
   return (
@@ -279,23 +297,43 @@ export default function ShortsScreen() {
         />
       </View>
 
-      {/* Recent Conversions */}
+      {/* History */}
       <View style={styles.historySection}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>최근 변환</Text>
-          {uniqueHistory.length > 0 && (
-            <TouchableOpacity onPress={handleDeleteAll}>
-              <Text style={styles.deleteAllBtn}>전체 삭제</Text>
-            </TouchableOpacity>
+        {/* Section toolbar */}
+        <View style={[styles.sectionHeader, uniqueHistory.length > 0 && styles.sectionHeaderWithBorder]}>
+          {uniqueHistory.length > 0 ? (
+            <>
+              <TouchableOpacity style={styles.selectAllRow} onPress={toggleSelectAll}>
+                <View style={[styles.checkboxSmall, isAllSelected && styles.checkboxSmallSelected]}>
+                  {isAllSelected && <Text style={styles.checkmarkSmall}>✓</Text>}
+                </View>
+                <Text style={styles.countText}>{uniqueHistory.length}개</Text>
+              </TouchableOpacity>
+
+              {isSelectMode ? (
+                <TouchableOpacity onPress={handleDeleteSelected}>
+                  <Text style={styles.deleteBtn}>삭제 ({selectedIds.size})</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.sectionLabel}>최근 변환</Text>
+              )}
+            </>
+          ) : (
+            <Text style={styles.sectionLabel}>최근 변환</Text>
           )}
         </View>
 
-        {uniqueHistory.length === 0 ? (
+        {isHistoryLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={colors.textTertiary} />
+          </View>
+        ) : uniqueHistory.length === 0 ? (
           <View style={styles.emptyContainer}>
             <EmptyState
               emoji="🎬"
               title="아직 변환한 영상이 없어요"
               description="유튜브 쇼츠 URL을 붙여넣어 보세요"
+              transparent
             />
           </View>
         ) : (
@@ -305,6 +343,7 @@ export default function ShortsScreen() {
             renderItem={renderHistoryCard}
             contentContainerStyle={styles.cardList}
             showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
         )}
       </View>
@@ -390,23 +429,63 @@ const styles = StyleSheet.create({
   // History section
   historySection: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
   },
-  sectionTitle: {
-    ...typography.h3,
-    color: colors.textPrimary,
+  sectionHeaderWithBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.divider,
   },
-  deleteAllBtn: {
+  selectAllRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  countText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  sectionLabel: {
+    ...typography.caption,
+    color: colors.textTertiary,
+  },
+  deleteBtn: {
     ...typography.caption,
     color: colors.error,
     fontWeight: '600',
+  },
+  // Checkbox (small — toolbar)
+  checkboxSmall: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxSmallSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkmarkSmall: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    marginTop: -1,
+  },
+  // Loading / Empty
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: spacing.xxl,
   },
   emptyContainer: {
     flex: 1,
@@ -415,44 +494,70 @@ const styles = StyleSheet.create({
   },
   // Card list
   cardList: {
-    gap: spacing.sm,
     paddingBottom: spacing.lg,
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.divider,
+    marginLeft: 56,
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.sm,
-    gap: spacing.sm,
-    ...shadow.sm,
+    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    gap: 12,
+    backgroundColor: colors.background,
+  },
+  cardSelected: {
+    backgroundColor: colors.primaryLight,
+  },
+  // Checkbox (card)
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkmark: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    marginTop: -1,
   },
   // Thumbnail
   thumbnailBox: {
-    width: 80,
-    height: 60,
-    borderRadius: borderRadius.sm,
+    width: 56,
+    height: 56,
+    borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: colors.divider,
   },
   thumbnail: {
-    width: 80,
-    height: 60,
+    width: 56,
+    height: 56,
   },
   thumbnailPlaceholder: {
-    width: 80,
-    height: 60,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primaryLight,
   },
   thumbnailEmoji: {
-    fontSize: 24,
+    fontSize: 22,
   },
   // Card info
   cardInfo: {
     flex: 1,
-    gap: 2,
+    gap: 1,
   },
   cardTitle: {
     ...typography.caption,
@@ -469,23 +574,8 @@ const styles = StyleSheet.create({
   },
   // Arrow
   cardArrow: {
-    fontSize: 22,
+    fontSize: 18,
     color: colors.textTertiary,
     fontWeight: '300',
-    paddingRight: spacing.xs,
-  },
-  // Swipe delete
-  swipeDeleteBtn: {
-    width: 72,
-    backgroundColor: colors.error,
-    borderRadius: borderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: spacing.sm,
-  },
-  swipeDeleteText: {
-    ...typography.caption,
-    color: colors.textInverse,
-    fontWeight: '700',
   },
 });
