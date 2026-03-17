@@ -22,6 +22,8 @@ public interface ShortsConversionHistoryRepository extends JpaRepository<ShortsC
             nativeQuery = true)
     List<ShortsConversionHistory> findRecentByUserIdDistinctUrl(@Param("userId") UUID userId);
 
+    boolean existsByUserIdAndShortsCacheId(UUID userId, Integer shortsCacheId);
+
     long countByCreatedAtBetween(Instant start, Instant end);
 
     @Query(value = "SELECT CAST(created_at AS DATE) AS day, COUNT(*) FROM shorts_conversion_history WHERE created_at BETWEEN :start AND :end GROUP BY day ORDER BY day",

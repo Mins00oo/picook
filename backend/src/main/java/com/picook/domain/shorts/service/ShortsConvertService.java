@@ -184,6 +184,17 @@ public class ShortsConvertService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public ShortsConvertResponse getCacheDetail(UUID userId, Integer cacheId) {
+        if (!historyRepository.existsByUserIdAndShortsCacheId(userId, cacheId)) {
+            throw new BusinessException("SHORTS_NOT_FOUND", "변환 기록을 찾을 수 없습니다", HttpStatus.NOT_FOUND);
+        }
+        ShortsCache cache = shortsCacheService.findById(cacheId)
+                .orElseThrow(() -> new BusinessException("SHORTS_NOT_FOUND", "변환 기록을 찾을 수 없습니다", HttpStatus.NOT_FOUND));
+        ShortsRecipeResult recipe = parseResult(cache.getResult());
+        return ShortsConvertResponse.of(cache, recipe, true);
+    }
+
     @Transactional
     public ShortsCache reconvertFromCache(ShortsCache existing) {
         String url = existing.getYoutubeUrl();

@@ -38,6 +38,12 @@ public class ShortsController {
         return ResponseEntity.ok(ApiResponse.success(responses));
     }
 
+    @GetMapping("/{cacheId}")
+    public ResponseEntity<ApiResponse<ShortsConvertResponse>> getCacheDetail(@PathVariable Integer cacheId) {
+        ShortsConvertResponse response = shortsConvertService.getCacheDetail(getCurrentUserId(), cacheId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
     private UUID getCurrentUserId() {
         String principal = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return UUID.fromString(principal);

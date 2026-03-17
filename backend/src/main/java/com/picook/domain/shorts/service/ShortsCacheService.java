@@ -21,6 +21,10 @@ public class ShortsCacheService {
         return shortsCacheRepository.findByUrlHashAndAiModelVersion(urlHash, aiModelVersion);
     }
 
+    public Optional<ShortsCache> findById(Integer id) {
+        return shortsCacheRepository.findById(id);
+    }
+
     @Transactional
     public ShortsCache save(ShortsCache cache) {
         return shortsCacheRepository.save(cache);

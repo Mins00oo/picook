@@ -239,6 +239,7 @@ com.picook/
 ### 쇼츠 (/api/v1/shorts)
 | POST /convert | 변환 |
 | GET /recent | 최근 변환 (URL 기준 중복 제거, 최대 20건) |
+| GET /{cacheId} | 캐시 상세 조회 (본인 변환 기록만 접근 가능) |
 
 ### 검색 기록 (/api/v1/search-history)
 | GET / | 목록 | DELETE /{id} | 개별삭제 | DELETE / | 전체삭제 |
