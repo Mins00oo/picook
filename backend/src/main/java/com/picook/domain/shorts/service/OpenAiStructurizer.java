@@ -87,13 +87,21 @@ public class OpenAiStructurizer implements RecipeStructurizer {
                     .block();
 
             String content = extractContent(responseJson);
+            log.debug("GPT raw content: {}", content);
 
             if (content.contains("NOT_COOKING_VIDEO")) {
                 throw new BusinessException("NOT_COOKING_VIDEO",
                         "요리 영상이 아닙니다", HttpStatus.BAD_REQUEST);
             }
 
-            return objectMapper.readValue(content, ShortsRecipeResult.class);
+            // GPT가 ```json ... ``` 마크다운으로 감싸는 경우 처리
+            String json = content.strip();
+            if (json.startsWith("```")) {
+                json = json.replaceFirst("```(?:json)?\\s*", "");
+                json = json.replaceFirst("\\s*```$", "");
+            }
+
+            return objectMapper.readValue(json, ShortsRecipeResult.class);
         } catch (BusinessException e) {
             throw e;
         } catch (WebClientResponseException e) {
