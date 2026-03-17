@@ -27,16 +27,16 @@ public interface IngredientRepository extends JpaRepository<Ingredient, Integer>
 
     @Query("SELECT i FROM Ingredient i JOIN FETCH i.category LEFT JOIN FETCH i.synonyms " +
             "WHERE (:categoryId IS NULL OR i.category.id = :categoryId) " +
-            "AND (:keyword IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+            "AND (:keyword IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')))")
     List<Ingredient> searchIngredients(@Param("categoryId") Integer categoryId,
                                        @Param("keyword") String keyword);
 
     @Query(value = "SELECT i FROM Ingredient i JOIN FETCH i.category LEFT JOIN FETCH i.synonyms " +
             "WHERE (:categoryId IS NULL OR i.category.id = :categoryId) " +
-            "AND (:keyword IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%')))",
+            "AND (:keyword IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')))",
             countQuery = "SELECT COUNT(i) FROM Ingredient i " +
                     "WHERE (:categoryId IS NULL OR i.category.id = :categoryId) " +
-                    "AND (:keyword IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+                    "AND (:keyword IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')))")
     Page<Ingredient> searchIngredientsPage(@Param("categoryId") Integer categoryId,
                                             @Param("keyword") String keyword,
                                             Pageable pageable);

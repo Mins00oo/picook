@@ -20,14 +20,14 @@ public interface RecipeRepository extends JpaRepository<Recipe, Integer> {
             "AND (:category IS NULL OR r.category = :category) " +
             "AND (:difficulty IS NULL OR r.difficulty = :difficulty) " +
             "AND (:coachingReady IS NULL OR r.coachingReady = :coachingReady) " +
-            "AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%')))",
+            "AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')))",
             countQuery = "SELECT COUNT(r) FROM Recipe r " +
                     "WHERE r.isDeleted = false " +
                     "AND (:status IS NULL OR r.status = :status) " +
                     "AND (:category IS NULL OR r.category = :category) " +
                     "AND (:difficulty IS NULL OR r.difficulty = :difficulty) " +
                     "AND (:coachingReady IS NULL OR r.coachingReady = :coachingReady) " +
-                    "AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+                    "AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')))")
     Page<Recipe> searchRecipes(@Param("status") String status,
                                @Param("category") String category,
                                @Param("difficulty") String difficulty,

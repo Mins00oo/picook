@@ -13,12 +13,12 @@ public interface ShortsCacheRepository extends JpaRepository<ShortsCache, Intege
     Optional<ShortsCache> findByUrlHashAndAiModelVersion(String urlHash, String aiModelVersion);
 
     @Query(value = "SELECT s FROM ShortsCache s " +
-            "WHERE (:keyword IS NULL OR LOWER(s.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "       OR LOWER(s.youtubeUrl) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+            "WHERE (:keyword IS NULL OR LOWER(s.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')) " +
+            "       OR LOWER(s.youtubeUrl) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%'))) " +
             "AND (:modelVersion IS NULL OR s.aiModelVersion = :modelVersion)",
             countQuery = "SELECT COUNT(s) FROM ShortsCache s " +
-                    "WHERE (:keyword IS NULL OR LOWER(s.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-                    "       OR LOWER(s.youtubeUrl) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+                    "WHERE (:keyword IS NULL OR LOWER(s.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')) " +
+                    "       OR LOWER(s.youtubeUrl) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%'))) " +
                     "AND (:modelVersion IS NULL OR s.aiModelVersion = :modelVersion)")
     Page<ShortsCache> searchCache(@Param("keyword") String keyword,
                                    @Param("modelVersion") String modelVersion,

@@ -31,13 +31,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query(value = "SELECT u FROM User u " +
             "WHERE (:status IS NULL OR u.status = :status) " +
             "AND (:loginType IS NULL OR u.loginType = :loginType) " +
-            "AND (:keyword IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "     OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :keyword, '%')))",
+            "AND (:keyword IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')) " +
+            "     OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')))",
             countQuery = "SELECT COUNT(u) FROM User u " +
                     "WHERE (:status IS NULL OR u.status = :status) " +
                     "AND (:loginType IS NULL OR u.loginType = :loginType) " +
-                    "AND (:keyword IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-                    "     OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+                    "AND (:keyword IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')) " +
+                    "     OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')))")
     Page<User> searchUsers(@Param("status") UserStatus status,
                            @Param("loginType") LoginType loginType,
                            @Param("keyword") String keyword,
