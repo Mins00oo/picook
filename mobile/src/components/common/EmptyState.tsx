@@ -9,6 +9,7 @@ interface EmptyStateProps {
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
+  transparent?: boolean;
 }
 
 export function EmptyState({
@@ -17,9 +18,10 @@ export function EmptyState({
   description,
   actionLabel,
   onAction,
+  transparent = false,
 }: EmptyStateProps) {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, transparent && styles.transparent]}>
       <Text style={styles.emoji}>{emoji}</Text>
       <Text style={styles.title}>{title}</Text>
       {description ? (
@@ -46,6 +48,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
+  },
+  transparent: {
+    backgroundColor: 'transparent',
+    borderRadius: 0,
   },
   emoji: {
     fontSize: 48,

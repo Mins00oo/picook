@@ -116,6 +116,7 @@ const styles = StyleSheet.create({
   },
   disabled: {
     backgroundColor: '#E5E7EB',
+    opacity: 1,
     shadowOpacity: 0,
     elevation: 0,
   },
