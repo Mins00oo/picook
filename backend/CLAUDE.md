@@ -280,11 +280,12 @@ http.authorizeHttpRequests(auth -> auth
 2. shorts_cache에서 hash + 현재 ai_model_version 조회
 3. 캐시 있으면 → 즉시 반환
 4. 캐시 없으면:
-   a. yt-dlp로 음성 추출 (.mp3)
-   b. Whisper API로 STT
-   c. GPT-4o로 단계별 구조화 (JSON)
-   d. 결과를 shorts_cache에 저장
-5. 반환
+   a. yt-dlp --dump-json으로 메타데이터(채널명, 원본제목, 길이, 썸네일) 파싱
+   b. yt-dlp로 음성 추출 (.mp3)
+   c. Whisper API로 STT
+   d. GPT-4o로 단계별 구조화 (JSON)
+   e. 결과 + 메타데이터를 shorts_cache에 저장
+5. 반환 (channelName, originalTitle, durationSeconds 포함)
 ```
 
 ## 엑셀 일괄등록
@@ -333,6 +334,10 @@ http.authorizeHttpRequests(auth -> auth
 - ✅ V3: 트리거
 - ✅ V4: 쇼츠 변환 이력 테이블
 - ✅ V5: Feedback updated_at 필드
+- ✅ V6: enum 대소문자 제약조건 수정
+- ✅ V7: 테스트 시드 데이터
+- ✅ V8: 쇼츠 변환 로그 테이블
+- ✅ V9: shorts_cache 유튜브 메타데이터 컬럼 (channel_name, original_title, duration_seconds)
 
 ### 테스트 (17개 파일, 전체 통과)
 - ✅ JwtProvider, JwtAuthenticationFilter
