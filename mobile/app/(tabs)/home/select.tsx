@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,24 +6,55 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { Colors } from '../../../src/constants/colors';
+import {
+  colors,
+  typography,
+  spacing,
+  borderRadius,
+  shadow,
+  getIngredientEmoji,
+  getCategoryEmoji,
+} from '../../../src/constants/theme';
 import { Button } from '../../../src/components/common/Button';
 import { Loading } from '../../../src/components/common/Loading';
 import { ErrorScreen } from '../../../src/components/common/ErrorScreen';
+import { EmptyState } from '../../../src/components/common/EmptyState';
 import { ingredientApi } from '../../../src/api/ingredientApi';
 import { useSelectionStore } from '../../../src/stores/selectionStore';
 import { searchIngredients } from '../../../src/utils/search';
 import type { Ingredient, IngredientCategory } from '../../../src/types/ingredient';
 
+const GRID_COLUMNS = 3;
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const GRID_PADDING = spacing.lg;
+const GRID_GAP = spacing.sm;
+const ITEM_SIZE = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
+
 export default function SelectScreen() {
   const router = useRouter();
   const { selectedIds, toggle, count, clear } = useSelectionStore();
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchInput(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setSearchQuery(text), 300);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const { data: categoriesData, isLoading: catLoading } = useQuery({
     queryKey: ['ingredient-categories'],
@@ -55,6 +86,11 @@ export default function SelectScreen() {
     return list;
   }, [ingredients, activeCategory, searchQuery]);
 
+  const selectedIngredients = useMemo(
+    () => ingredients.filter((ing) => selectedIds.has(ing.id)),
+    [ingredients, selectedIds],
+  );
+
   const handleToggle = useCallback((id: number) => toggle(id), [toggle]);
 
   if (catLoading || ingLoading) return <Loading message="재료를 불러오는 중..." />;
@@ -62,9 +98,10 @@ export default function SelectScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>← 뒤로</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.title}>재료 선택</Text>
         <TouchableOpacity onPress={clear}>
@@ -72,30 +109,41 @@ export default function SelectScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Search */}
       <View style={styles.searchBox}>
+        <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
           style={styles.searchInput}
           placeholder="재료 검색 (초성 지원: ㄱㅁㄹ)"
-          placeholderTextColor={Colors.textTertiary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
+          placeholderTextColor={colors.textTertiary}
+          value={searchInput}
+          onChangeText={handleSearchChange}
+          onFocus={() => setSearchFocused(true)}
+          onBlur={() => setSearchFocused(false)}
           autoCorrect={false}
         />
+        {searchInput.length > 0 && (
+          <TouchableOpacity onPress={() => { setSearchInput(''); setSearchQuery(''); }}>
+            <Text style={styles.searchClear}>✕</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
+      {/* Category Chips */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoryTabs}
+        contentContainerStyle={styles.categoryChips}
       >
         <TouchableOpacity
-          style={[styles.categoryTab, activeCategory === null && styles.categoryTabActive]}
+          style={[styles.categoryChip, activeCategory === null && styles.categoryChipActive]}
           onPress={() => setActiveCategory(null)}
         >
+          <Text style={styles.categoryEmoji}>{getCategoryEmoji('전체')}</Text>
           <Text
             style={[
-              styles.categoryText,
-              activeCategory === null && styles.categoryTextActive,
+              styles.categoryLabel,
+              activeCategory === null && styles.categoryLabelActive,
             ]}
           >
             전체
@@ -105,15 +153,16 @@ export default function SelectScreen() {
           <TouchableOpacity
             key={cat.id}
             style={[
-              styles.categoryTab,
-              activeCategory === cat.id && styles.categoryTabActive,
+              styles.categoryChip,
+              activeCategory === cat.id && styles.categoryChipActive,
             ]}
             onPress={() => setActiveCategory(cat.id)}
           >
+            <Text style={styles.categoryEmoji}>{getCategoryEmoji(cat.name)}</Text>
             <Text
               style={[
-                styles.categoryText,
-                activeCategory === cat.id && styles.categoryTextActive,
+                styles.categoryLabel,
+                activeCategory === cat.id && styles.categoryLabelActive,
               ]}
             >
               {cat.name}
@@ -122,32 +171,70 @@ export default function SelectScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView style={styles.grid} contentContainerStyle={styles.gridContent}>
-        {filteredIngredients.map((ing: Ingredient) => {
-          const selected = selectedIds.has(ing.id);
-          return (
-            <TouchableOpacity
-              key={ing.id}
-              style={[styles.chip, selected && styles.chipSelected]}
-              onPress={() => handleToggle(ing.id)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                {ing.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-        {filteredIngredients.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>검색 결과가 없어요</Text>
+      {/* Ingredient Grid */}
+      <ScrollView style={styles.gridScroll} contentContainerStyle={styles.gridContent}>
+        {filteredIngredients.length > 0 ? (
+          <View style={styles.grid}>
+            {filteredIngredients.map((ing: Ingredient) => {
+              const selected = selectedIds.has(ing.id);
+              return (
+                <TouchableOpacity
+                  key={ing.id}
+                  style={styles.gridItem}
+                  onPress={() => handleToggle(ing.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.iconCircle, selected && styles.iconCircleSelected]}>
+                    <Text style={styles.ingredientEmoji}>
+                      {getIngredientEmoji(ing.name)}
+                    </Text>
+                    {selected && (
+                      <View style={styles.checkBadge}>
+                        <Text style={styles.checkMark}>✓</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text
+                    style={[styles.ingredientName, selected && styles.ingredientNameSelected]}
+                    numberOfLines={1}
+                  >
+                    {ing.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
+        ) : (
+          <EmptyState
+            emoji="🔍"
+            title="검색 결과가 없어요"
+            description="다른 키워드로 검색해보세요"
+          />
         )}
       </ScrollView>
 
+      {/* Footer */}
       <View style={styles.footer}>
+        {selectedIngredients.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.selectedChips}
+          >
+            {selectedIngredients.map((ing) => (
+              <TouchableOpacity
+                key={ing.id}
+                style={styles.selectedChip}
+                onPress={() => toggle(ing.id)}
+              >
+                <Text style={styles.selectedChipText}>{ing.name}</Text>
+                <Text style={styles.selectedChipX}>✕</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
         <Button
-          title={`선택 완료 (${count()}개)`}
+          title={count() > 0 ? `선택 완료 (${count()}개)` : '재료를 선택해주세요'}
           onPress={() => router.push('/(tabs)/home/confirm')}
           disabled={count() === 0}
           size="large"
@@ -161,107 +248,192 @@ export default function SelectScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
-  back: {
-    fontSize: 16,
-    color: Colors.primary,
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.sm,
+  },
+  backIcon: {
+    fontSize: 18,
+    color: colors.textPrimary,
     fontWeight: '600',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
+    ...typography.h3,
+    color: colors.textPrimary,
   },
   clearBtn: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+    ...typography.caption,
+    color: colors.textTertiary,
   },
+  // Search
   searchBox: {
-    paddingHorizontal: 20,
-    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    backgroundColor: '#F5F5F5',
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    height: 44,
+    gap: spacing.sm,
+  },
+  searchIcon: {
+    fontSize: 16,
   },
   searchInput: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: Colors.text,
+    flex: 1,
+    ...typography.caption,
+    color: colors.textPrimary,
+    padding: 0,
   },
-  categoryTabs: {
-    paddingHorizontal: 20,
-    gap: 8,
-    paddingBottom: 12,
-  },
-  categoryTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.surface,
-  },
-  categoryTabActive: {
-    backgroundColor: Colors.primary,
-  },
-  categoryText: {
+  searchClear: {
     fontSize: 14,
+    color: colors.textTertiary,
+    padding: spacing.xs,
+  },
+  // Categories
+  categoryChips: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 4,
+  },
+  categoryChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  categoryEmoji: {
+    fontSize: 14,
+  },
+  categoryLabel: {
+    ...typography.small,
     fontWeight: '500',
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
-  categoryTextActive: {
-    color: Colors.white,
+  categoryLabelActive: {
+    color: colors.textInverse,
+    fontWeight: '600',
   },
-  grid: {
+  // Grid
+  gridScroll: {
     flex: 1,
   },
   gridContent: {
+    paddingHorizontal: GRID_PADDING,
+    paddingBottom: spacing.lg,
+  },
+  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 20,
-    gap: 8,
-    paddingBottom: 20,
+    gap: GRID_GAP,
   },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
+  gridItem: {
+    width: ITEM_SIZE,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+  },
+  iconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.surface,
     borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  chipSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: '#FFF5F0',
+  iconCircleSelected: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+    borderWidth: 2,
   },
-  chipText: {
-    fontSize: 14,
-    color: Colors.text,
+  ingredientEmoji: {
+    fontSize: 28,
   },
-  chipTextSelected: {
-    color: Colors.primary,
+  checkBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkMark: {
+    fontSize: 11,
+    color: colors.textInverse,
+    fontWeight: '700',
+  },
+  ingredientName: {
+    ...typography.small,
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  ingredientNameSelected: {
+    color: colors.primary,
     fontWeight: '600',
   },
-  emptyState: {
-    width: '100%',
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: Colors.textTertiary,
-  },
+  // Footer
   footer: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
+    borderTopColor: colors.divider,
+    ...shadow.md,
+    gap: spacing.sm,
+  },
+  selectedChips: {
+    gap: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  selectedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
+    gap: 4,
+  },
+  selectedChipText: {
+    ...typography.small,
+    color: colors.textInverse,
+    fontWeight: '500',
+  },
+  selectedChipX: {
+    fontSize: 10,
+    color: colors.textInverse,
+    opacity: 0.8,
   },
   confirmButton: {
     width: '100%',

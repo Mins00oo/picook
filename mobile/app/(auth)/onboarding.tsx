@@ -6,6 +6,7 @@ import {
   Dimensions,
   FlatList,
   ViewToken,
+  TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -91,7 +92,12 @@ export default function OnboardingScreen() {
         {currentPage === PAGES.length - 1 ? (
           <Button title="시작하기" onPress={handleStart} size="large" style={styles.button} />
         ) : (
-          <Button title="다음" onPress={handleNext} size="large" style={styles.button} />
+          <>
+            <Button title="다음" onPress={handleNext} size="large" style={styles.button} />
+            <TouchableOpacity onPress={handleStart} style={styles.skipButton}>
+              <Text style={styles.skipText}>건너뛰기</Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
     </SafeAreaView>
@@ -150,5 +156,13 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
+  },
+  skipButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  skipText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
   },
 });

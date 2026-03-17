@@ -1,4 +1,7 @@
 import { create } from 'zustand';
+import { Alert } from 'react-native';
+
+const MAX_SELECTION = 30;
 
 interface SelectionState {
   selectedIds: Set<number>;
@@ -20,6 +23,10 @@ export const useSelectionStore = create<SelectionState>((set, get) => ({
       if (next.has(id)) {
         next.delete(id);
       } else {
+        if (next.size >= MAX_SELECTION) {
+          Alert.alert('알림', `최대 ${MAX_SELECTION}개까지 선택 가능해요`);
+          return state;
+        }
         next.add(id);
       }
       return { selectedIds: next };
@@ -28,7 +35,10 @@ export const useSelectionStore = create<SelectionState>((set, get) => ({
   addMultiple: (ids) =>
     set((state) => {
       const next = new Set(state.selectedIds);
-      ids.forEach((id) => next.add(id));
+      for (const id of ids) {
+        if (next.size >= MAX_SELECTION) break;
+        next.add(id);
+      }
       return { selectedIds: next };
     }),
 
