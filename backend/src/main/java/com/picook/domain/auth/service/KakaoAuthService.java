@@ -3,6 +3,7 @@ package com.picook.domain.auth.service;
 import com.picook.domain.auth.dto.AuthResponse;
 import com.picook.domain.user.entity.LoginType;
 import com.picook.domain.user.entity.User;
+import com.picook.domain.user.entity.UserStatus;
 import com.picook.domain.user.repository.UserRepository;
 import com.picook.global.exception.BusinessException;
 import org.slf4j.Logger;
@@ -51,6 +52,14 @@ public class KakaoAuthService {
 
         User user = userRepository.findByKakaoId(kakaoId)
                 .map(existingUser -> {
+                    if (existingUser.getStatus() == UserStatus.SUSPENDED) {
+                        throw new BusinessException("USER_SUSPENDED",
+                                "정지된 계정입니다: " + existingUser.getSuspendedReason(), HttpStatus.FORBIDDEN);
+                    }
+                    if (existingUser.getStatus() == UserStatus.DELETED) {
+                        throw new BusinessException("USER_DELETED",
+                                "탈퇴된 계정입니다", HttpStatus.FORBIDDEN);
+                    }
                     existingUser.setLastLoginAt(Instant.now());
                     return existingUser;
                 })
