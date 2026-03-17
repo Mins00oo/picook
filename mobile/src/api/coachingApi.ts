@@ -3,6 +3,9 @@ import type { ApiResponse } from '../types/api';
 import type { CoachingLog, CoachingLogRequest } from '../types/coaching';
 
 export const coachingApi = {
+  start: (data: { mode: 'single' | 'multi'; recipeIds: number[] }) =>
+    api.post<ApiResponse<{ id: number }>>('/api/v1/coaching/start', data),
+
   complete: (data: CoachingLogRequest) =>
     api.post<ApiResponse<CoachingLog>>('/api/v1/coaching/complete', data),
 

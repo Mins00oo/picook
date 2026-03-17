@@ -55,8 +55,12 @@ export default function CompleteScreen() {
         setUser(updatedUser);
       }
       queryClient.invalidateQueries({ queryKey: ['recipe'] });
+      router.replace('/(tabs)/home');
     },
-    onError: () => Alert.alert('오류', '완료 기록에 실패했습니다.'),
+    onError: () => {
+      Alert.alert('오류', '완료 기록에 실패했습니다.');
+      router.replace('/(tabs)/home');
+    },
   });
 
   const handlePickPhoto = async () => {
@@ -75,7 +79,6 @@ export default function CompleteScreen() {
 
   const handleDone = () => {
     completeMutation.mutate();
-    router.replace('/(tabs)/home');
   };
 
   const count = (user?.completedCount ?? 0) + 1;
