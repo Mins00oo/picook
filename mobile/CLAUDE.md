@@ -263,6 +263,14 @@ const api = axios.create({
 - ✅ useShortsConvert (mutation + polling)
 - ✅ 변환 결과 화면 (단계별 레시피)
 
+### 8단계: UI 품질 개선 (PIC-20)
+- ✅ 재료 선택: 카테고리-그리드 간 거대 여백 제거 (ScrollView flexGrow:0)
+- ✅ 재료 선택: 비활성 버튼 색상 변경 (#E5E7EB + #9CA3AF), 빈 상태 분리
+- ✅ 쇼츠 탭: URL 중복 제거 (같은 youtubeUrl 최신 1건만)
+- ✅ 쇼츠 탭: 카드 디자인 (썸네일 80x60 + 제목 + URL + 상대시간 + 화살표)
+- ✅ 쇼츠 탭: 빈 상태 (🎬 + 안내), URL 검증 (✅/❌ + 테두리 색상)
+- ✅ 앱 아이콘 교체 (프라이팬+계란+허브, scripts/generate-icon.py)
+
 ### 빌드 및 환경 설정
 - ✅ Expo SDK 55 → 54 다운그레이드 (Expo Go 최신 버전 호환)
 - ✅ react-native-web + react-dom 설치 (웹 번들링 지원)
