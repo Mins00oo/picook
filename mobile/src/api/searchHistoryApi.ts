@@ -4,13 +4,18 @@ import type { ApiResponse } from '../types/api';
 export interface SearchHistory {
   id: number;
   ingredientIds: number[];
-  ingredientNames: string[];
+  filters: string | null;
+  resultCount: number;
   createdAt: string;
 }
 
 export const searchHistoryApi = {
-  getRecent: (size = 5) =>
-    api.get<ApiResponse<SearchHistory[]>>('/api/v1/search-history', {
-      params: { size },
-    }),
+  getRecent: () =>
+    api.get<ApiResponse<SearchHistory[]>>('/api/v1/search-history'),
+
+  deleteAll: () =>
+    api.delete<ApiResponse<null>>('/api/v1/search-history'),
+
+  deleteOne: (id: number) =>
+    api.delete<ApiResponse<null>>(`/api/v1/search-history/${id}`),
 };

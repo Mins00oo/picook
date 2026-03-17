@@ -9,19 +9,32 @@ export interface CoachingState {
   startedAt: string;
 }
 
-export interface CoachingLogRequest {
-  recipeId: number;
-  completedSteps: number;
-  totalTimeSeconds: number;
-  photoUrl?: string;
+export interface StartCoachingRequest {
+  mode: 'single' | 'multi';
+  recipeIds: number[];
+  estimatedSeconds?: number;
 }
 
-export interface CoachingLog {
+export interface CompleteCoachingRequest {
+  actualSeconds: number;
+}
+
+export interface CoachingLogResponse {
+  id: number;
+  mode: string;
+  recipeIds: number[];
+  estimatedSeconds: number | null;
+  actualSeconds: number | null;
+  completed: boolean;
+  startedAt: string;
+  completedAt: string | null;
+}
+
+export interface CookingCompletionResponse {
   id: number;
   recipeId: number;
-  recipeTitle: string;
-  completedSteps: number;
-  totalTimeSeconds: number;
+  coachingLogId: number;
   photoUrl: string | null;
   createdAt: string;
+  rankInfo: import('./user').RankInfo;
 }

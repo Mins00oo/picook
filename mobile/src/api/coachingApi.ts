@@ -1,16 +1,23 @@
 import api from './client';
 import type { ApiResponse } from '../types/api';
-import type { CoachingLog, CoachingLogRequest } from '../types/coaching';
+import type {
+  StartCoachingRequest,
+  CompleteCoachingRequest,
+  CoachingLogResponse,
+  CookingCompletionResponse,
+} from '../types/coaching';
 
 export const coachingApi = {
-  start: (data: { mode: 'single' | 'multi'; recipeIds: number[] }) =>
-    api.post<ApiResponse<{ id: number }>>('/api/v1/coaching/start', data),
+  start: (data: StartCoachingRequest) =>
+    api.post<ApiResponse<CoachingLogResponse>>('/api/v1/coaching/start', data),
 
-  complete: (data: CoachingLogRequest) =>
-    api.post<ApiResponse<CoachingLog>>('/api/v1/coaching/complete', data),
+  complete: (id: number, data: CompleteCoachingRequest) =>
+    api.patch<ApiResponse<CoachingLogResponse>>(`/api/v1/coaching/${id}/complete`, data),
 
-  uploadPhoto: (formData: FormData) =>
-    api.post<ApiResponse<{ url: string }>>('/api/v1/files/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+  uploadPhoto: (coachingId: number, formData: FormData) =>
+    api.post<ApiResponse<CookingCompletionResponse>>(
+      `/api/v1/coaching/${coachingId}/photo`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    ),
 };

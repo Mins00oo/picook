@@ -44,6 +44,18 @@ public class ShortsController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @DeleteMapping("/history/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteHistory(@PathVariable Integer id) {
+        shortsConvertService.deleteHistory(getCurrentUserId(), id);
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    @DeleteMapping("/history")
+    public ResponseEntity<ApiResponse<Void>> deleteAllHistory() {
+        shortsConvertService.deleteAllHistory(getCurrentUserId());
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
     private UUID getCurrentUserId() {
         String principal = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return UUID.fromString(principal);

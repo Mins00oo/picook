@@ -1,16 +1,24 @@
 import api from './client';
-import type { ApiResponse, PageResponse } from '../types/api';
-import type { RecipeSummary } from '../types/recipe';
+import type { ApiResponse } from '../types/api';
+
+export interface FavoriteItem {
+  id: number; // favorite entity ID
+  recipeId: number;
+  recipeTitle: string;
+  recipeThumbnailUrl: string | null;
+  recipeCategory: string;
+  recipeDifficulty: string;
+  cookingTimeMinutes: number;
+  createdAt: string;
+}
 
 export const favoriteApi = {
-  getList: (page = 0, size = 20) =>
-    api.get<ApiResponse<PageResponse<RecipeSummary>>>('/api/v1/favorites', {
-      params: { page, size },
-    }),
+  getList: () =>
+    api.get<ApiResponse<FavoriteItem[]>>('/api/v1/favorites'),
 
   add: (recipeId: number) =>
-    api.post<ApiResponse<null>>(`/api/v1/favorites/${recipeId}`),
+    api.post<ApiResponse<FavoriteItem>>('/api/v1/favorites', { recipeId }),
 
-  remove: (recipeId: number) =>
-    api.delete<ApiResponse<null>>(`/api/v1/favorites/${recipeId}`),
+  remove: (favoriteId: number) =>
+    api.delete<ApiResponse<null>>(`/api/v1/favorites/${favoriteId}`),
 };

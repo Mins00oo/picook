@@ -1,7 +1,7 @@
 export interface IngredientCategory {
   id: number;
   name: string;
-  displayOrder: number;
+  sortOrder: number;
 }
 
 export interface Ingredient {

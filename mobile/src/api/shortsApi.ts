@@ -1,16 +1,14 @@
 import api from './client';
-import type { ApiResponse, PageResponse } from '../types/api';
+import type { ApiResponse } from '../types/api';
 import type { ShortsConvertResponse, ShortsHistory } from '../types/shorts';
 
 export const shortsApi = {
-  convert: (url: string) =>
-    api.post<ApiResponse<ShortsConvertResponse>>('/api/v1/shorts/convert', { url }),
+  convert: (youtubeUrl: string) =>
+    api.post<ApiResponse<ShortsConvertResponse>>('/api/v1/shorts/convert', { youtubeUrl }),
 
-  getStatus: (id: number) =>
-    api.get<ApiResponse<ShortsConvertResponse>>(`/api/v1/shorts/${id}`),
+  getDetail: (cacheId: number) =>
+    api.get<ApiResponse<ShortsConvertResponse>>(`/api/v1/shorts/${cacheId}`),
 
-  getHistory: (page = 0, size = 20) =>
-    api.get<ApiResponse<PageResponse<ShortsHistory>>>('/api/v1/shorts/history', {
-      params: { page, size },
-    }),
+  getRecent: () =>
+    api.get<ApiResponse<ShortsHistory[]>>('/api/v1/shorts/recent'),
 };

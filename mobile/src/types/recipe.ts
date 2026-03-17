@@ -2,54 +2,67 @@ export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type StepType = 'ACTIVE' | 'WAIT';
 
 export interface RecipeStep {
+  id: number;
   stepNumber: number;
   description: string;
-  type: StepType;
-  durationSeconds: number | null;
+  stepType: string;
+  durationSeconds: number;
   imageUrl: string | null;
+  canParallel: boolean;
+}
+
+export interface RecipeIngredient {
+  id: number;
+  ingredientId: number;
+  ingredientName: string;
+  amount: number;
+  unit: string;
+  isRequired: boolean;
+  sortOrder: number;
 }
 
 export interface Recipe {
   id: number;
   title: string;
-  description: string;
-  imageUrl: string | null;
-  cookTimeMinutes: number;
-  difficulty: Difficulty;
+  category: string;
+  difficulty: string;
+  cookingTimeMinutes: number;
   servings: number;
-  matchRate?: number;
-  isFavorite?: boolean;
+  imageUrl: string | null;
+  thumbnailUrl: string | null;
+  tips: string | null;
+  totalIngredients: number;
+  viewCount: number;
+  coachingReady: boolean;
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
+  createdAt: string;
 }
 
-export interface RecipeIngredient {
-  ingredientId: number;
+export interface MissingIngredient {
+  id: number;
   name: string;
-  amount: string;
-  required: boolean;
-  isOwned?: boolean;
 }
 
 export interface RecipeSummary {
   id: number;
   title: string;
-  imageUrl: string | null;
-  cookTimeMinutes: number;
-  difficulty: Difficulty;
+  category: string;
+  difficulty: string;
+  cookingTimeMinutes: number;
   servings: number;
-  matchRate?: number;
-  isFavorite?: boolean;
+  imageUrl: string | null;
+  thumbnailUrl: string | null;
+  matchingRate: number;
+  missingIngredients: MissingIngredient[];
 }
 
 export interface RecommendRequest {
   ingredientIds: number[];
-  maxCookTimeMinutes?: number;
+  maxTime?: number;
   difficulty?: Difficulty;
   servings?: number;
 }
 
-export interface RecommendResponse {
-  recipes: RecipeSummary[];
-  totalCount: number;
-}
+// Backend returns RecipeSummary[] directly (flat array), not wrapped
+export type RecommendResponse = RecipeSummary[];

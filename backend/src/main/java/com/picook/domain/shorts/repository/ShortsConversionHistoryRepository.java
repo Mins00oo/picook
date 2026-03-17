@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ShortsConversionHistoryRepository extends JpaRepository<ShortsConversionHistory, Integer> {
@@ -23,6 +24,10 @@ public interface ShortsConversionHistoryRepository extends JpaRepository<ShortsC
     List<ShortsConversionHistory> findRecentByUserIdDistinctUrl(@Param("userId") UUID userId);
 
     boolean existsByUserIdAndShortsCacheId(UUID userId, Integer shortsCacheId);
+
+    Optional<ShortsConversionHistory> findByIdAndUserId(Integer id, UUID userId);
+
+    void deleteAllByUserId(UUID userId);
 
     long countByCreatedAtBetween(Instant start, Instant end);
 

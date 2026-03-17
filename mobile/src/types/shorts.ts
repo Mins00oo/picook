@@ -1,35 +1,33 @@
-export type ConvertStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-
-export interface ShortsConvertRequest {
-  url: string;
-}
-
 export interface ShortsConvertResponse {
-  id: number;
-  url: string;
-  status: ConvertStatus;
+  cacheId: number;
+  youtubeUrl: string;
+  title: string;
+  thumbnailUrl: string | null;
   recipe: ShortsRecipe | null;
-  errorMessage: string | null;
+  fromCache: boolean;
+  convertedAt: string;
 }
 
 export interface ShortsRecipe {
   title: string;
   description: string;
+  servings: number;
+  estimatedTimeMinutes: number;
   ingredients: string[];
   steps: ShortsStep[];
 }
 
 export interface ShortsStep {
   stepNumber: number;
-  description: string;
+  instruction: string;
   type: 'ACTIVE' | 'WAIT';
   durationSeconds: number | null;
 }
 
 export interface ShortsHistory {
-  id: number;
-  url: string;
+  cacheId: number;
+  youtubeUrl: string;
   title: string | null;
-  status: ConvertStatus;
-  createdAt: string;
+  thumbnailUrl: string | null;
+  convertedAt: string;
 }

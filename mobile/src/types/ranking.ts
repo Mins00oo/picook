@@ -1,8 +1,3 @@
-export interface RankInfo {
-  completedCount: number;
-  level: number;
-  title: string;
-  emoji: string;
-  progress: number;
-  nextLevelMin: number | null;
-}
+// RankInfo is now in user.ts (returned as part of UserProfileResponse)
+// Re-export for backward compatibility
+export type { RankInfo } from './user';
