@@ -65,7 +65,7 @@ export class CoachingEngine {
     const step = this.steps[this.currentStep];
     if (!step) return;
 
-    if (step.type === 'WAIT' && step.durationSeconds) {
+    if (step.stepType === 'WAIT' && step.durationSeconds) {
       this.startTimer(step.durationSeconds);
     }
   }

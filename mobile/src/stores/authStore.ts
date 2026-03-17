@@ -56,9 +56,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
       } catch {
         // 401 → client.ts 인터셉터가 refresh 시도 → 실패 시 토큰 삭제됨
-        // 여기서는 로컬 캐시로 폴백
+        // 토큰이 아직 존재하면 로컬 캐시로 폴백, 없으면 로그아웃
+        const tokenStillExists = await SecureStore.getItemAsync(Config.JWT_ACCESS_KEY);
         const userJson = await SecureStore.getItemAsync(Config.USER_KEY);
-        if (userJson) {
+        if (tokenStillExists && userJson) {
           set({
             user: JSON.parse(userJson),
             isAuthenticated: true,

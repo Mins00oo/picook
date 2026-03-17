@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     height: 52,
   },
   disabled: {
-    opacity: 0.5,
+    backgroundColor: '#E5E7EB',
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -144,6 +144,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
   },
   labelDisabled: {
-    opacity: 0.7,
+    color: '#9CA3AF',
   },
 });
