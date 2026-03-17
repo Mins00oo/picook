@@ -270,6 +270,8 @@ const api = axios.create({
 - ✅ 쇼츠 탭: 카드 디자인 (썸네일 80x60 + 제목 + URL + 상대시간 + 화살표)
 - ✅ 쇼츠 탭: 빈 상태 (🎬 + 안내), URL 검증 (✅/❌ + 테두리 색상)
 - ✅ 앱 아이콘 교체 (프라이팬+계란+허브, scripts/generate-icon.py)
+- ✅ 쇼츠 탭: 개별 삭제 (스와이프 → Swipeable), 전체 삭제 ([전체 삭제] + 확인 다이얼로그)
+- ✅ 쇼츠 탭: 채널명(channelName) 표시, 타입 Swagger 동기화
 
 ### 빌드 및 환경 설정
 - ✅ Expo SDK 55 → 54 다운그레이드 (Expo Go 최신 버전 호환)
