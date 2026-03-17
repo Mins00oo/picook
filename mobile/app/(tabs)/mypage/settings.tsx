@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
+import Constants from 'expo-constants';
 import { Colors } from '../../../src/constants/colors';
 import { useAuthStore } from '../../../src/stores/authStore';
 import { authApi } from '../../../src/api/authApi';
@@ -9,6 +11,8 @@ import { authApi } from '../../../src/api/authApi';
 export default function SettingsScreen() {
   const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
+  const queryClient = useQueryClient();
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃하시겠어요?', [
@@ -21,6 +25,7 @@ export default function SettingsScreen() {
           } catch {
             // ignore
           }
+          queryClient.clear();
           await logout();
           router.replace('/(auth)/login');
         },
@@ -55,7 +60,7 @@ export default function SettingsScreen() {
         </TouchableOpacity>
         <View style={styles.menuItem}>
           <Text style={styles.menuLabel}>앱 버전</Text>
-          <Text style={styles.menuVersion}>1.0.0</Text>
+          <Text style={styles.menuVersion}>{appVersion}</Text>
         </View>
       </View>
 

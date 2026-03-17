@@ -18,7 +18,7 @@ import { ErrorScreen } from '../../../src/components/common/ErrorScreen';
 import { recipeApi } from '../../../src/api/recipeApi';
 import { favoriteApi } from '../../../src/api/favoriteApi';
 import { formatCookTime, formatDifficulty } from '../../../src/utils/format';
-import type { RecipeStep } from '../../../src/types/recipe';
+import type { Recipe, RecipeStep } from '../../../src/types/recipe';
 
 function StepIcon({ type }: { type: string }) {
   return (
@@ -50,12 +50,23 @@ export default function RecipeDetailScreen() {
         await favoriteApi.add(Number(id));
       }
     },
-    onSuccess: () => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['recipe', id] });
+      const previous = queryClient.getQueryData<Recipe>(['recipe', id]);
+      queryClient.setQueryData<Recipe>(['recipe', id], (old) =>
+        old ? { ...old, isFavorite: !old.isFavorite } : old,
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['recipe', id], context.previous);
+      }
+      Alert.alert('오류', '즐겨찾기 처리에 실패했습니다.');
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['recipe', id] });
       queryClient.invalidateQueries({ queryKey: ['favorites'] });
-    },
-    onError: () => {
-      Alert.alert('오류', '즐겨찾기 처리에 실패했습니다.');
     },
   });
 

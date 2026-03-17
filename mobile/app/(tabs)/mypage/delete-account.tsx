@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import { Colors } from '../../../src/constants/colors';
 import { Button } from '../../../src/components/common/Button';
 import { useAuthStore } from '../../../src/stores/authStore';
@@ -10,6 +11,7 @@ import { authApi } from '../../../src/api/authApi';
 export default function DeleteAccountScreen() {
   const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
   const handleDelete = () => {
@@ -25,6 +27,7 @@ export default function DeleteAccountScreen() {
             setLoading(true);
             try {
               await authApi.deleteAccount();
+              queryClient.clear();
               await logout();
               router.replace('/(auth)/login');
             } catch {
