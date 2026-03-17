@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,21 +11,58 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { Colors } from '../../../src/constants/colors';
+import { Image } from 'expo-image';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  colors,
+  typography,
+  spacing,
+  borderRadius,
+  shadow,
+} from '../../../src/constants/theme';
 import { Button } from '../../../src/components/common/Button';
+import { EmptyState } from '../../../src/components/common/EmptyState';
 import { shortsApi } from '../../../src/api/shortsApi';
 import { isValidShortsUrl } from '../../../src/utils/validation';
 import type { ShortsHistory } from '../../../src/types/shorts';
 
+/** 상대 시간 포맷: "방금 전", "3분 전", "2시간 전", "어제", "3일 전" */
+function formatTimeAgo(dateString: string): string {
+  const now = Date.now();
+  const then = new Date(dateString).getTime();
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60_000);
+  const diffHour = Math.floor(diffMs / 3_600_000);
+  const diffDay = Math.floor(diffMs / 86_400_000);
+
+  if (diffMin < 1) return '방금 전';
+  if (diffMin < 60) return `${diffMin}분 전`;
+  if (diffHour < 24) return `${diffHour}시간 전`;
+  if (diffDay === 1) return '어제';
+  if (diffDay < 30) return `${diffDay}일 전`;
+  return new Date(dateString).toLocaleDateString('ko-KR');
+}
+
+/** URL을 짧게 표시: "youtube.com/shorts/abc123..." */
+function shortenUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const path = u.pathname.length > 20 ? u.pathname.slice(0, 20) + '...' : u.pathname;
+    return u.hostname.replace('www.', '') + path;
+  } catch {
+    return url.length > 35 ? url.slice(0, 35) + '...' : url;
+  }
+}
+
 export default function ShortsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [url, setUrl] = useState('');
 
   const { data: historyData } = useQuery({
     queryKey: ['shorts-history'],
     queryFn: async () => {
-      const res = await shortsApi.getHistory();
+      const res = await shortsApi.getRecent();
       return res.data.data;
     },
   });
@@ -36,7 +73,9 @@ export default function ShortsScreen() {
       return res.data.data;
     },
     onSuccess: (data) => {
-      router.push({ pathname: '/(tabs)/shorts/result', params: { id: String(data.id) } });
+      queryClient.setQueryData(['shorts', String(data.cacheId)], data);
+      queryClient.invalidateQueries({ queryKey: ['shorts-history'] });
+      router.push({ pathname: '/(tabs)/shorts/result', params: { id: String(data.cacheId) } });
     },
     onError: (error: any) => {
       const code = error?.response?.data?.error?.code;
@@ -52,7 +91,18 @@ export default function ShortsScreen() {
     },
   });
 
-  const showUrlError = url.trim().length > 0 && !isValidShortsUrl(url);
+  const hasInput = url.trim().length > 0;
+  const isValid = isValidShortsUrl(url);
+  const showUrlError = hasInput && !isValid;
+
+  // URL 중복 제거: 같은 youtubeUrl은 최신 1건만
+  const uniqueHistory = useMemo(() => {
+    const list = historyData ?? [];
+    return list.filter(
+      (item: ShortsHistory, idx: number, arr: ShortsHistory[]) =>
+        arr.findIndex((x: ShortsHistory) => x.youtubeUrl === item.youtubeUrl) === idx,
+    );
+  }, [historyData]);
 
   const handlePaste = async () => {
     const text = await Clipboard.getStringAsync();
@@ -64,78 +114,115 @@ export default function ShortsScreen() {
   };
 
   const handleConvert = () => {
-    if (!isValidShortsUrl(url)) {
+    if (!isValid) {
       Alert.alert('알림', '유효한 유튜브 쇼츠 URL을 입력해주세요.');
       return;
     }
     convertMutation.mutate(url);
   };
 
-  const history = historyData?.content ?? [];
+  const renderHistoryCard = ({ item }: { item: ShortsHistory }) => (
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.7}
+      onPress={() =>
+        router.push({
+          pathname: '/(tabs)/shorts/result',
+          params: { id: String(item.cacheId) },
+        })
+      }
+    >
+      {/* Thumbnail */}
+      <View style={styles.thumbnailBox}>
+        {item.thumbnailUrl ? (
+          <Image
+            source={{ uri: item.thumbnailUrl }}
+            style={styles.thumbnail}
+            contentFit="cover"
+          />
+        ) : (
+          <View style={styles.thumbnailPlaceholder}>
+            <Text style={styles.thumbnailEmoji}>🎬</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Info */}
+      <View style={styles.cardInfo}>
+        <Text style={styles.cardTitle} numberOfLines={1}>
+          {item.title ?? '변환된 레시피'}
+        </Text>
+        <Text style={styles.cardUrl} numberOfLines={1}>
+          {shortenUrl(item.youtubeUrl)}
+        </Text>
+        <Text style={styles.cardTime}>{formatTimeAgo(item.convertedAt)}</Text>
+      </View>
+
+      {/* Arrow */}
+      <Text style={styles.cardArrow}>›</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>쇼츠 변환</Text>
         <Text style={styles.subtitle}>유튜브 쇼츠를 레시피로 변환해보세요</Text>
       </View>
 
+      {/* URL Input */}
       <View style={styles.inputSection}>
-        <View style={styles.inputRow}>
+        <View style={[styles.inputRow, hasInput && (isValid ? styles.inputRowValid : styles.inputRowInvalid)]}>
+          <Text style={styles.inputIcon}>📺</Text>
           <TextInput
             style={styles.input}
             placeholder="유튜브 쇼츠 URL 붙여넣기"
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             value={url}
             onChangeText={setUrl}
             autoCapitalize="none"
             autoCorrect={false}
           />
+          {hasInput && (
+            <Text style={styles.validationIcon}>{isValid ? '✅' : '❌'}</Text>
+          )}
           <TouchableOpacity style={styles.pasteBtn} onPress={handlePaste}>
             <Text style={styles.pasteText}>붙여넣기</Text>
           </TouchableOpacity>
         </View>
         {showUrlError && (
-          <Text style={styles.urlError}>유튜브 쇼츠 URL을 입력해주세요</Text>
+          <Text style={styles.urlError}>유튜브 쇼츠 URL 형식이 아니에요</Text>
         )}
         <Button
           title="레시피로 변환"
           onPress={handleConvert}
           loading={convertMutation.isPending}
-          disabled={!url.trim() || showUrlError}
+          disabled={!hasInput || showUrlError}
           size="large"
           style={styles.convertBtn}
         />
       </View>
 
+      {/* Recent Conversions */}
       <View style={styles.historySection}>
         <Text style={styles.sectionTitle}>최근 변환</Text>
-        {history.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>아직 변환 기록이 없어요</Text>
+
+        {uniqueHistory.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <EmptyState
+              emoji="🎬"
+              title="아직 변환한 영상이 없어요"
+              description="유튜브 쇼츠 URL을 붙여넣어 보세요"
+            />
           </View>
         ) : (
           <FlatList
-            data={history}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={({ item }: { item: ShortsHistory }) => (
-              <TouchableOpacity
-                style={styles.historyItem}
-                onPress={() =>
-                  router.push({
-                    pathname: '/(tabs)/shorts/result',
-                    params: { id: String(item.id) },
-                  })
-                }
-              >
-                <Text style={styles.historyTitle} numberOfLines={1}>
-                  {item.title ?? item.url}
-                </Text>
-                <Text style={styles.historyStatus}>
-                  {item.status === 'COMPLETED' ? '✅' : item.status === 'FAILED' ? '❌' : '⏳'}
-                </Text>
-              </TouchableOpacity>
-            )}
+            data={uniqueHistory}
+            keyExtractor={(item) => String(item.cacheId)}
+            renderItem={renderHistoryCard}
+            contentContainerStyle={styles.cardList}
+            showsVerticalScrollIndicator={false}
           />
         )}
       </View>
@@ -146,94 +233,153 @@ export default function ShortsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
+  // Header
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 4,
+    ...typography.h2,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 15,
-    color: Colors.textSecondary,
+    ...typography.caption,
+    color: colors.textSecondary,
   },
+  // URL Input
   inputSection: {
-    padding: 20,
-    gap: 12,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    gap: spacing.sm,
   },
   inputRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    paddingLeft: spacing.sm,
+    gap: spacing.xs,
+  },
+  inputRowValid: {
+    borderColor: colors.success,
+  },
+  inputRowInvalid: {
+    borderColor: colors.error,
+  },
+  inputIcon: {
+    fontSize: 18,
   },
   input: {
     flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    ...typography.caption,
+    color: colors.textPrimary,
     paddingVertical: 12,
+    padding: 0,
+  },
+  validationIcon: {
     fontSize: 14,
-    color: Colors.text,
   },
   pasteBtn: {
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: Colors.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.divider,
   },
   pasteText: {
-    fontSize: 14,
-    color: Colors.primary,
+    ...typography.caption,
+    color: colors.primary,
     fontWeight: '600',
   },
   urlError: {
-    fontSize: 13,
-    color: Colors.error,
-    marginTop: -4,
+    ...typography.small,
+    color: colors.error,
+    marginTop: -2,
+    marginLeft: spacing.xs,
   },
   convertBtn: {
     width: '100%',
   },
+  // History
   historySection: {
     flex: 1,
-    paddingHorizontal: 20,
-    gap: 12,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
-  empty: {
-    padding: 32,
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: Colors.textTertiary,
-  },
-  historyItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  historyTitle: {
+  emptyContainer: {
     flex: 1,
-    fontSize: 15,
-    color: Colors.text,
-    marginRight: 12,
+    justifyContent: 'center',
+    paddingBottom: spacing.xxl,
   },
-  historyStatus: {
-    fontSize: 16,
+  // Card list
+  cardList: {
+    gap: spacing.sm,
+    paddingBottom: spacing.lg,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    gap: spacing.sm,
+    ...shadow.sm,
+  },
+  // Thumbnail
+  thumbnailBox: {
+    width: 80,
+    height: 60,
+    borderRadius: borderRadius.sm,
+    overflow: 'hidden',
+    backgroundColor: colors.divider,
+  },
+  thumbnail: {
+    width: 80,
+    height: 60,
+  },
+  thumbnailPlaceholder: {
+    width: 80,
+    height: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryLight,
+  },
+  thumbnailEmoji: {
+    fontSize: 24,
+  },
+  // Card info
+  cardInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  cardTitle: {
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  cardUrl: {
+    ...typography.small,
+    color: colors.textTertiary,
+  },
+  cardTime: {
+    ...typography.small,
+    color: colors.textTertiary,
+  },
+  // Arrow
+  cardArrow: {
+    fontSize: 22,
+    color: colors.textTertiary,
+    fontWeight: '300',
+    paddingRight: spacing.xs,
   },
 });
