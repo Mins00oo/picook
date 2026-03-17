@@ -6,6 +6,7 @@ import com.picook.domain.admin.shorts.dto.AdminShortsStatsResponse;
 import com.picook.domain.shorts.entity.ShortsCache;
 import com.picook.domain.shorts.repository.ShortsCacheRepository;
 import com.picook.domain.shorts.repository.ShortsConversionHistoryRepository;
+import com.picook.domain.shorts.repository.ShortsConversionLogRepository;
 import com.picook.domain.shorts.service.ShortsConvertService;
 import com.picook.global.exception.BusinessException;
 import com.picook.global.util.PageResponse;
@@ -15,6 +16,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,13 +29,16 @@ public class AdminShortsService {
 
     private final ShortsCacheRepository shortsCacheRepository;
     private final ShortsConversionHistoryRepository historyRepository;
+    private final ShortsConversionLogRepository conversionLogRepository;
     private final ShortsConvertService shortsConvertService;
 
     public AdminShortsService(ShortsCacheRepository shortsCacheRepository,
                               ShortsConversionHistoryRepository historyRepository,
+                              ShortsConversionLogRepository conversionLogRepository,
                               ShortsConvertService shortsConvertService) {
         this.shortsCacheRepository = shortsCacheRepository;
         this.historyRepository = historyRepository;
+        this.conversionLogRepository = conversionLogRepository;
         this.shortsConvertService = shortsConvertService;
     }
 
@@ -70,12 +77,39 @@ public class AdminShortsService {
         long totalCache = shortsCacheRepository.count();
         long totalConversions = historyRepository.count();
 
+        long successCount = conversionLogRepository.countByStatus("SUCCESS");
+        long failCount = conversionLogRepository.countByStatus("FAILED");
+        long totalLogs = successCount + failCount;
+        double successRate = totalLogs > 0 ? (double) successCount / totalLogs * 100 : 0;
+
+        Double avgProcessingTimeMs = conversionLogRepository.avgProcessingTimeMs();
+
         // Model version distribution
         List<ShortsCache> allCaches = shortsCacheRepository.findAll();
         Map<String, Long> modelVersionDistribution = allCaches.stream()
                 .collect(Collectors.groupingBy(ShortsCache::getAiModelVersion, Collectors.counting()));
 
-        return new AdminShortsStatsResponse(totalCache, totalConversions, modelVersionDistribution);
+        // Fail reason distribution
+        Map<String, Long> failReasonDistribution = new LinkedHashMap<>();
+        for (Object[] row : conversionLogRepository.countFailuresByErrorCode()) {
+            failReasonDistribution.put((String) row[0], (Long) row[1]);
+        }
+
+        Instant todayStart = Instant.now().truncatedTo(ChronoUnit.DAYS);
+        long todayConversionCount = conversionLogRepository.countByCreatedAtAfter(todayStart);
+        long cacheHitCount = conversionLogRepository.countByCacheHit(true);
+
+        Double avgExtractMs = conversionLogRepository.avgExtractMs();
+        Double avgTranscribeMs = conversionLogRepository.avgTranscribeMs();
+        Double avgStructurizeMs = conversionLogRepository.avgStructurizeMs();
+
+        return new AdminShortsStatsResponse(
+                totalCache, totalConversions,
+                successCount, failCount, successRate, avgProcessingTimeMs,
+                modelVersionDistribution, failReasonDistribution,
+                todayConversionCount, cacheHitCount,
+                avgExtractMs, avgTranscribeMs, avgStructurizeMs
+        );
     }
 
     private ShortsCache findOrThrow(Integer id) {

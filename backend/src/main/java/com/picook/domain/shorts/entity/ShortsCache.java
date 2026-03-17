@@ -62,6 +62,12 @@ public class ShortsCache {
         this.updatedAt = Instant.now();
     }
 
+    public void update(String aiModelVersion, String title, String result) {
+        this.aiModelVersion = aiModelVersion;
+        this.title = title;
+        this.result = result;
+    }
+
     public Integer getId() { return id; }
     public String getYoutubeUrl() { return youtubeUrl; }
     public String getUrlHash() { return urlHash; }

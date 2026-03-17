@@ -33,6 +33,43 @@ public class YtDlpService {
         Files.createDirectories(Path.of(tempDir));
     }
 
+    /**
+     * yt-dlp로 영상 길이(초)를 조회. 3분 초과 시 거부.
+     */
+    public void checkDuration(String url) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder(
+                    ytdlpPath, "--print", "duration", "--no-download", url
+            );
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            String output = new String(process.getInputStream().readAllBytes()).strip();
+            boolean finished = process.waitFor(15, TimeUnit.SECONDS);
+
+            if (!finished) {
+                process.destroyForcibly();
+                log.warn("Duration check timed out for {}", url);
+                return; // 타임아웃 시 길이 체크 스킵 (변환은 시도)
+            }
+
+            if (process.exitValue() == 0 && !output.isBlank()) {
+                try {
+                    double seconds = Double.parseDouble(output);
+                    if (seconds > 180) {
+                        throw new BusinessException("VIDEO_TOO_LONG",
+                                "3분 이하의 영상만 변환할 수 있습니다", HttpStatus.BAD_REQUEST);
+                    }
+                } catch (NumberFormatException e) {
+                    log.warn("Could not parse duration '{}' for {}", output, url);
+                }
+            }
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Duration check failed for {}: {}", url, e.getMessage());
+        }
+    }
+
     public Path extractAudio(String url) {
         String filename = UUID.randomUUID() + ".mp3";
         Path outputPath = Path.of(tempDir, filename);

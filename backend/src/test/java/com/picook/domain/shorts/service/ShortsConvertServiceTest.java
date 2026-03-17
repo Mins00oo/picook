@@ -1,6 +1,6 @@
 package com.picook.domain.shorts.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.picook.domain.shorts.dto.ShortsConvertRequest;
 import com.picook.domain.shorts.dto.ShortsConvertResponse;
 import com.picook.domain.shorts.dto.ShortsRecipeResult;
@@ -8,6 +8,7 @@ import com.picook.domain.shorts.dto.RecentShortsResponse;
 import com.picook.domain.shorts.entity.ShortsCache;
 import com.picook.domain.shorts.entity.ShortsConversionHistory;
 import com.picook.domain.shorts.repository.ShortsConversionHistoryRepository;
+import com.picook.domain.shorts.repository.ShortsConversionLogRepository;
 import com.picook.global.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,13 +30,16 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 class ShortsConvertServiceTest {
 
     @Mock private ShortsCacheService shortsCacheService;
     @Mock private ShortsConversionHistoryRepository historyRepository;
+    @Mock private ShortsConversionLogRepository conversionLogRepository;
     @Mock private YtDlpService ytDlpService;
     @Mock private WhisperService whisperService;
     @Mock private RecipeStructurizer recipeStructurizer;
+    @Mock private ShortsRateLimiter rateLimiter;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private ShortsConvertService shortsConvertService;
@@ -44,10 +48,11 @@ class ShortsConvertServiceTest {
     @BeforeEach
     void setUp() {
         shortsConvertService = new ShortsConvertService(
-                shortsCacheService, historyRepository,
-                ytDlpService, whisperService, recipeStructurizer, objectMapper
+                shortsCacheService, historyRepository, conversionLogRepository,
+                ytDlpService, whisperService, recipeStructurizer, objectMapper, rateLimiter
         );
         userId = UUID.randomUUID();
+        when(conversionLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
     @Test

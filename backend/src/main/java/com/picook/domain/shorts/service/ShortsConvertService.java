@@ -8,7 +8,9 @@ import com.picook.domain.shorts.dto.ShortsConvertResponse;
 import com.picook.domain.shorts.dto.ShortsRecipeResult;
 import com.picook.domain.shorts.entity.ShortsCache;
 import com.picook.domain.shorts.entity.ShortsConversionHistory;
+import com.picook.domain.shorts.entity.ShortsConversionLog;
 import com.picook.domain.shorts.repository.ShortsConversionHistoryRepository;
+import com.picook.domain.shorts.repository.ShortsConversionLogRepository;
 import com.picook.global.exception.BusinessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,51 +37,79 @@ public class ShortsConvertService {
     private static final Logger log = LoggerFactory.getLogger(ShortsConvertService.class);
 
     private static final Pattern YOUTUBE_URL_PATTERN = Pattern.compile(
-            "^(https?://)?(www\\.)?(youtube\\.com/(shorts/|watch\\?v=)|youtu\\.be/)[\\w-]+.*$"
+            "^(https?://)?(www\\.)?(youtube\\.com/(shorts/|watch\\?v=)|youtu\\.be/)[\\w-]{6,}.*$"
     );
 
     private final ShortsCacheService shortsCacheService;
     private final ShortsConversionHistoryRepository historyRepository;
+    private final ShortsConversionLogRepository conversionLogRepository;
     private final YtDlpService ytDlpService;
     private final WhisperService whisperService;
     private final RecipeStructurizer recipeStructurizer;
     private final ObjectMapper objectMapper;
+    private final ShortsRateLimiter rateLimiter;
 
     public ShortsConvertService(ShortsCacheService shortsCacheService,
                                 ShortsConversionHistoryRepository historyRepository,
+                                ShortsConversionLogRepository conversionLogRepository,
                                 YtDlpService ytDlpService,
                                 WhisperService whisperService,
                                 RecipeStructurizer recipeStructurizer,
-                                ObjectMapper objectMapper) {
+                                ObjectMapper objectMapper,
+                                ShortsRateLimiter rateLimiter) {
         this.shortsCacheService = shortsCacheService;
         this.historyRepository = historyRepository;
+        this.conversionLogRepository = conversionLogRepository;
         this.ytDlpService = ytDlpService;
         this.whisperService = whisperService;
         this.recipeStructurizer = recipeStructurizer;
         this.objectMapper = objectMapper;
+        this.rateLimiter = rateLimiter;
     }
 
     @Transactional
     public ShortsConvertResponse convert(UUID userId, ShortsConvertRequest request) {
+        long startTime = System.currentTimeMillis();
         String normalizedUrl = normalizeUrl(request.youtubeUrl());
         validateYoutubeUrl(normalizedUrl);
+
+        // Rate limiting
+        rateLimiter.checkUserLimit(userId);
 
         String urlHash = sha256(normalizedUrl);
         String modelVersion = recipeStructurizer.getModelVersion();
 
+        // Cache hit
         Optional<ShortsCache> cached = shortsCacheService.findByUrlHashAndModelVersion(urlHash, modelVersion);
         if (cached.isPresent()) {
             ShortsCache cache = cached.get();
             recordHistory(userId, cache);
             ShortsRecipeResult recipe = parseResult(cache.getResult());
+            long totalMs = System.currentTimeMillis() - startTime;
+            conversionLogRepository.save(
+                    ShortsConversionLog.success(userId, normalizedUrl, true, totalMs, null, null, null));
+            log.info("Shorts conversion cache hit: url={}, totalMs={}", normalizedUrl, totalMs);
             return ShortsConvertResponse.of(cache, recipe, true);
         }
 
+        // Video length check
+        ytDlpService.checkDuration(normalizedUrl);
+
+        // Concurrent slot
+        rateLimiter.acquireConcurrentSlot();
         Path audioPath = null;
         try {
+            long t0 = System.currentTimeMillis();
             audioPath = ytDlpService.extractAudio(normalizedUrl);
+            long extractMs = System.currentTimeMillis() - t0;
+
+            long t1 = System.currentTimeMillis();
             String transcript = whisperService.transcribe(audioPath);
+            long transcribeMs = System.currentTimeMillis() - t1;
+
+            long t2 = System.currentTimeMillis();
             ShortsRecipeResult recipe = recipeStructurizer.structurize(transcript);
+            long structurizeMs = System.currentTimeMillis() - t2;
 
             String resultJson = objectMapper.writeValueAsString(recipe);
             ShortsCache cache = shortsCacheService.save(
@@ -88,14 +118,28 @@ public class ShortsConvertService {
             );
 
             recordHistory(userId, cache);
+            long totalMs = System.currentTimeMillis() - startTime;
+            conversionLogRepository.save(
+                    ShortsConversionLog.success(userId, normalizedUrl, false,
+                            totalMs, extractMs, transcribeMs, structurizeMs));
+            log.info("Shorts conversion success: url={}, totalMs={}, extractMs={}, transcribeMs={}, structurizeMs={}",
+                    normalizedUrl, totalMs, extractMs, transcribeMs, structurizeMs);
             return ShortsConvertResponse.of(cache, recipe, false);
         } catch (BusinessException e) {
+            long totalMs = System.currentTimeMillis() - startTime;
+            conversionLogRepository.save(
+                    ShortsConversionLog.failure(userId, normalizedUrl, e.getErrorCode(), e.getMessage(), totalMs));
+            log.warn("Shorts conversion failed: url={}, error={}, totalMs={}", normalizedUrl, e.getErrorCode(), totalMs);
             throw e;
         } catch (JacksonException e) {
+            long totalMs = System.currentTimeMillis() - startTime;
+            conversionLogRepository.save(
+                    ShortsConversionLog.failure(userId, normalizedUrl, "AI_STRUCTURIZE_FAILED", e.getMessage(), totalMs));
             log.error("Failed to serialize recipe result", e);
             throw new BusinessException("AI_STRUCTURIZE_FAILED",
                     "레시피 결과 저장에 실패했습니다", HttpStatus.BAD_GATEWAY);
         } finally {
+            rateLimiter.releaseConcurrentSlot();
             deleteQuietly(audioPath);
         }
     }
@@ -117,6 +161,10 @@ public class ShortsConvertService {
             String base = trimmed.substring(0, trimmed.indexOf('?'));
             if (trimmed.contains("v=")) {
                 String videoId = trimmed.replaceAll(".*[?&]v=([^&]+).*", "$1");
+                if (videoId.isBlank()) {
+                    throw new BusinessException("INVALID_YOUTUBE_URL",
+                            "유효하지 않은 유튜브 URL입니다", HttpStatus.BAD_REQUEST);
+                }
                 return "https://www.youtube.com/watch?v=" + videoId;
             }
             return base;
@@ -154,11 +202,7 @@ public class ShortsConvertService {
     @Transactional
     public ShortsCache reconvertFromCache(ShortsCache existing) {
         String url = existing.getYoutubeUrl();
-        String urlHash = existing.getUrlHash();
         String modelVersion = recipeStructurizer.getModelVersion();
-
-        // Delete old cache
-        shortsCacheService.delete(existing);
 
         Path audioPath = null;
         try {
@@ -167,10 +211,8 @@ public class ShortsConvertService {
             ShortsRecipeResult recipe = recipeStructurizer.structurize(transcript);
 
             String resultJson = objectMapper.writeValueAsString(recipe);
-            return shortsCacheService.save(
-                    new ShortsCache(url, urlHash, modelVersion,
-                            recipe.title(), null, resultJson)
-            );
+            existing.update(modelVersion, recipe.title(), resultJson);
+            return shortsCacheService.save(existing);
         } catch (BusinessException e) {
             throw e;
         } catch (JacksonException e) {

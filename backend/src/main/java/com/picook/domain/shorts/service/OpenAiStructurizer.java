@@ -2,6 +2,7 @@ package com.picook.domain.shorts.service;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
+import io.netty.channel.ChannelOption;
 import com.picook.domain.shorts.dto.ShortsRecipeResult;
 import com.picook.global.exception.BusinessException;
 import org.slf4j.Logger;
@@ -9,10 +10,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.netty.http.client.HttpClient;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -60,7 +64,11 @@ public class OpenAiStructurizer implements RecipeStructurizer {
 
     public OpenAiStructurizer(@Value("${openai.api-key}") String apiKey, ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5_000)
+                .responseTimeout(Duration.ofSeconds(30));
         this.webClient = WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .baseUrl("https://api.openai.com/v1")
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .build();
