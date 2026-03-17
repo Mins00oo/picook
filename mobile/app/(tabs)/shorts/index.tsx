@@ -38,14 +38,29 @@ export default function ShortsScreen() {
     onSuccess: (data) => {
       router.push({ pathname: '/(tabs)/shorts/result', params: { id: String(data.id) } });
     },
-    onError: () => {
-      Alert.alert('오류', '변환에 실패했습니다. 다시 시도해주세요.');
+    onError: (error: any) => {
+      const code = error?.response?.data?.error?.code;
+      const messages: Record<string, string> = {
+        INVALID_YOUTUBE_URL: '유튜브 쇼츠 URL을 입력해주세요.',
+        AUDIO_EXTRACTION_FAILED: '영상 음성을 추출할 수 없어요.',
+        NO_AUDIO_CONTENT: '음성이 없는 영상이에요.',
+        NOT_COOKING_VIDEO: '요리 영상이 아닌 것 같아요.',
+        CONVERSION_TIMEOUT: '변환 시간이 너무 오래 걸려요. 다시 시도해주세요.',
+        RATE_LIMIT_EXCEEDED: '요청이 너무 많아요. 잠시 후 시도해주세요.',
+      };
+      Alert.alert('오류', messages[code] ?? '변환에 실패했어요. 다시 시도해주세요.');
     },
   });
 
+  const showUrlError = url.trim().length > 0 && !isValidShortsUrl(url);
+
   const handlePaste = async () => {
     const text = await Clipboard.getStringAsync();
-    if (text) setUrl(text);
+    if (!text) {
+      Alert.alert('알림', '복사된 URL이 없어요.');
+      return;
+    }
+    setUrl(text);
   };
 
   const handleConvert = () => {
@@ -80,11 +95,14 @@ export default function ShortsScreen() {
             <Text style={styles.pasteText}>붙여넣기</Text>
           </TouchableOpacity>
         </View>
+        {showUrlError && (
+          <Text style={styles.urlError}>유튜브 쇼츠 URL을 입력해주세요</Text>
+        )}
         <Button
           title="레시피로 변환"
           onPress={handleConvert}
           loading={convertMutation.isPending}
-          disabled={!url.trim()}
+          disabled={!url.trim() || showUrlError}
           size="large"
           style={styles.convertBtn}
         />
@@ -172,6 +190,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.primary,
     fontWeight: '600',
+  },
+  urlError: {
+    fontSize: 13,
+    color: Colors.error,
+    marginTop: -4,
   },
   convertBtn: {
     width: '100%',
