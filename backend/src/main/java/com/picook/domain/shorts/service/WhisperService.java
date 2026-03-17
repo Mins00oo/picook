@@ -47,14 +47,15 @@ public class WhisperService {
             builder.part("model", whisperModel);
             builder.part("language", "ko");
 
-            String transcript = webClient.post()
+            TranscriptionResponse response = webClient.post()
                     .uri("/audio/transcriptions")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(BodyInserters.fromMultipartData(builder.build()))
                     .retrieve()
                     .bodyToMono(TranscriptionResponse.class)
-                    .block()
-                    .text();
+                    .block();
+
+            String transcript = response != null ? response.text() : null;
 
             if (transcript == null || transcript.isBlank()) {
                 throw new BusinessException("NO_AUDIO_CONTENT",
