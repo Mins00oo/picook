@@ -25,6 +25,7 @@ import { Button } from '../../../src/components/common/Button';
 import { EmptyState } from '../../../src/components/common/EmptyState';
 import { shortsApi } from '../../../src/api/shortsApi';
 import { isValidShortsUrl } from '../../../src/utils/validation';
+import { useShortsConvertStore } from '../../../src/stores/shortsConvertStore';
 import type { ShortsHistory } from '../../../src/types/shorts';
 
 /** 상대 시간 포맷 */
@@ -60,30 +61,9 @@ export default function ShortsScreen() {
     },
   });
 
-  // ─── Mutations ───
-  const convertMutation = useMutation({
-    mutationFn: async (inputUrl: string) => {
-      const res = await shortsApi.convert(inputUrl);
-      return res.data.data;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(['shorts', String(data.cacheId)], data);
-      queryClient.invalidateQueries({ queryKey: ['shorts-history'] });
-      router.push({ pathname: '/(tabs)/shorts/result', params: { id: String(data.cacheId) } });
-    },
-    onError: (error: any) => {
-      const code = error?.response?.data?.error?.code;
-      const messages: Record<string, string> = {
-        INVALID_YOUTUBE_URL: '유튜브 쇼츠 URL을 입력해주세요.',
-        AUDIO_EXTRACTION_FAILED: '영상 음성을 추출할 수 없어요.',
-        NO_AUDIO_CONTENT: '음성이 없는 영상이에요.',
-        NOT_COOKING_VIDEO: '요리 영상이 아닌 것 같아요.',
-        CONVERSION_TIMEOUT: '변환 시간이 너무 오래 걸려요. 다시 시도해주세요.',
-        RATE_LIMIT_EXCEEDED: '요청이 너무 많아요. 잠시 후 시도해주세요.',
-      };
-      Alert.alert('오류', messages[code] ?? '변환에 실패했어요. 다시 시도해주세요.');
-    },
-  });
+  // ─── Shorts convert (Zustand store) ───
+  const startConvert = useShortsConvertStore((s) => s.startConvert);
+  const convertStatus = useShortsConvertStore((s) => s.status);
 
   const deleteMutation = useMutation({
     mutationFn: (historyId: number) => shortsApi.deleteHistory(historyId),
@@ -133,7 +113,8 @@ export default function ShortsScreen() {
       Alert.alert('알림', '유효한 유튜브 쇼츠 URL을 입력해주세요.');
       return;
     }
-    convertMutation.mutate(url);
+    startConvert(url);
+    router.push({ pathname: '/(tabs)/shorts/result', params: { mode: 'converting' } });
   };
 
   const toggleSelect = useCallback((cacheId: number) => {
@@ -290,8 +271,8 @@ export default function ShortsScreen() {
         <Button
           title="레시피로 변환"
           onPress={handleConvert}
-          loading={convertMutation.isPending}
-          disabled={!hasInput || showUrlError}
+          loading={convertStatus === 'converting'}
+          disabled={!hasInput || showUrlError || convertStatus === 'converting'}
           size="large"
           style={styles.convertBtn}
         />
