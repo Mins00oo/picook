@@ -182,6 +182,140 @@ class ShortsConvertServiceTest {
     }
 
     @Test
+    void 영상_길이_초과_에러() {
+        String url = "https://www.youtube.com/shorts/abc123";
+        when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
+        when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        doThrow(new BusinessException("VIDEO_TOO_LONG", "3분 이하의 영상만 변환할 수 있습니다",
+                org.springframework.http.HttpStatus.BAD_REQUEST))
+                .when(ytDlpService).checkDuration(anyString());
+
+        assertThatThrownBy(() -> shortsConvertService.convert(userId, new ShortsConvertRequest(url)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo("VIDEO_TOO_LONG");
+                });
+        verify(ytDlpService, never()).extractAudio(anyString());
+    }
+
+    @Test
+    void 분당_Rate_Limit_초과_에러() {
+        String url = "https://www.youtube.com/shorts/abc123";
+        doThrow(new BusinessException("RATE_LIMIT_EXCEEDED", "요청이 너무 많습니다.",
+                org.springframework.http.HttpStatus.TOO_MANY_REQUESTS))
+                .when(rateLimiter).checkUserLimit(any());
+
+        assertThatThrownBy(() -> shortsConvertService.convert(userId, new ShortsConvertRequest(url)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo("RATE_LIMIT_EXCEEDED");
+                });
+        verify(ytDlpService, never()).extractAudio(anyString());
+    }
+
+    @Test
+    void 동시_변환_초과_에러() {
+        String url = "https://www.youtube.com/shorts/abc123";
+        when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
+        when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        doThrow(new BusinessException("SERVER_BUSY", "서버가 바쁩니다.",
+                org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE))
+                .when(rateLimiter).acquireConcurrentSlot();
+
+        assertThatThrownBy(() -> shortsConvertService.convert(userId, new ShortsConvertRequest(url)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo("SERVER_BUSY");
+                });
+    }
+
+    @Test
+    void 성공_시_변환_로그에_단계별_시간_기록() throws Exception {
+        String url = "https://www.youtube.com/shorts/abc123";
+        ShortsRecipeResult recipe = createRecipeResult();
+        String resultJson = objectMapper.writeValueAsString(recipe);
+        ShortsCache savedCache = new ShortsCache(url, "hash", "gpt-4o-2025", "김치찌개", null, resultJson);
+        setField(savedCache, "id", 1);
+        setField(savedCache, "createdAt", Instant.now());
+
+        when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
+        when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        when(ytDlpService.extractAudio(anyString())).thenReturn(Path.of("/tmp/test.mp3"));
+        when(whisperService.transcribe(any())).thenReturn("김치찌개 만드는 법...");
+        when(recipeStructurizer.structurize(anyString())).thenReturn(recipe);
+        when(shortsCacheService.save(any())).thenReturn(savedCache);
+        when(historyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        shortsConvertService.convert(userId, new ShortsConvertRequest(url));
+
+        var logCaptor = org.mockito.ArgumentCaptor.forClass(
+                com.picook.domain.shorts.entity.ShortsConversionLog.class);
+        verify(conversionLogRepository).save(logCaptor.capture());
+        var savedLog = logCaptor.getValue();
+        assertThat(savedLog.getStatus()).isEqualTo("SUCCESS");
+        assertThat(savedLog.isCacheHit()).isFalse();
+        assertThat(savedLog.getTotalMs()).isNotNull().isGreaterThanOrEqualTo(0L);
+        assertThat(savedLog.getExtractMs()).isNotNull().isGreaterThanOrEqualTo(0L);
+        assertThat(savedLog.getTranscribeMs()).isNotNull().isGreaterThanOrEqualTo(0L);
+        assertThat(savedLog.getStructurizeMs()).isNotNull().isGreaterThanOrEqualTo(0L);
+    }
+
+    @Test
+    void 캐시_히트_시_변환_로그에_cacheHit_true() throws Exception {
+        String url = "https://www.youtube.com/shorts/abc123";
+        ShortsRecipeResult recipe = createRecipeResult();
+        String resultJson = objectMapper.writeValueAsString(recipe);
+        ShortsCache cache = new ShortsCache(url, "hash", "gpt-4o-2025", "김치찌개", null, resultJson);
+        setField(cache, "id", 1);
+        setField(cache, "createdAt", Instant.now());
+
+        when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
+        when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), eq("gpt-4o-2025")))
+                .thenReturn(Optional.of(cache));
+        when(historyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        shortsConvertService.convert(userId, new ShortsConvertRequest(url));
+
+        var logCaptor = org.mockito.ArgumentCaptor.forClass(
+                com.picook.domain.shorts.entity.ShortsConversionLog.class);
+        verify(conversionLogRepository).save(logCaptor.capture());
+        var savedLog = logCaptor.getValue();
+        assertThat(savedLog.getStatus()).isEqualTo("SUCCESS");
+        assertThat(savedLog.isCacheHit()).isTrue();
+        assertThat(savedLog.getExtractMs()).isNull();
+        assertThat(savedLog.getTranscribeMs()).isNull();
+        assertThat(savedLog.getStructurizeMs()).isNull();
+    }
+
+    @Test
+    void 실패_시_변환_로그에_에러코드_저장() throws Exception {
+        String url = "https://www.youtube.com/shorts/abc123";
+        when(recipeStructurizer.getModelVersion()).thenReturn("gpt-4o-2025");
+        when(shortsCacheService.findByUrlHashAndModelVersion(anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        when(ytDlpService.extractAudio(anyString()))
+                .thenThrow(new BusinessException("AUDIO_EXTRACTION_FAILED", "음성 추출에 실패했습니다",
+                        org.springframework.http.HttpStatus.BAD_GATEWAY));
+
+        assertThatThrownBy(() -> shortsConvertService.convert(userId, new ShortsConvertRequest(url)))
+                .isInstanceOf(BusinessException.class);
+
+        var logCaptor = org.mockito.ArgumentCaptor.forClass(
+                com.picook.domain.shorts.entity.ShortsConversionLog.class);
+        verify(conversionLogRepository).save(logCaptor.capture());
+        var savedLog = logCaptor.getValue();
+        assertThat(savedLog.getStatus()).isEqualTo("FAILED");
+        assertThat(savedLog.getErrorCode()).isEqualTo("AUDIO_EXTRACTION_FAILED");
+        assertThat(savedLog.getTotalMs()).isNotNull();
+    }
+
+    @Test
     void 최근_변환_목록_조회() {
         ShortsCache cache = new ShortsCache("https://youtube.com/shorts/abc", "hash", "v1", "김치찌개", null, "{}");
         setFieldSilent(cache, "id", 1);
