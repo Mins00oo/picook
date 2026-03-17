@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,13 @@ import {
   Alert,
   FlatList,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
+import { Swipeable } from 'react-native-gesture-handler';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   colors,
@@ -26,7 +28,7 @@ import { shortsApi } from '../../../src/api/shortsApi';
 import { isValidShortsUrl } from '../../../src/utils/validation';
 import type { ShortsHistory } from '../../../src/types/shorts';
 
-/** 상대 시간 포맷: "방금 전", "3분 전", "2시간 전", "어제", "3일 전" */
+/** 상대 시간 포맷 */
 function formatTimeAgo(dateString: string): string {
   const now = Date.now();
   const then = new Date(dateString).getTime();
@@ -43,22 +45,13 @@ function formatTimeAgo(dateString: string): string {
   return new Date(dateString).toLocaleDateString('ko-KR');
 }
 
-/** URL을 짧게 표시: "youtube.com/shorts/abc123..." */
-function shortenUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    const path = u.pathname.length > 20 ? u.pathname.slice(0, 20) + '...' : u.pathname;
-    return u.hostname.replace('www.', '') + path;
-  } catch {
-    return url.length > 35 ? url.slice(0, 35) + '...' : url;
-  }
-}
-
 export default function ShortsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [url, setUrl] = useState('');
+  const swipeableRefs = useRef<Map<number, Swipeable>>(new Map());
 
+  // ─── Queries ───
   const { data: historyData } = useQuery({
     queryKey: ['shorts-history'],
     queryFn: async () => {
@@ -67,6 +60,7 @@ export default function ShortsScreen() {
     },
   });
 
+  // ─── Mutations ───
   const convertMutation = useMutation({
     mutationFn: async (inputUrl: string) => {
       const res = await shortsApi.convert(inputUrl);
@@ -91,6 +85,25 @@ export default function ShortsScreen() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (historyId: number) => shortsApi.deleteHistory(historyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shorts-history'] });
+      Alert.alert('완료', '변환 기록을 삭제했어요');
+    },
+    onError: () => {
+      Alert.alert('오류', '삭제에 실패했어요');
+    },
+  });
+
+  const deleteAllMutation = useMutation({
+    mutationFn: () => shortsApi.deleteAllHistory(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shorts-history'] });
+    },
+  });
+
+  // ─── Derived state ───
   const hasInput = url.trim().length > 0;
   const isValid = isValidShortsUrl(url);
   const showUrlError = hasInput && !isValid;
@@ -104,6 +117,7 @@ export default function ShortsScreen() {
     );
   }, [historyData]);
 
+  // ─── Handlers ───
   const handlePaste = async () => {
     const text = await Clipboard.getStringAsync();
     if (!text) {
@@ -121,46 +135,107 @@ export default function ShortsScreen() {
     convertMutation.mutate(url);
   };
 
-  const renderHistoryCard = ({ item }: { item: ShortsHistory }) => (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.7}
-      onPress={() =>
-        router.push({
-          pathname: '/(tabs)/shorts/result',
-          params: { id: String(item.cacheId) },
-        })
-      }
-    >
-      {/* Thumbnail */}
-      <View style={styles.thumbnailBox}>
-        {item.thumbnailUrl ? (
-          <Image
-            source={{ uri: item.thumbnailUrl }}
-            style={styles.thumbnail}
-            contentFit="cover"
-          />
-        ) : (
-          <View style={styles.thumbnailPlaceholder}>
-            <Text style={styles.thumbnailEmoji}>🎬</Text>
+  const handleDeleteOne = useCallback((item: ShortsHistory) => {
+    swipeableRefs.current.get(item.cacheId)?.close();
+    deleteMutation.mutate(item.cacheId);
+  }, [deleteMutation]);
+
+  const handleDeleteAll = useCallback(() => {
+    Alert.alert(
+      '전체 삭제',
+      '모든 변환 기록을 삭제할까요?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: () => deleteAllMutation.mutate(),
+        },
+      ],
+    );
+  }, [deleteAllMutation]);
+
+  // ─── Swipe delete action ───
+  const renderRightActions = useCallback(
+    (item: ShortsHistory) =>
+      (_progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
+        const scale = dragX.interpolate({
+          inputRange: [-80, 0],
+          outputRange: [1, 0.5],
+          extrapolate: 'clamp',
+        });
+
+        return (
+          <TouchableOpacity
+            style={styles.swipeDeleteBtn}
+            onPress={() => handleDeleteOne(item)}
+            activeOpacity={0.7}
+          >
+            <Animated.Text style={[styles.swipeDeleteText, { transform: [{ scale }] }]}>
+              삭제
+            </Animated.Text>
+          </TouchableOpacity>
+        );
+      },
+    [handleDeleteOne],
+  );
+
+  // ─── Card render ───
+  const renderHistoryCard = useCallback(
+    ({ item }: { item: ShortsHistory }) => (
+      <Swipeable
+        ref={(ref) => {
+          if (ref) swipeableRefs.current.set(item.cacheId, ref);
+          else swipeableRefs.current.delete(item.cacheId);
+        }}
+        renderRightActions={renderRightActions(item)}
+        overshootRight={false}
+        rightThreshold={40}
+      >
+        <TouchableOpacity
+          style={styles.card}
+          activeOpacity={0.7}
+          onPress={() =>
+            router.push({
+              pathname: '/(tabs)/shorts/result',
+              params: { id: String(item.cacheId) },
+            })
+          }
+        >
+          {/* Thumbnail */}
+          <View style={styles.thumbnailBox}>
+            {item.thumbnailUrl ? (
+              <Image
+                source={{ uri: item.thumbnailUrl }}
+                style={styles.thumbnail}
+                contentFit="cover"
+              />
+            ) : (
+              <View style={styles.thumbnailPlaceholder}>
+                <Text style={styles.thumbnailEmoji}>🎬</Text>
+              </View>
+            )}
           </View>
-        )}
-      </View>
 
-      {/* Info */}
-      <View style={styles.cardInfo}>
-        <Text style={styles.cardTitle} numberOfLines={1}>
-          {item.title ?? '변환된 레시피'}
-        </Text>
-        <Text style={styles.cardUrl} numberOfLines={1}>
-          {shortenUrl(item.youtubeUrl)}
-        </Text>
-        <Text style={styles.cardTime}>{formatTimeAgo(item.convertedAt)}</Text>
-      </View>
+          {/* Info */}
+          <View style={styles.cardInfo}>
+            <Text style={styles.cardTitle} numberOfLines={1}>
+              {item.title ?? '변환된 레시피'}
+            </Text>
+            {item.channelName ? (
+              <Text style={styles.cardChannel} numberOfLines={1}>
+                {item.channelName}
+              </Text>
+            ) : null}
+            <Text style={styles.cardTime}>{formatTimeAgo(item.convertedAt)}</Text>
+          </View>
 
-      {/* Arrow */}
-      <Text style={styles.cardArrow}>›</Text>
-    </TouchableOpacity>
+          {/* Arrow */}
+          <Text style={styles.cardArrow}>›</Text>
+        </TouchableOpacity>
+      </Swipeable>
+    ),
+    [renderRightActions, router],
   );
 
   return (
@@ -206,7 +281,14 @@ export default function ShortsScreen() {
 
       {/* Recent Conversions */}
       <View style={styles.historySection}>
-        <Text style={styles.sectionTitle}>최근 변환</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>최근 변환</Text>
+          {uniqueHistory.length > 0 && (
+            <TouchableOpacity onPress={handleDeleteAll}>
+              <Text style={styles.deleteAllBtn}>전체 삭제</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {uniqueHistory.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -305,16 +387,26 @@ const styles = StyleSheet.create({
   convertBtn: {
     width: '100%',
   },
-  // History
+  // History section
   historySection: {
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
   sectionTitle: {
     ...typography.h3,
     color: colors.textPrimary,
-    marginBottom: spacing.sm,
+  },
+  deleteAllBtn: {
+    ...typography.caption,
+    color: colors.error,
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,
@@ -367,9 +459,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
   },
-  cardUrl: {
+  cardChannel: {
     ...typography.small,
-    color: colors.textTertiary,
+    color: colors.textSecondary,
   },
   cardTime: {
     ...typography.small,
@@ -381,5 +473,19 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     fontWeight: '300',
     paddingRight: spacing.xs,
+  },
+  // Swipe delete
+  swipeDeleteBtn: {
+    width: 72,
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: spacing.sm,
+  },
+  swipeDeleteText: {
+    ...typography.caption,
+    color: colors.textInverse,
+    fontWeight: '700',
   },
 });

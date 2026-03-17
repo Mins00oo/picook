@@ -11,4 +11,10 @@ export const shortsApi = {
 
   getRecent: () =>
     api.get<ApiResponse<ShortsHistory[]>>('/api/v1/shorts/recent'),
+
+  deleteHistory: (historyId: number) =>
+    api.delete<ApiResponse<void>>(`/api/v1/shorts/history/${historyId}`),
+
+  deleteAllHistory: () =>
+    api.delete<ApiResponse<void>>('/api/v1/shorts/history'),
 };

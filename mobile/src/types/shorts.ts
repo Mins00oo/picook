@@ -3,6 +3,9 @@ export interface ShortsConvertResponse {
   youtubeUrl: string;
   title: string;
   thumbnailUrl: string | null;
+  channelName: string | null;
+  originalTitle: string | null;
+  durationSeconds: number | null;
   recipe: ShortsRecipe | null;
   fromCache: boolean;
   convertedAt: string;
@@ -29,5 +32,6 @@ export interface ShortsHistory {
   youtubeUrl: string;
   title: string | null;
   thumbnailUrl: string | null;
+  channelName: string | null;
   convertedAt: string;
 }
