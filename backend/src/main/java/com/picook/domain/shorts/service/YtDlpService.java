@@ -39,7 +39,7 @@ public class YtDlpService {
     public void checkDuration(String url) {
         try {
             ProcessBuilder pb = new ProcessBuilder(
-                    ytdlpPath, "--print", "duration", "--no-download", url
+                    ytdlpPath, "--no-warnings", "--print", "duration", "--no-download", url
             );
             pb.redirectErrorStream(true);
             Process process = pb.start();
@@ -53,14 +53,17 @@ public class YtDlpService {
             }
 
             if (process.exitValue() == 0 && !output.isBlank()) {
+                // 멀티라인 출력 시 마지막 줄만 파싱 (경고 메시지 무시)
+                String lastLine = output.lines().reduce((first, second) -> second).orElse(output).strip();
                 try {
-                    double seconds = Double.parseDouble(output);
+                    double seconds = Double.parseDouble(lastLine);
                     if (seconds > 180) {
                         throw new BusinessException("VIDEO_TOO_LONG",
                                 "3분 이하의 영상만 변환할 수 있습니다", HttpStatus.BAD_REQUEST);
                     }
+                    log.debug("Video duration: {}s for {}", seconds, url);
                 } catch (NumberFormatException e) {
-                    log.warn("Could not parse duration '{}' for {}", output, url);
+                    log.warn("Could not parse duration '{}' for {}", lastLine, url);
                 }
             }
         } catch (BusinessException e) {
