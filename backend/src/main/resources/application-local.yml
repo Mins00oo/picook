@@ -1,4 +1,7 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
+
   datasource:
     url: jdbc:postgresql://localhost:5432/picook_db
     username: picook_user
@@ -9,16 +12,13 @@ spring:
     properties:
       hibernate:
         show_sql: true
-        
+
 server:
   port: 8080
-  
-openai:
-  api-key: ${OPENAI_API_KEY:your-api-key-here}
 
 # JWT
 jwt:
-  secret: ${JWT_SECRET:change-me-in-production-minimum-256-bit-secret-key-here}
+  secret: ${JWT_SECRET:}
   access-expiration: 3600000      # 1h
   refresh-expiration: 2592000000  # 30d
 
@@ -26,8 +26,13 @@ aws:
   s3:
     bucket: picook-bucket-dev
     region: ap-northeast-2
-    access-key: local-access-key
-    secret-key: local-secret-key
+    access-key: ${AWS_S3_ACCESS_KEY:local-access-key}
+    secret-key: ${AWS_S3_SECRET_KEY:local-secret-key}
+
+shorts:
+  ytdlp-path: C:/Users/alstn/AppData/Local/Programs/Python/Python314/Scripts/yt-dlp.exe
+  ffmpeg-path: C:/Users/alstn/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.0.1-full_build/bin/ffmpeg.exe
+  temp-dir: ${java.io.tmpdir}/picook-shorts
 
 logging:
   level:
