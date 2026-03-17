@@ -46,7 +46,9 @@ public class JwtProvider {
     public boolean isAccessToken(String token) {
         try {
             Claims claims = getClaims(token);
-            return "access".equals(claims.get("type", String.class));
+            String type = claims.get("type", String.class);
+            // 기존 토큰(type 클레임 없음)은 access로 간주 (하위호환)
+            return type == null || "access".equals(type);
         } catch (Exception e) {
             return false;
         }
