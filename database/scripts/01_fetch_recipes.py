@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 API_KEY = os.getenv("FOOD_SAFETY_API_KEY")
 if not API_KEY:
@@ -31,29 +31,37 @@ OUTPUT_DIR = Path(__file__).parent.parent / "seeds"
 OUTPUT_FILE = OUTPUT_DIR / "raw_recipes.json"
 
 
+MAX_RETRIES = 3
+
+
 def fetch_batch(start: int, end: int) -> list:
-    """API에서 start~end 범위의 레시피를 가져온다."""
+    """API에서 start~end 범위의 레시피를 가져온다. 실패 시 최대 3회 재시도."""
     url = f"{BASE_URL}/{start}/{end}"
-    try:
-        resp = requests.get(url, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
 
-        result = data.get("COOKRCP01", {})
-        code = result.get("RESULT", {}).get("CODE", "")
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            resp = requests.get(url, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
 
-        if code == "INFO-000":
-            return result.get("row", [])
-        elif code == "INFO-200":
-            # 데이터 없음 (범위 초과)
-            return []
-        else:
-            msg = result.get("RESULT", {}).get("MSG", "알 수 없는 오류")
-            print(f"  ⚠️ API 응답 코드: {code} — {msg}")
-            return []
-    except requests.exceptions.RequestException as e:
-        print(f"  ❌ 요청 실패 ({start}~{end}): {e}")
-        return []
+            result = data.get("COOKRCP01", {})
+            code = result.get("RESULT", {}).get("CODE", "")
+
+            if code == "INFO-000":
+                return result.get("row", [])
+            elif code == "INFO-200":
+                return []
+            else:
+                msg = result.get("RESULT", {}).get("MSG", "알 수 없는 오류")
+                print(f"  ⚠️ API 응답 코드: {code} — {msg}")
+                return []
+        except requests.exceptions.RequestException as e:
+            print(f"  ⚠️ 요청 실패 ({start}~{end}), 시도 {attempt}/{MAX_RETRIES}: {e}")
+            if attempt < MAX_RETRIES:
+                time.sleep(2 * attempt)
+            else:
+                print(f"  ❌ {MAX_RETRIES}회 재시도 실패 ({start}~{end})")
+                return []
 
 
 def fetch_all_recipes() -> list:

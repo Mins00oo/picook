@@ -24,7 +24,7 @@ import argparse
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 if not ANTHROPIC_API_KEY:
@@ -69,16 +69,35 @@ def save_progress(progress: dict):
         json.dump(progress, f, ensure_ascii=False, indent=2)
 
 
+MAX_RETRIES = 3
+
+
 def refine_single_recipe(prompt_template: str, raw_recipe: dict) -> dict:
-    """단일 레시피를 Claude로 정제한다."""
+    """단일 레시피를 Claude로 정제한다. 429 에러 시 재시도."""
     raw_json = json.dumps(raw_recipe, ensure_ascii=False)
     full_prompt = prompt_template + "\n\n## 원본 데이터\n```json\n" + raw_json + "\n```"
 
-    response = CLIENT.messages.create(
-        model=MODEL,
-        max_tokens=4096,
-        messages=[{"role": "user", "content": full_prompt}]
-    )
+    response = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            response = CLIENT.messages.create(
+                model=MODEL,
+                max_tokens=4096,
+                messages=[{"role": "user", "content": full_prompt}]
+            )
+            break
+        except anthropic.RateLimitError as e:
+            wait = 10 * attempt
+            print(f"    ⏳ Rate limit, {wait}초 대기 (시도 {attempt}/{MAX_RETRIES})...")
+            time.sleep(wait)
+            if attempt == MAX_RETRIES:
+                raise
+        except anthropic.APIError as e:
+            if attempt < MAX_RETRIES:
+                print(f"    ⚠️ API 오류, 재시도 {attempt}/{MAX_RETRIES}: {e}")
+                time.sleep(5 * attempt)
+            else:
+                raise
 
     result_text = response.content[0].text
 
