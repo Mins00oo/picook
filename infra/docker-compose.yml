@@ -22,11 +22,15 @@ services:
       DB_USERNAME: picook_user
       DB_PASSWORD: picook_local_pw
       SPRING_PROFILES_ACTIVE: local
+      FILE_UPLOAD_DIR: /data/picook/uploads
     ports:
       - "8080:8080"
+    volumes:
+      - picook_uploads:/data/picook/uploads
     depends_on:
       - postgres
     restart: unless-stopped
 
 volumes:
   picook_pgdata:
+  picook_uploads:
