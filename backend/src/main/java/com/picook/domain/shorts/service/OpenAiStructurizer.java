@@ -39,16 +39,24 @@ public class OpenAiStructurizer implements RecipeStructurizer {
               "steps": [
                 {
                   "stepNumber": 1,
-                  "instruction": "조리 설명",
+                  "instruction": "조리 지시사항 (한국어, 명확하고 구체적으로)",
                   "type": "active 또는 wait",
-                  "durationSeconds": 초단위시간(정수, 없으면 null)
+                  "durationSeconds": 예상소요시간(초, 정수, 반드시 포함)
                 }
               ]
             }
 
-            규칙:
-            - type은 "active"(손이 필요한 작업) 또는 "wait"(대기 작업, 예: 끓이기, 재우기)
-            - durationSeconds는 대기 시간이 명확할 때만 설정, 없으면 null
+            각 조리 단계의 type과 durationSeconds 규칙:
+            - type "active": 사용자가 직접 손으로 하는 행동 (썰기, 볶기, 섞기, 담기, 버무리기 등)
+            - type "wait": 기다리는 시간이 있는 단계 (끓이기, 재우기, 오븐 굽기, 식히기 등)
+            - 판단 기준: 사용자가 계속 손을 쓰고 있어야 하면 active, 놔두고 기다려도 되면 wait
+            - durationSeconds는 모든 단계에 반드시 정수값을 포함해야 한다 (null 불가)
+            - active 예시: "야채를 썬다" → 120, "양념장을 섞는다" → 60, "고기를 볶는다" → 180
+            - wait 예시: "10분간 끓인다" → 600, "30분간 재운다" → 1800, "5분간 식힌다" → 300
+            - 텍스트에 시간이 명시되어 있으면 그대로 초 단위로 변환
+            - 시간이 명시되지 않은 active 단계는 60~180 사이로 추정
+
+            기타 규칙:
             - 요리가 아닌 영상이면 정확히 {"error": "NOT_COOKING_VIDEO"} 만 반환
             - servings를 추정할 수 없으면 2로 설정
             """;
@@ -109,7 +117,7 @@ public class OpenAiStructurizer implements RecipeStructurizer {
                 json = json.replaceFirst("\\s*```$", "");
             }
 
-            return objectMapper.readValue(json, ShortsRecipeResult.class);
+            return objectMapper.readValue(json, ShortsRecipeResult.class).withStepDefaults();
         } catch (BusinessException e) {
             throw e;
         } catch (WebClientResponseException e) {
