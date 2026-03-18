@@ -40,8 +40,8 @@ aws:
 openai:
   api-key: ${OPENAI_API_KEY}
   whisper-model: whisper-1
-  chat-model: gpt-4o
-  ai-model-version: ${AI_MODEL_VERSION:gpt-4o-2025}
+  chat-model: gpt-5.4-mini
+  ai-model-version: ${AI_MODEL_VERSION:gpt-5.4-mini-2025}
 
 # Shorts
 shorts:
