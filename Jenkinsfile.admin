@@ -16,7 +16,7 @@ pipeline {
                 sh '''
                     git config --global --add safe.directory /opt/picook/app
                     cd ${APP_DIR}
-					git gc --prune=now || true
+					rm -rf .git/refs/remotes/origin
                     git fetch origin main
                     git reset --hard origin/main
                 '''
