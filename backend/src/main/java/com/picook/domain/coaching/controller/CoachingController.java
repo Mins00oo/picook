@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "코칭", description = "코칭 시작/완료, 사진 업로드")
@@ -39,12 +40,29 @@ public class CoachingController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    /** 다중 사진 업로드 (최대 5장) */
+    @PostMapping("/{id}/photos")
+    public ResponseEntity<ApiResponse<PhotoUploadResponse>> uploadPhotos(
+            @PathVariable Integer id,
+            @RequestParam("files") List<MultipartFile> files) {
+        PhotoUploadResponse response = coachingService.uploadCoachingPhotos(getCurrentUserId(), id, files);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+    }
+
+    /** 기존 단일 사진 업로드 (하위 호환) — 내부에서 photos로 위임 */
     @PostMapping("/{id}/photo")
-    public ResponseEntity<ApiResponse<CookingCompletionResponse>> uploadPhoto(
+    public ResponseEntity<ApiResponse<PhotoUploadResponse>> uploadPhoto(
             @PathVariable Integer id,
             @RequestParam("file") MultipartFile file) {
-        CookingCompletionResponse response = coachingService.uploadCompletionPhoto(getCurrentUserId(), id, file);
+        PhotoUploadResponse response = coachingService.uploadCoachingPhotos(getCurrentUserId(), id, List.of(file));
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+    }
+
+    /** 사진 삭제 */
+    @DeleteMapping("/photos/{photoId}")
+    public ResponseEntity<ApiResponse<Void>> deletePhoto(@PathVariable Integer photoId) {
+        coachingService.deleteCoachingPhoto(getCurrentUserId(), photoId);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     private UUID getCurrentUserId() {

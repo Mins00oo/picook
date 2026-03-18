@@ -26,6 +26,20 @@ public interface CoachingLogRepository extends JpaRepository<CoachingLog, Intege
 
     long countByStartedAtBetween(Instant start, Instant end);
 
+    Page<CoachingLog> findByUserIdAndCompletedTrueOrderByCompletedAtDesc(UUID userId, Pageable pageable);
+
+    Optional<CoachingLog> findFirstByUserIdAndCompletedTrueOrderByCompletedAtAsc(UUID userId);
+
+    @Query(value = "SELECT COUNT(DISTINCT cl.id) FROM coaching_logs cl " +
+            "JOIN coaching_photos cp ON cp.coaching_log_id = cl.id " +
+            "WHERE cl.user_id = :userId AND cl.completed = true", nativeQuery = true)
+    long countCompletedWithPhotos(@Param("userId") UUID userId);
+
+    @Query(value = "SELECT TO_CHAR(completed_at, 'YYYY-MM') AS ym, COUNT(*) " +
+            "FROM coaching_logs WHERE user_id = :userId AND completed = true " +
+            "GROUP BY ym ORDER BY ym", nativeQuery = true)
+    List<Object[]> countMonthlyCompleted(@Param("userId") UUID userId);
+
     @Query(value = "SELECT EXTRACT(HOUR FROM started_at) AS hour, COUNT(*) FROM coaching_logs GROUP BY hour ORDER BY hour", nativeQuery = true)
     List<Object[]> findHourlyDistribution();
 

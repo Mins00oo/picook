@@ -6,7 +6,8 @@ import com.picook.domain.coaching.entity.CookingCompletion;
 import com.picook.domain.coaching.repository.CoachingLogRepository;
 import com.picook.domain.coaching.repository.CookingCompletionRepository;
 import com.picook.domain.file.dto.FileUploadResponse;
-import com.picook.domain.file.service.S3FileService;
+import com.picook.domain.coaching.repository.CoachingPhotoRepository;
+import com.picook.domain.file.service.FileStorageService;
 import com.picook.domain.recipe.entity.Recipe;
 import com.picook.domain.recipe.repository.RecipeRepository;
 import com.picook.domain.shorts.entity.ShortsCache;
@@ -41,9 +42,10 @@ class CoachingServiceTest {
 
     @Mock private CoachingLogRepository coachingLogRepository;
     @Mock private CookingCompletionRepository cookingCompletionRepository;
+    @Mock private CoachingPhotoRepository coachingPhotoRepository;
     @Mock private RecipeRepository recipeRepository;
     @Mock private UserRepository userRepository;
-    @Mock private S3FileService s3FileService;
+    @Mock private FileStorageService fileStorageService;
     @Mock private ShortsCacheService shortsCacheService;
     @Mock private PlatformTransactionManager txManager;
     @Mock private EntityManager entityManager;
@@ -56,8 +58,8 @@ class CoachingServiceTest {
     void setUp() throws Exception {
         when(txManager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
         coachingService = new CoachingService(
-                coachingLogRepository, cookingCompletionRepository,
-                recipeRepository, userRepository, s3FileService,
+                coachingLogRepository, cookingCompletionRepository, coachingPhotoRepository,
+                recipeRepository, userRepository, fileStorageService,
                 shortsCacheService, txManager, entityManager);
         userId = UUID.randomUUID();
         recipe = new Recipe("김치찌개", "한식", "easy", 30, 2);
@@ -237,13 +239,13 @@ class CoachingServiceTest {
 
         when(coachingLogRepository.findByIdAndUserId(1, userId)).thenReturn(Optional.of(log));
         when(cookingCompletionRepository.existsByCoachingLogId(1)).thenReturn(false);
-        when(s3FileService.upload(mockFile)).thenReturn(new FileUploadResponse("https://s3.com/photo.jpg", "photo.jpg", 1024));
+        when(fileStorageService.upload(mockFile, "cooking")).thenReturn("/uploads/cooking/2026/03/18/photo.jpg");
         when(cookingCompletionRepository.save(any(CookingCompletion.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
         CookingCompletionResponse response = coachingService.uploadCompletionPhoto(userId, 1, mockFile);
 
-        assertThat(response.photoUrl()).isEqualTo("https://s3.com/photo.jpg");
+        assertThat(response.photoUrl()).isEqualTo("/uploads/cooking/2026/03/18/photo.jpg");
         assertThat(response.recipeId()).isEqualTo(1);
         assertThat(response.rankInfo()).isNotNull();
         assertThat(response.rankInfo().level()).isEqualTo(3);
@@ -265,13 +267,13 @@ class CoachingServiceTest {
 
         when(coachingLogRepository.findByIdAndUserId(2, userId)).thenReturn(Optional.of(log));
         when(cookingCompletionRepository.existsByCoachingLogId(2)).thenReturn(false);
-        when(s3FileService.upload(mockFile)).thenReturn(new FileUploadResponse("https://s3.com/photo2.jpg", "photo2.jpg", 2048));
+        when(fileStorageService.upload(mockFile, "cooking")).thenReturn("/uploads/cooking/2026/03/18/photo2.jpg");
         when(cookingCompletionRepository.save(any(CookingCompletion.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
         CookingCompletionResponse response = coachingService.uploadCompletionPhoto(userId, 2, mockFile);
 
-        assertThat(response.photoUrl()).isEqualTo("https://s3.com/photo2.jpg");
+        assertThat(response.photoUrl()).isEqualTo("/uploads/cooking/2026/03/18/photo2.jpg");
         assertThat(response.recipeId()).isNull();
         assertThat(response.rankInfo()).isNotNull();
     }

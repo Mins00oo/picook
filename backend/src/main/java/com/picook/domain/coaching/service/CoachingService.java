@@ -2,11 +2,12 @@ package com.picook.domain.coaching.service;
 
 import com.picook.domain.coaching.dto.*;
 import com.picook.domain.coaching.entity.CoachingLog;
+import com.picook.domain.coaching.entity.CoachingPhoto;
 import com.picook.domain.coaching.entity.CookingCompletion;
 import com.picook.domain.coaching.repository.CoachingLogRepository;
+import com.picook.domain.coaching.repository.CoachingPhotoRepository;
 import com.picook.domain.coaching.repository.CookingCompletionRepository;
-import com.picook.domain.file.dto.FileUploadResponse;
-import com.picook.domain.file.service.S3FileService;
+import com.picook.domain.file.service.FileStorageService;
 import com.picook.domain.recipe.entity.Recipe;
 import com.picook.domain.recipe.repository.RecipeRepository;
 import com.picook.domain.shorts.entity.ShortsCache;
@@ -35,28 +36,33 @@ public class CoachingService {
 
     private static final Logger log = LoggerFactory.getLogger(CoachingService.class);
 
+    private static final int MAX_PHOTOS = 5;
+
     private final CoachingLogRepository coachingLogRepository;
     private final CookingCompletionRepository cookingCompletionRepository;
+    private final CoachingPhotoRepository coachingPhotoRepository;
     private final RecipeRepository recipeRepository;
     private final UserRepository userRepository;
-    private final S3FileService s3FileService;
+    private final FileStorageService fileStorageService;
     private final ShortsCacheService shortsCacheService;
     private final TransactionTemplate transactionTemplate;
     private final EntityManager entityManager;
 
     public CoachingService(CoachingLogRepository coachingLogRepository,
                            CookingCompletionRepository cookingCompletionRepository,
+                           CoachingPhotoRepository coachingPhotoRepository,
                            RecipeRepository recipeRepository,
                            UserRepository userRepository,
-                           S3FileService s3FileService,
+                           FileStorageService fileStorageService,
                            ShortsCacheService shortsCacheService,
                            PlatformTransactionManager txManager,
                            EntityManager entityManager) {
         this.coachingLogRepository = coachingLogRepository;
         this.cookingCompletionRepository = cookingCompletionRepository;
+        this.coachingPhotoRepository = coachingPhotoRepository;
         this.recipeRepository = recipeRepository;
         this.userRepository = userRepository;
-        this.s3FileService = s3FileService;
+        this.fileStorageService = fileStorageService;
         this.shortsCacheService = shortsCacheService;
         this.transactionTemplate = new TransactionTemplate(txManager);
         this.entityManager = entityManager;
@@ -114,7 +120,7 @@ public class CoachingService {
     }
 
     /**
-     * 완성 사진 업로드 — S3는 TX 밖, DB 저장만 TX 안에서 수행
+     * 완성 사진 업로드 — 파일 저장은 TX 밖, DB 저장만 TX 안에서 수행
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CookingCompletionResponse uploadCompletionPhoto(UUID userId, Integer coachingLogId, MultipartFile file) {
@@ -130,8 +136,8 @@ public class CoachingService {
             throw new BusinessException("COMPLETION_DUPLICATE", "이미 완성 사진이 등록된 코칭 세션입니다", HttpStatus.CONFLICT);
         }
 
-        // 2. S3 업로드 — TX 밖 (DB 커넥션 점유 없음)
-        FileUploadResponse uploaded = s3FileService.upload(file);
+        // 2. 파일 업로드 — TX 밖 (DB 커넥션 점유 없음)
+        String photoUrl = fileStorageService.upload(file, "cooking");
 
         // 3. DB 저장 — TransactionTemplate으로 짧은 TX
         try {
@@ -144,7 +150,7 @@ public class CoachingService {
 
                 Integer recipeId = (coachingLog.getRecipeIds() != null && !coachingLog.getRecipeIds().isEmpty())
                         ? coachingLog.getRecipeIds().get(0) : null;
-                CookingCompletion completion = new CookingCompletion(userId, recipeId, coachingLogId, uploaded.url());
+                CookingCompletion completion = new CookingCompletion(userId, recipeId, coachingLogId, photoUrl);
                 cookingCompletionRepository.save(completion);
 
                 // flush로 INSERT 실행 → DB 트리거가 completed_cooking_count 증가
@@ -160,21 +166,109 @@ public class CoachingService {
                 return CookingCompletionResponse.of(completion, rankInfo);
             });
         } catch (BusinessException e) {
-            // DB 실패 시 S3 파일 정리
-            cleanupS3Quietly(uploaded.url());
+            // DB 실패 시 파일 정리
+            cleanupFileQuietly(photoUrl);
             throw e;
         } catch (Exception e) {
-            cleanupS3Quietly(uploaded.url());
+            cleanupFileQuietly(photoUrl);
             throw e;
         }
     }
 
-    private void cleanupS3Quietly(String url) {
+    private void cleanupFileQuietly(String url) {
         try {
-            s3FileService.delete(url);
+            fileStorageService.delete(url);
         } catch (Exception e) {
-            log.warn("Failed to cleanup S3 file after DB failure: {}", url, e);
+            log.warn("Failed to cleanup file after DB failure: {}", url, e);
         }
+    }
+
+    /**
+     * 다중 사진 업로드 — 파일 저장은 TX 밖, DB 저장만 TX 안에서 수행
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public PhotoUploadResponse uploadCoachingPhotos(UUID userId, Integer coachingLogId, List<MultipartFile> files) {
+        if (files == null || files.isEmpty()) {
+            throw new BusinessException("FILE_EMPTY", "사진을 1장 이상 업로드해주세요", HttpStatus.BAD_REQUEST);
+        }
+        if (files.size() > MAX_PHOTOS) {
+            throw new BusinessException("TOO_MANY_PHOTOS", "사진은 최대 " + MAX_PHOTOS + "장까지 업로드할 수 있습니다", HttpStatus.BAD_REQUEST);
+        }
+
+        CoachingLog coachingLog = coachingLogRepository.findByIdAndUserId(coachingLogId, userId)
+                .orElseThrow(() -> new BusinessException("COACHING_NOT_FOUND", "코칭 세션을 찾을 수 없습니다", HttpStatus.NOT_FOUND));
+
+        if (!coachingLog.getCompleted()) {
+            throw new BusinessException("COACHING_NOT_COMPLETED", "코칭이 아직 완료되지 않았습니다", HttpStatus.BAD_REQUEST);
+        }
+
+        int existingCount = coachingPhotoRepository.countByCoachingLogId(coachingLogId);
+        if (existingCount + files.size() > MAX_PHOTOS) {
+            throw new BusinessException("TOO_MANY_PHOTOS",
+                    "사진은 최대 " + MAX_PHOTOS + "장까지 가능합니다 (현재 " + existingCount + "장)", HttpStatus.BAD_REQUEST);
+        }
+
+        boolean isFirstUpload = existingCount == 0;
+
+        // 파일 업로드 — TX 밖
+        List<String> photoUrls = new java.util.ArrayList<>();
+        try {
+            for (MultipartFile file : files) {
+                photoUrls.add(fileStorageService.upload(file, "cooking"));
+            }
+        } catch (Exception e) {
+            photoUrls.forEach(this::cleanupFileQuietly);
+            throw e;
+        }
+
+        // DB 저장 — 짧은 TX
+        final List<String> savedUrls = photoUrls;
+        try {
+            return transactionTemplate.execute(status -> {
+                List<CoachingPhotoResponse> photoResponses = new java.util.ArrayList<>();
+                int order = existingCount;
+                for (String url : savedUrls) {
+                    CoachingPhoto photo = new CoachingPhoto(coachingLogId, url, order++);
+                    coachingPhotoRepository.save(photo);
+                    photoResponses.add(CoachingPhotoResponse.of(photo));
+                }
+
+                // 첫 사진 업로드 시에만 cooking_count +1
+                if (isFirstUpload && !cookingCompletionRepository.existsByCoachingLogId(coachingLogId)) {
+                    Integer recipeId = (coachingLog.getRecipeIds() != null && !coachingLog.getRecipeIds().isEmpty())
+                            ? coachingLog.getRecipeIds().get(0) : null;
+                    CookingCompletion completion = new CookingCompletion(userId, recipeId, coachingLogId, savedUrls.get(0));
+                    cookingCompletionRepository.save(completion);
+                    cookingCompletionRepository.flush();
+                }
+
+                User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "사용자를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
+                entityManager.refresh(user);
+                RankInfo rank = RankInfo.of(user.getCompletedCookingCount());
+
+                return new PhotoUploadResponse(photoResponses, user.getCompletedCookingCount(),
+                        rank.level(), rank.title(), rank.emoji());
+            });
+        } catch (Exception e) {
+            savedUrls.forEach(this::cleanupFileQuietly);
+            throw e;
+        }
+    }
+
+    /**
+     * 사진 삭제 — 본인 사진만 삭제 가능, 등급은 유지
+     */
+    @Transactional
+    public void deleteCoachingPhoto(UUID userId, Integer photoId) {
+        CoachingPhoto photo = coachingPhotoRepository.findById(photoId)
+                .orElseThrow(() -> new BusinessException("PHOTO_NOT_FOUND", "사진을 찾을 수 없습니다", HttpStatus.NOT_FOUND));
+
+        CoachingLog coachingLog = coachingLogRepository.findByIdAndUserId(photo.getCoachingLogId(), userId)
+                .orElseThrow(() -> new BusinessException("PHOTO_NOT_FOUND", "사진을 찾을 수 없습니다", HttpStatus.NOT_FOUND));
+
+        coachingPhotoRepository.delete(photo);
+        cleanupFileQuietly(photo.getPhotoUrl());
     }
 
     private void validateMode(String mode, List<Integer> recipeIds) {
