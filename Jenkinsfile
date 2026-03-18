@@ -11,6 +11,7 @@ pipeline {
         stage('Pull') {
             steps {
                 sh '''
+					git config --global --add safe.directory /opt/picook/app
                     cd ${APP_DIR}
                     git fetch origin main
 					git reset --hard origin/main
