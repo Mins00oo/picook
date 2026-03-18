@@ -34,9 +34,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-flyway")
     implementation("org.flywaydb:flyway-database-postgresql")
 
-    // AWS S3
-    implementation("software.amazon.awssdk:s3:2.29.51")
-
     // Excel
     implementation("org.apache.poi:poi-ooxml:5.3.0")
 
