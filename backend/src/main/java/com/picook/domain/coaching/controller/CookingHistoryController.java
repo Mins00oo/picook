@@ -11,7 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -29,24 +29,26 @@ public class CookingHistoryController {
 
     @GetMapping("/history")
     public ResponseEntity<ApiResponse<PageResponse<CookingHistoryResponse>>> getHistory(
-            @AuthenticationPrincipal UUID userId,
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<CookingHistoryResponse> page = cookingHistoryService.getHistory(userId, pageable);
+        Page<CookingHistoryResponse> page = cookingHistoryService.getHistory(getCurrentUserId(), pageable);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(page)));
     }
 
     @GetMapping("/history/{id}")
     public ResponseEntity<ApiResponse<CookingHistoryDetailResponse>> getHistoryDetail(
-            @AuthenticationPrincipal UUID userId,
             @PathVariable Integer id) {
-        CookingHistoryDetailResponse detail = cookingHistoryService.getHistoryDetail(userId, id);
+        CookingHistoryDetailResponse detail = cookingHistoryService.getHistoryDetail(getCurrentUserId(), id);
         return ResponseEntity.ok(ApiResponse.success(detail));
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<ApiResponse<CookingStatsResponse>> getStats(
-            @AuthenticationPrincipal UUID userId) {
-        CookingStatsResponse stats = cookingHistoryService.getStats(userId);
+    public ResponseEntity<ApiResponse<CookingStatsResponse>> getStats() {
+        CookingStatsResponse stats = cookingHistoryService.getStats(getCurrentUserId());
         return ResponseEntity.ok(ApiResponse.success(stats));
+    }
+
+    private UUID getCurrentUserId() {
+        String principal = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return UUID.fromString(principal);
     }
 }
