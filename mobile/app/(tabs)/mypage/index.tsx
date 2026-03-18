@@ -15,6 +15,7 @@ export default function MypageScreen() {
   const progress = getLevelProgress(count);
 
   const MENU_ITEMS = [
+    { label: '🍳 나의 요리 기록', route: '/(tabs)/mypage/cooking-history' as const },
     { label: '프로필 수정', route: '/(tabs)/mypage/profile' as const },
     { label: '코칭 설정', route: '/(tabs)/mypage/coaching-settings' as const },
     { label: '앱 설정', route: '/(tabs)/mypage/settings' as const },
@@ -36,7 +37,11 @@ export default function MypageScreen() {
           </View>
         </View>
 
-        <View style={styles.rankCard}>
+        <TouchableOpacity
+          style={styles.rankCard}
+          activeOpacity={0.7}
+          onPress={() => router.push('/(tabs)/mypage/cooking-history')}
+        >
           <View style={styles.rankHeader}>
             <Text style={styles.rankTitle}>요리 등급</Text>
             <Text style={styles.rankCount}>{count}회 완료</Text>
@@ -49,7 +54,7 @@ export default function MypageScreen() {
               ? `다음 등급까지 ${nextLevel.min - count}회 남았어요`
               : '최고 등급 달성!'}
           </Text>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.menu}>
           {MENU_ITEMS.map((item) => (
