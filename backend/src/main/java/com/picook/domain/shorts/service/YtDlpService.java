@@ -12,8 +12,15 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -32,6 +39,9 @@ public class YtDlpService {
     private String tempDir;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
     @PostConstruct
     void init() throws IOException {
@@ -168,15 +178,23 @@ public class YtDlpService {
                 log.warn("Metadata fetch timed out for {}", url);
             } else if (process.exitValue() == 0 && !output.isBlank()) {
                 JsonNode json = objectMapper.readTree(output);
-                channelName = getTextOrNull(json, "channel");
-                if (channelName == null) {
-                    channelName = getTextOrNull(json, "uploader");
-                }
                 originalTitle = getTextOrNull(json, "title");
                 if (json.has("duration") && !json.get("duration").isNull()) {
                     durationSeconds = json.get("duration").asInt();
                 }
                 thumbnailUrl = getTextOrNull(json, "thumbnail");
+
+                // yt-dlp의 channel 필드는 MCN 네트워크명이 반환될 수 있으므로
+                // YouTube oEmbed API로 정확한 채널 표시명을 조회
+                channelName = fetchChannelNameFromOEmbed(url);
+                if (channelName == null) {
+                    // oEmbed 실패 시 yt-dlp fallback
+                    channelName = getTextOrNull(json, "channel");
+                    if (channelName == null) {
+                        channelName = getTextOrNull(json, "uploader");
+                    }
+                }
+
                 log.debug("YouTube metadata: channel={}, title={}, duration={}s",
                         channelName, originalTitle, durationSeconds);
             }
@@ -188,6 +206,41 @@ public class YtDlpService {
         Path audioPath = extractAudio(url);
 
         return new YtDlpResult(audioPath, channelName, originalTitle, durationSeconds, thumbnailUrl);
+    }
+
+    /**
+     * YouTube oEmbed API로 정확한 채널 표시명을 조회한다.
+     * yt-dlp의 channel 필드는 MCN 소속 채널의 경우 네트워크명(예: Tasty)이 반환되는 문제가 있어
+     * oEmbed의 author_name을 사용한다.
+     */
+    private String fetchChannelNameFromOEmbed(String videoUrl) {
+        try {
+            // shorts URL을 watch URL 형식으로 변환 (oEmbed는 watch URL만 지원)
+            String watchUrl = videoUrl.replaceFirst("/shorts/", "/watch?v=");
+            String encoded = URLEncoder.encode(watchUrl, StandardCharsets.UTF_8);
+            String oembedUrl = "https://www.youtube.com/oembed?url=" + encoded + "&format=json";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(oembedUrl))
+                    .timeout(Duration.ofSeconds(5))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                JsonNode json = objectMapper.readTree(response.body());
+                String authorName = getTextOrNull(json, "author_name");
+                if (authorName != null) {
+                    log.debug("oEmbed channel name: {}", authorName);
+                }
+                return authorName;
+            }
+            log.warn("oEmbed API returned status {} for {}", response.statusCode(), videoUrl);
+        } catch (Exception e) {
+            log.warn("oEmbed channel name fetch failed for {}: {}", videoUrl, e.getMessage());
+        }
+        return null;
     }
 
     private String getTextOrNull(JsonNode node, String field) {
