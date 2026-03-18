@@ -26,6 +26,9 @@ public class CoachingLog {
     @JdbcTypeCode(SqlTypes.ARRAY)
     private List<Integer> recipeIds;
 
+    @Column(name = "shorts_cache_id")
+    private Integer shortsCacheId;
+
     @Column(name = "estimated_seconds")
     private Integer estimatedSeconds;
 
@@ -50,6 +53,14 @@ public class CoachingLog {
         this.estimatedSeconds = estimatedSeconds;
     }
 
+    public CoachingLog(UUID userId, String mode, Integer shortsCacheId, Integer estimatedSeconds) {
+        this.userId = userId;
+        this.mode = mode;
+        this.recipeIds = List.of();
+        this.shortsCacheId = shortsCacheId;
+        this.estimatedSeconds = estimatedSeconds;
+    }
+
     @PrePersist
     protected void onCreate() {
         this.startedAt = Instant.now();
@@ -65,6 +76,7 @@ public class CoachingLog {
     public UUID getUserId() { return userId; }
     public String getMode() { return mode; }
     public List<Integer> getRecipeIds() { return recipeIds; }
+    public Integer getShortsCacheId() { return shortsCacheId; }
     public Integer getEstimatedSeconds() { return estimatedSeconds; }
     public Integer getActualSeconds() { return actualSeconds; }
     public Boolean getCompleted() { return completed; }

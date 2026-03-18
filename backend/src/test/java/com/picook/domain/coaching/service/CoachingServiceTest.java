@@ -9,6 +9,8 @@ import com.picook.domain.file.dto.FileUploadResponse;
 import com.picook.domain.file.service.S3FileService;
 import com.picook.domain.recipe.entity.Recipe;
 import com.picook.domain.recipe.repository.RecipeRepository;
+import com.picook.domain.shorts.entity.ShortsCache;
+import com.picook.domain.shorts.service.ShortsCacheService;
 import com.picook.domain.user.entity.LoginType;
 import com.picook.domain.user.entity.User;
 import com.picook.domain.user.repository.UserRepository;
@@ -42,6 +44,7 @@ class CoachingServiceTest {
     @Mock private RecipeRepository recipeRepository;
     @Mock private UserRepository userRepository;
     @Mock private S3FileService s3FileService;
+    @Mock private ShortsCacheService shortsCacheService;
     @Mock private PlatformTransactionManager txManager;
     @Mock private EntityManager entityManager;
 
@@ -55,7 +58,7 @@ class CoachingServiceTest {
         coachingService = new CoachingService(
                 coachingLogRepository, cookingCompletionRepository,
                 recipeRepository, userRepository, s3FileService,
-                txManager, entityManager);
+                shortsCacheService, txManager, entityManager);
         userId = UUID.randomUUID();
         recipe = new Recipe("김치찌개", "한식", "easy", 30, 2);
         setField(recipe, "id", 1);
@@ -64,7 +67,7 @@ class CoachingServiceTest {
 
     @Test
     void 코칭_시작_싱글_성공() {
-        StartCoachingRequest request = new StartCoachingRequest("single", List.of(1), 1800);
+        StartCoachingRequest request = new StartCoachingRequest("single", List.of(1), null, 1800);
         when(recipeRepository.findByIdAndIsDeletedFalse(1)).thenReturn(Optional.of(recipe));
         when(coachingLogRepository.save(any(CoachingLog.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -72,6 +75,7 @@ class CoachingServiceTest {
 
         assertThat(response.mode()).isEqualTo("single");
         assertThat(response.recipeIds()).containsExactly(1);
+        assertThat(response.shortsCacheId()).isNull();
         assertThat(response.completed()).isFalse();
         verify(coachingLogRepository).save(any(CoachingLog.class));
     }
@@ -82,7 +86,7 @@ class CoachingServiceTest {
         setField(recipe2, "id", 2);
         setField(recipe2, "coachingReady", true);
 
-        StartCoachingRequest request = new StartCoachingRequest("multi", List.of(1, 2), 3600);
+        StartCoachingRequest request = new StartCoachingRequest("multi", List.of(1, 2), null, 3600);
         when(recipeRepository.findByIdAndIsDeletedFalse(1)).thenReturn(Optional.of(recipe));
         when(recipeRepository.findByIdAndIsDeletedFalse(2)).thenReturn(Optional.of(recipe2));
         when(coachingLogRepository.save(any(CoachingLog.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -94,8 +98,45 @@ class CoachingServiceTest {
     }
 
     @Test
+    void 코칭_시작_쇼츠캐시_성공() throws Exception {
+        ShortsCache cache = new ShortsCache("https://youtube.com/shorts/abc", "hash", "v1", "레시피", null, "{\"steps\":[]}");
+        setField(cache, "id", 10);
+
+        StartCoachingRequest request = new StartCoachingRequest("single", null, 10, 600);
+        when(shortsCacheService.findById(10)).thenReturn(Optional.of(cache));
+        when(coachingLogRepository.save(any(CoachingLog.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CoachingLogResponse response = coachingService.startCoaching(userId, request);
+
+        assertThat(response.mode()).isEqualTo("single");
+        assertThat(response.shortsCacheId()).isEqualTo(10);
+        assertThat(response.recipeIds()).isEmpty();
+        verify(shortsCacheService).findById(10);
+        verify(coachingLogRepository).save(any(CoachingLog.class));
+    }
+
+    @Test
+    void 코칭_시작_쇼츠캐시_미존재_에러() {
+        StartCoachingRequest request = new StartCoachingRequest("single", null, 999, 600);
+        when(shortsCacheService.findById(999)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> coachingService.startCoaching(userId, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("쇼츠 변환 결과를 찾을 수 없습니다");
+    }
+
+    @Test
+    void 코칭_시작_recipeIds와_shortsCacheId_모두_없으면_에러() {
+        StartCoachingRequest request = new StartCoachingRequest("single", null, null, 600);
+
+        assertThatThrownBy(() -> coachingService.startCoaching(userId, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("recipeIds 또는 shortsCacheId 중 하나는 필수");
+    }
+
+    @Test
     void 코칭_시작_싱글모드_레시피_2개이면_에러() {
-        StartCoachingRequest request = new StartCoachingRequest("single", List.of(1, 2), 1800);
+        StartCoachingRequest request = new StartCoachingRequest("single", List.of(1, 2), null, 1800);
 
         assertThatThrownBy(() -> coachingService.startCoaching(userId, request))
                 .isInstanceOf(BusinessException.class)
@@ -104,7 +145,7 @@ class CoachingServiceTest {
 
     @Test
     void 코칭_시작_멀티모드_레시피_1개이면_에러() {
-        StartCoachingRequest request = new StartCoachingRequest("multi", List.of(1), 1800);
+        StartCoachingRequest request = new StartCoachingRequest("multi", List.of(1), null, 1800);
 
         assertThatThrownBy(() -> coachingService.startCoaching(userId, request))
                 .isInstanceOf(BusinessException.class)
@@ -113,7 +154,7 @@ class CoachingServiceTest {
 
     @Test
     void 코칭_시작_잘못된_모드_에러() {
-        StartCoachingRequest request = new StartCoachingRequest("invalid", List.of(1), 1800);
+        StartCoachingRequest request = new StartCoachingRequest("invalid", List.of(1), null, 1800);
 
         assertThatThrownBy(() -> coachingService.startCoaching(userId, request))
                 .isInstanceOf(BusinessException.class)
@@ -122,7 +163,7 @@ class CoachingServiceTest {
 
     @Test
     void 코칭_시작_미존재_레시피_에러() {
-        StartCoachingRequest request = new StartCoachingRequest("single", List.of(999), 1800);
+        StartCoachingRequest request = new StartCoachingRequest("single", List.of(999), null, 1800);
         when(recipeRepository.findByIdAndIsDeletedFalse(999)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> coachingService.startCoaching(userId, request))
@@ -133,7 +174,7 @@ class CoachingServiceTest {
     @Test
     void 코칭_시작_코칭미지원_레시피_에러() throws Exception {
         setField(recipe, "coachingReady", false);
-        StartCoachingRequest request = new StartCoachingRequest("single", List.of(1), 1800);
+        StartCoachingRequest request = new StartCoachingRequest("single", List.of(1), null, 1800);
         when(recipeRepository.findByIdAndIsDeletedFalse(1)).thenReturn(Optional.of(recipe));
 
         assertThatThrownBy(() -> coachingService.startCoaching(userId, request))
@@ -188,7 +229,6 @@ class CoachingServiceTest {
         setField(log, "id", 1);
         log.complete(2000);
 
-        // DB 트리거가 증가시킨 후의 값 (refresh로 읽어오는 값)
         User user = new User(LoginType.KAKAO);
         setField(user, "id", userId);
         setField(user, "completedCookingCount", 6);
@@ -206,9 +246,34 @@ class CoachingServiceTest {
         assertThat(response.photoUrl()).isEqualTo("https://s3.com/photo.jpg");
         assertThat(response.recipeId()).isEqualTo(1);
         assertThat(response.rankInfo()).isNotNull();
-        assertThat(response.rankInfo().level()).isEqualTo(3); // count 6 -> LV3
+        assertThat(response.rankInfo().level()).isEqualTo(3);
         verify(cookingCompletionRepository).save(any(CookingCompletion.class));
         verify(entityManager).refresh(user);
+    }
+
+    @Test
+    void 사진_업로드_쇼츠코칭_성공() throws Exception {
+        CoachingLog log = new CoachingLog(userId, "single", 10, 600);
+        setField(log, "id", 2);
+        log.complete(500);
+
+        User user = new User(LoginType.KAKAO);
+        setField(user, "id", userId);
+        setField(user, "completedCookingCount", 1);
+
+        MultipartFile mockFile = mock(MultipartFile.class);
+
+        when(coachingLogRepository.findByIdAndUserId(2, userId)).thenReturn(Optional.of(log));
+        when(cookingCompletionRepository.existsByCoachingLogId(2)).thenReturn(false);
+        when(s3FileService.upload(mockFile)).thenReturn(new FileUploadResponse("https://s3.com/photo2.jpg", "photo2.jpg", 2048));
+        when(cookingCompletionRepository.save(any(CookingCompletion.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        CookingCompletionResponse response = coachingService.uploadCompletionPhoto(userId, 2, mockFile);
+
+        assertThat(response.photoUrl()).isEqualTo("https://s3.com/photo2.jpg");
+        assertThat(response.recipeId()).isNull();
+        assertThat(response.rankInfo()).isNotNull();
     }
 
     @Test

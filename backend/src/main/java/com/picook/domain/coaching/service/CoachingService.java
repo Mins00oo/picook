@@ -9,6 +9,8 @@ import com.picook.domain.file.dto.FileUploadResponse;
 import com.picook.domain.file.service.S3FileService;
 import com.picook.domain.recipe.entity.Recipe;
 import com.picook.domain.recipe.repository.RecipeRepository;
+import com.picook.domain.shorts.entity.ShortsCache;
+import com.picook.domain.shorts.service.ShortsCacheService;
 import com.picook.domain.user.dto.RankInfo;
 import com.picook.domain.user.entity.User;
 import com.picook.domain.user.repository.UserRepository;
@@ -38,6 +40,7 @@ public class CoachingService {
     private final RecipeRepository recipeRepository;
     private final UserRepository userRepository;
     private final S3FileService s3FileService;
+    private final ShortsCacheService shortsCacheService;
     private final TransactionTemplate transactionTemplate;
     private final EntityManager entityManager;
 
@@ -46,6 +49,7 @@ public class CoachingService {
                            RecipeRepository recipeRepository,
                            UserRepository userRepository,
                            S3FileService s3FileService,
+                           ShortsCacheService shortsCacheService,
                            PlatformTransactionManager txManager,
                            EntityManager entityManager) {
         this.coachingLogRepository = coachingLogRepository;
@@ -53,19 +57,45 @@ public class CoachingService {
         this.recipeRepository = recipeRepository;
         this.userRepository = userRepository;
         this.s3FileService = s3FileService;
+        this.shortsCacheService = shortsCacheService;
         this.transactionTemplate = new TransactionTemplate(txManager);
         this.entityManager = entityManager;
     }
 
     @Transactional
     public CoachingLogResponse startCoaching(UUID userId, StartCoachingRequest request) {
-        validateMode(request.mode(), request.recipeIds());
-        validateRecipes(request.recipeIds());
+        boolean hasRecipes = request.recipeIds() != null && !request.recipeIds().isEmpty();
+        boolean hasShorts = request.shortsCacheId() != null;
 
-        CoachingLog log = new CoachingLog(userId, request.mode(), request.recipeIds(), request.estimatedSeconds());
-        coachingLogRepository.save(log);
+        if (!hasRecipes && !hasShorts) {
+            throw new BusinessException("INVALID_COACHING_SOURCE",
+                    "recipeIds 또는 shortsCacheId 중 하나는 필수입니다", HttpStatus.BAD_REQUEST);
+        }
 
-        return CoachingLogResponse.of(log);
+        CoachingLog coachingLog;
+
+        if (hasShorts) {
+            // 쇼츠 캐시 기반 코칭
+            ShortsCache cache = shortsCacheService.findById(request.shortsCacheId())
+                    .orElseThrow(() -> new BusinessException("SHORTS_NOT_FOUND",
+                            "쇼츠 변환 결과를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
+
+            if (cache.getResult() == null || cache.getResult().isBlank()) {
+                throw new BusinessException("SHORTS_NO_RECIPE",
+                        "변환된 레시피가 없습니다", HttpStatus.BAD_REQUEST);
+            }
+
+            coachingLog = new CoachingLog(userId, "single", request.shortsCacheId(), request.estimatedSeconds());
+        } else {
+            // 기존 레시피 기반 코칭
+            validateMode(request.mode(), request.recipeIds());
+            validateRecipes(request.recipeIds());
+
+            coachingLog = new CoachingLog(userId, request.mode(), request.recipeIds(), request.estimatedSeconds());
+        }
+
+        coachingLogRepository.save(coachingLog);
+        return CoachingLogResponse.of(coachingLog);
     }
 
     @Transactional
@@ -112,7 +142,8 @@ public class CoachingService {
                             "이미 완성 사진이 등록된 코칭 세션입니다", HttpStatus.CONFLICT);
                 }
 
-                Integer recipeId = coachingLog.getRecipeIds().get(0);
+                Integer recipeId = (coachingLog.getRecipeIds() != null && !coachingLog.getRecipeIds().isEmpty())
+                        ? coachingLog.getRecipeIds().get(0) : null;
                 CookingCompletion completion = new CookingCompletion(userId, recipeId, coachingLogId, uploaded.url());
                 cookingCompletionRepository.save(completion);
 
