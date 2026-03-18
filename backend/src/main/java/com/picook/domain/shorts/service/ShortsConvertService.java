@@ -113,7 +113,7 @@ public class ShortsConvertService {
             long transcribeMs = System.currentTimeMillis() - t1;
 
             long t2 = System.currentTimeMillis();
-            ShortsRecipeResult recipe = recipeStructurizer.structurize(transcript);
+            ShortsRecipeResult recipe = recipeStructurizer.structurize(transcript, ytResult.originalTitle());
             long structurizeMs = System.currentTimeMillis() - t2;
 
             String resultJson = objectMapper.writeValueAsString(recipe);
@@ -225,7 +225,7 @@ public class ShortsConvertService {
             YtDlpResult ytResult = ytDlpService.fetchMetadataAndExtractAudio(url);
             audioPath = ytResult.audioPath();
             String transcript = whisperService.transcribe(audioPath);
-            ShortsRecipeResult recipe = recipeStructurizer.structurize(transcript);
+            ShortsRecipeResult recipe = recipeStructurizer.structurize(transcript, ytResult.originalTitle());
 
             String resultJson = objectMapper.writeValueAsString(recipe);
             existing.update(modelVersion, recipe.title(), resultJson);

@@ -98,7 +98,7 @@ class ShortsConvertServiceTest {
         when(ytDlpService.fetchMetadataAndExtractAudio(anyString()))
                 .thenReturn(new YtDlpResult(Path.of("/tmp/test.mp3"), "요리채널", "김치찌개 만들기", 60, "https://img.youtube.com/thumb.jpg"));
         when(whisperService.transcribe(any())).thenReturn("김치찌개 만드는 법...");
-        when(recipeStructurizer.structurize(anyString())).thenReturn(recipe);
+        when(recipeStructurizer.structurize(anyString(), any())).thenReturn(recipe);
         when(shortsCacheService.save(any())).thenReturn(savedCache);
         when(historyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -110,7 +110,7 @@ class ShortsConvertServiceTest {
         var inOrder = inOrder(ytDlpService, whisperService, recipeStructurizer, shortsCacheService);
         inOrder.verify(ytDlpService).fetchMetadataAndExtractAudio(anyString());
         inOrder.verify(whisperService).transcribe(any());
-        inOrder.verify(recipeStructurizer).structurize(anyString());
+        inOrder.verify(recipeStructurizer).structurize(anyString(), any());
         inOrder.verify(shortsCacheService).save(any());
     }
 
@@ -129,7 +129,7 @@ class ShortsConvertServiceTest {
         when(ytDlpService.fetchMetadataAndExtractAudio(anyString()))
                 .thenReturn(new YtDlpResult(Path.of("/tmp/test.mp3"), null, null, null, null));
         when(whisperService.transcribe(any())).thenReturn("transcript");
-        when(recipeStructurizer.structurize(anyString())).thenReturn(recipe);
+        when(recipeStructurizer.structurize(anyString(), any())).thenReturn(recipe);
         when(shortsCacheService.save(any())).thenReturn(savedCache);
         when(historyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -178,7 +178,7 @@ class ShortsConvertServiceTest {
         when(ytDlpService.fetchMetadataAndExtractAudio(anyString()))
                 .thenReturn(new YtDlpResult(Path.of("/tmp/test.mp3"), null, null, null, null));
         when(whisperService.transcribe(any())).thenReturn("게임 공략 영상입니다...");
-        when(recipeStructurizer.structurize(anyString()))
+        when(recipeStructurizer.structurize(anyString(), any()))
                 .thenThrow(new BusinessException("NOT_COOKING_VIDEO", "요리 영상이 아닙니다",
                         org.springframework.http.HttpStatus.BAD_REQUEST));
 
@@ -258,7 +258,7 @@ class ShortsConvertServiceTest {
         when(ytDlpService.fetchMetadataAndExtractAudio(anyString()))
                 .thenReturn(new YtDlpResult(Path.of("/tmp/test.mp3"), "요리채널", "김치찌개 만들기", 60, null));
         when(whisperService.transcribe(any())).thenReturn("김치찌개 만드는 법...");
-        when(recipeStructurizer.structurize(anyString())).thenReturn(recipe);
+        when(recipeStructurizer.structurize(anyString(), any())).thenReturn(recipe);
         when(shortsCacheService.save(any())).thenReturn(savedCache);
         when(historyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 

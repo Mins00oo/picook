@@ -83,13 +83,18 @@ public class OpenAiStructurizer implements RecipeStructurizer {
     }
 
     @Override
-    public ShortsRecipeResult structurize(String transcript) {
+    public ShortsRecipeResult structurize(String transcript, String videoTitle) {
         try {
+            String userContent = transcript;
+            if (videoTitle != null && !videoTitle.isBlank()) {
+                userContent = "[영상 제목: " + videoTitle + "]\n\n" + transcript;
+            }
+
             Map<String, Object> requestBody = Map.of(
                     "model", chatModel,
                     "messages", List.of(
                             Map.of("role", "system", "content", SYSTEM_PROMPT),
-                            Map.of("role", "user", "content", transcript)
+                            Map.of("role", "user", "content", userContent)
                     ),
                     "temperature", 0.3
             );

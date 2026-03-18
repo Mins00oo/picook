@@ -58,8 +58,18 @@ public class WhisperService {
             String transcript = response != null ? response.text() : null;
 
             if (transcript == null || transcript.isBlank()) {
+                log.warn("Whisper returned empty transcript for {}", audioPath.getFileName());
                 throw new BusinessException("NO_AUDIO_CONTENT",
-                        "음성이 없는 영상입니다", HttpStatus.BAD_REQUEST);
+                        "음성이 없는 영상입니다. 음성 나레이션이 있는 영상만 변환할 수 있습니다.", HttpStatus.BAD_REQUEST);
+            }
+
+            log.debug("Whisper transcript ({}chars): {}", transcript.length(), transcript);
+
+            // 음성이 너무 짧으면 레시피 구조화가 어려움 (배경음악 잡음 등)
+            if (transcript.length() < 20) {
+                log.warn("Whisper transcript too short ({}chars): {}", transcript.length(), transcript);
+                throw new BusinessException("INSUFFICIENT_AUDIO",
+                        "음성이 부족하여 레시피를 추출할 수 없습니다. 음성 설명이 충분한 영상을 사용해주세요.", HttpStatus.BAD_REQUEST);
             }
 
             return transcript;
