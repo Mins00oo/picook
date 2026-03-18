@@ -1,0 +1,54 @@
+pipeline {
+    agent any
+
+    environment {
+        APP_DIR = '/opt/picook/app'
+        DEPLOY_DIR = '/opt/picook/admin/dist'
+        VITE_API_BASE_URL = 'https://api.picook.co.kr/api'
+    }
+
+    stages {
+        stage('Pull') {
+            steps {
+                sh '''
+                    git config --global --add safe.directory /opt/picook/app
+                    cd ${APP_DIR}
+                    git fetch origin main
+                    git reset --hard origin/main
+                '''
+            }
+        }
+
+        stage('Install & Build') {
+            steps {
+                sh '''
+                    docker run --rm \
+                        -v ${APP_DIR}/admin:/app \
+                        -e VITE_API_BASE_URL=${VITE_API_BASE_URL} \
+                        -w /app \
+                        node:20-alpine \
+                        sh -c "npm ci && npm run build"
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh '''
+                    rm -rf ${DEPLOY_DIR}
+                    cp -r ${APP_DIR}/admin/dist ${DEPLOY_DIR}
+                    echo "✅ admin 배포 완료: $(date)"
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '🎉 Admin 배포 성공!'
+        }
+        failure {
+            echo '❌ Admin 배포 실패'
+        }
+    }
+}
