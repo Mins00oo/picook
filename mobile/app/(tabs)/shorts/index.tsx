@@ -25,6 +25,7 @@ import { Button } from '../../../src/components/common/Button';
 import { EmptyState } from '../../../src/components/common/EmptyState';
 import { shortsApi } from '../../../src/api/shortsApi';
 import { isValidShortsUrl } from '../../../src/utils/validation';
+import { useAuthStore } from '../../../src/stores/authStore';
 import { useShortsConvertStore } from '../../../src/stores/shortsConvertStore';
 import type { ShortsHistory } from '../../../src/types/shorts';
 
@@ -51,14 +52,18 @@ export default function ShortsScreen() {
   const [url, setUrl] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const isSelectMode = selectedIds.size > 0;
+  const user = useAuthStore((s) => s.user);
 
-  // ─── Queries ───
-  const { data: historyData, isLoading: isHistoryLoading } = useQuery({
+  // ─── Queries (user 로드 완료 후에만 실행) ───
+  const { data: historyData, isLoading: isHistoryLoading, error: historyError, refetch } = useQuery({
     queryKey: ['shorts-history'],
     queryFn: async () => {
       const res = await shortsApi.getRecent();
       return res.data.data;
     },
+    enabled: !!user,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // ─── Shorts convert (Zustand store) ───
@@ -308,6 +313,18 @@ export default function ShortsScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color={colors.textTertiary} />
           </View>
+        ) : historyError ? (
+          <View style={styles.emptyContainer}>
+            <EmptyState
+              emoji="⚠️"
+              title="목록을 불러오지 못했어요"
+              description="네트워크를 확인하고 다시 시도해주세요"
+              transparent
+            />
+            <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}>
+              <Text style={styles.retryText}>다시 시도</Text>
+            </TouchableOpacity>
+          </View>
         ) : uniqueHistory.length === 0 ? (
           <View style={styles.emptyContainer}>
             <EmptyState
@@ -439,6 +456,18 @@ const styles = StyleSheet.create({
   deleteBtn: {
     ...typography.caption,
     color: colors.error,
+    fontWeight: '600',
+  },
+  retryBtn: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+  },
+  retryText: {
+    ...typography.caption,
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   // Checkbox (small — toolbar)

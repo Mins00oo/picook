@@ -11,7 +11,7 @@ function getDevApiUrl(): string {
 }
 
 export const Config = {
-  API_BASE_URL: __DEV__ ? getDevApiUrl() : 'https://api.picook.com',
+  API_BASE_URL: __DEV__ ? getDevApiUrl() : 'https://api.picook.co.kr',
   QUERY_STALE_TIME: 5 * 60 * 1000,
   MAX_FAVORITES: 20,
   MAX_RECOMMEND_RESULTS: 10,

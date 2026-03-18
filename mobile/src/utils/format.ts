@@ -31,3 +31,17 @@ export function formatServings(servings: number): string {
 export function formatMatchRate(rate: number): string {
   return `${Math.round(rate)}%`;
 }
+
+/**
+ * 상대 경로 이미지 URL을 절대 URL로 변환
+ * "/uploads/..." → "http://baseUrl/uploads/..."
+ * 이미 절대 URL이면 그대로 반환
+ */
+export function toAbsoluteImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { Config } = require('../constants/config');
+  return `${Config.API_BASE_URL}${url}`;
+}

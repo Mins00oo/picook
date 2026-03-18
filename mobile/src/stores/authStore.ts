@@ -44,6 +44,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       // 서버에서 프로필 검증
+      // 401 → 인터셉터가 자동 refresh + 재시도 → 성공하면 여기서 정상 응답 받음
+      // refresh도 실패하면 인터셉터가 토큰 삭제 후 reject → catch로 감
       try {
         const { data } = await userApi.getMe();
         const user = data.data;
@@ -55,21 +57,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
         });
       } catch {
-        // 401 → client.ts 인터셉터가 refresh 시도 → 실패 시 토큰 삭제됨
-        // 토큰이 아직 존재하면 로컬 캐시로 폴백, 없으면 로그아웃
-        const tokenStillExists = await SecureStore.getItemAsync(Config.JWT_ACCESS_KEY);
-        const userJson = await SecureStore.getItemAsync(Config.USER_KEY);
-        if (tokenStillExists && userJson) {
-          set({
-            user: JSON.parse(userJson),
-            isAuthenticated: true,
-            isOnboardingDone: isOnboarded,
-            isLoading: false,
-          });
-        } else {
-          await get().logout();
-          set({ isLoading: false, isOnboardingDone: isOnboarded });
-        }
+        // getMe 실패 = 토큰이 유효하지 않음 → 재로그인 필요
+        await get().logout();
+        set({ isLoading: false, isOnboardingDone: isOnboarded });
       }
     } catch {
       set({ isLoading: false });
