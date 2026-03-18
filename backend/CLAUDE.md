@@ -8,7 +8,7 @@
 - AWS S3 SDK v2 (이미지)
 - Apache POI (엑셀 파싱)
 - yt-dlp + ffmpeg (쇼츠 음성 추출, 서버에 설치 필요)
-- OpenAI API (Whisper STT + GPT-4o 구조화)
+- OpenAI API (Whisper STT + gpt-5.4-mini 구조화)
 
 ## 패키지 구조
 ```
@@ -283,7 +283,7 @@ http.authorizeHttpRequests(auth -> auth
    a. yt-dlp --dump-json으로 메타데이터(채널명, 원본제목, 길이, 썸네일) 파싱
    b. yt-dlp로 음성 추출 (.mp3)
    c. Whisper API로 STT
-   d. GPT-4o로 단계별 구조화 (JSON)
+   d. gpt-5.4-mini로 단계별 구조화 (JSON, stepType + durationSeconds 포함)
    e. 결과 + 메타데이터를 shorts_cache에 저장
 5. 반환 (channelName, originalTitle, durationSeconds 포함)
 ```

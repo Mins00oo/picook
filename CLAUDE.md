@@ -39,7 +39,7 @@
 - Apache POI (엑셀 일괄등록)
 - yt-dlp + ffmpeg (쇼츠 음성 추출)
 - OpenAI Whisper API (쇼츠 STT)
-- GPT-4o (쇼츠 텍스트 구조화)
+- gpt-5.4-mini (쇼츠 텍스트 구조화)
 
 ### 모바일 (iOS)
 - React Native (Expo SDK 52+) + TypeScript
@@ -136,7 +136,7 @@ picook/                    ← 루트
 
 ### 3. 쇼츠 URL 변환 (MVP)
 - 유튜브 쇼츠 URL 붙여넣기 → 단계별 레시피 변환
-- 서버: yt-dlp(음성추출) → Whisper(STT) → GPT-4o(구조화)
+- 서버: yt-dlp(음성추출) → Whisper(STT) → gpt-5.4-mini(구조화)
 - 캐싱: shorts_cache 테이블 (url_hash + ai_model_version)
 - AI 모델 업그레이드 시 캐시 버전 불일치하면 재변환
 - 무료 무제한
