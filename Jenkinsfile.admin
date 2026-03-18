@@ -4,7 +4,6 @@ pipeline {
     environment {
         APP_DIR = '/opt/picook/app'
         DEPLOY_DIR = '/opt/picook/admin/dist'
-        VITE_API_BASE_URL = 'https://api.picook.co.kr/api'
     }
 
     stages {
@@ -24,7 +23,6 @@ pipeline {
                 sh '''
                     docker run --rm \
                         -v ${APP_DIR}/admin:/app \
-                        -e VITE_API_BASE_URL=${VITE_API_BASE_URL} \
                         -w /app \
                         node:20-alpine \
                         sh -c "npm ci && npm run build"
