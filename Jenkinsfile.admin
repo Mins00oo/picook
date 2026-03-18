@@ -1,9 +1,9 @@
 pipeline {
     agent any
 	
-    options {
-        lock('picook-git')    // 이 줄 추가
-    }
+	options {
+		disableConcurrentBuilds()
+	}
 
     environment {
         APP_DIR = '/opt/picook/app'

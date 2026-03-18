@@ -6,9 +6,9 @@
 pipeline {
     agent any
 	
-    options {
-        lock('picook-git')    // 이 줄 추가
-    }
+	options {
+		disableConcurrentBuilds()
+	}
 
     environment {
         COMPOSE_FILE = '/opt/picook/docker-compose.yml'
