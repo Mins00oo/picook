@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -16,8 +16,9 @@ import { Loading } from '../../../src/components/common/Loading';
 import { ErrorScreen } from '../../../src/components/common/ErrorScreen';
 import { ConvertingProgress } from '../../../src/components/shorts/ConvertingProgress';
 import { shortsApi } from '../../../src/api/shortsApi';
+import { coachingApi } from '../../../src/api/coachingApi';
 import { useShortsConvertStore } from '../../../src/stores/shortsConvertStore';
-import type { ShortsConvertResponse } from '../../../src/types/shorts';
+import type { ShortsConvertResponse, ShortsStep } from '../../../src/types/shorts';
 
 export default function ShortsResultScreen() {
   const { id, mode } = useLocalSearchParams<{ id?: string; mode?: string }>();
@@ -129,6 +130,52 @@ export default function ShortsResultScreen() {
 
   return renderResult(historyData);
 
+  // ─── ShortsStep → RecipeStep 형태 매핑 ───
+  function mapShortsStepsToCoachingSteps(steps: ShortsStep[]) {
+    return steps.map((s) => ({
+      id: s.stepNumber,
+      stepNumber: s.stepNumber,
+      description: s.instruction,
+      stepType: s.type,
+      durationSeconds: s.durationSeconds ?? 60,
+      imageUrl: null,
+      canParallel: false,
+    }));
+  }
+
+  // ─── 코칭 시작 핸들러 ───
+  const [isStartingCoaching, setIsStartingCoaching] = useState(false);
+
+  async function handleStartCoaching(data: ShortsConvertResponse) {
+    if (!data.recipe?.steps?.length) {
+      Alert.alert('알림', '조리 단계가 없어 코칭을 시작할 수 없어요.');
+      return;
+    }
+    setIsStartingCoaching(true);
+    try {
+      const res = await coachingApi.start({
+        mode: 'single',
+        shortsCacheId: data.cacheId,
+      });
+      const coachingLogId = res.data.data.id;
+      const mappedSteps = mapShortsStepsToCoachingSteps(data.recipe.steps);
+
+      router.push({
+        pathname: '/(tabs)/cooking/single/[id]',
+        params: {
+          id: 'shorts',
+          coachingId: String(coachingLogId),
+          title: data.recipe.title,
+          steps: JSON.stringify(mappedSteps),
+        },
+      });
+    } catch {
+      Alert.alert('오류', '코칭을 시작할 수 없어요. 다시 시도해주세요.');
+    } finally {
+      setIsStartingCoaching(false);
+    }
+  }
+
   // ─── 결과 렌더 (공통) ───
   function renderResult(data: ShortsConvertResponse) {
     const recipe = data.recipe;
@@ -186,7 +233,8 @@ export default function ShortsResultScreen() {
           />
           <Button
             title="코칭 시작"
-            onPress={() => Alert.alert('알림', '쇼츠 레시피 코칭 기능은 준비 중입니다.')}
+            onPress={() => handleStartCoaching(data)}
+            loading={isStartingCoaching}
             size="medium"
             style={styles.halfBtn}
           />

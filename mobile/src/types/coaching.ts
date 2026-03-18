@@ -11,7 +11,8 @@ export interface CoachingState {
 
 export interface StartCoachingRequest {
   mode: 'single' | 'multi';
-  recipeIds: number[];
+  recipeIds?: number[];
+  shortsCacheId?: number;
   estimatedSeconds?: number;
 }
 

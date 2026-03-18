@@ -24,7 +24,13 @@ import type { CoachingStatus } from '../../../../src/types/coaching';
 
 export default function SingleCookingScreen() {
   useKeepAwake();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{
+    id: string;
+    coachingId?: string;
+    title?: string;
+    steps?: string;
+  }>();
+  const { id } = params;
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const engineRef = useRef(new CoachingEngine());
@@ -35,30 +41,43 @@ export default function SingleCookingScreen() {
   const [elapsed, setElapsed] = useState(0);
   const coachingIdRef = useRef<number | null>(null);
 
+  // 쇼츠에서 온 경우: params로 steps/coachingId를 직접 전달받음
+  const isShortsMode = !!params.steps;
+  const shortsSteps = isShortsMode ? JSON.parse(params.steps!) : null;
+  const shortsTitle = params.title ?? '쇼츠 레시피';
+
   const { data: recipe, isLoading, error } = useQuery({
     queryKey: ['recipe', id],
     queryFn: async () => {
       const res = await recipeApi.getDetail(Number(id));
       return res.data.data;
     },
-    enabled: !!id,
+    enabled: !isShortsMode && !!id,
   });
 
-  useEffect(() => {
-    if (!recipe) return;
+  // 실제 사용할 steps (쇼츠 or DB 레시피)
+  const activeSteps = isShortsMode ? shortsSteps : recipe?.steps;
 
-    // Start coaching log on the server
-    coachingApi.start({
-      mode: 'single',
-      recipeIds: [Number(id)],
-    }).then((res) => {
-      coachingIdRef.current = res.data.data.id;
-    }).catch(() => {
-      // Non-blocking: coaching log creation failure shouldn't prevent cooking
-    });
+  useEffect(() => {
+    if (!activeSteps) return;
+
+    // 쇼츠 모드: coachingId가 이미 전달됨
+    if (isShortsMode && params.coachingId) {
+      coachingIdRef.current = Number(params.coachingId);
+    } else if (!isShortsMode) {
+      // DB 레시피 모드: 서버에 코칭 시작 요청
+      coachingApi.start({
+        mode: 'single',
+        recipeIds: [Number(id)],
+      }).then((res) => {
+        coachingIdRef.current = res.data.data.id;
+      }).catch(() => {
+        // Non-blocking
+      });
+    }
 
     const engine = engineRef.current;
-    engine.init(recipe.steps);
+    engine.init(activeSteps);
 
     const unsub = engine.on((event) => {
       switch (event.type) {
@@ -67,7 +86,7 @@ export default function SingleCookingScreen() {
           setRemaining(null);
           // TTS for the step
           if (user?.coachingEnabled !== false) {
-            const step = recipe.steps[event.step];
+            const step = activeSteps[event.step];
             ttsService.speak(
               `${event.step + 1}단계. ${step.description}`,
             );
@@ -88,7 +107,8 @@ export default function SingleCookingScreen() {
           router.replace({
             pathname: '/(tabs)/cooking/complete',
             params: {
-              recipeId: id,
+              recipeId: isShortsMode ? 'shorts' : id,
+              recipeTitle: isShortsMode ? shortsTitle : (recipe?.title ?? ''),
               elapsed: String(elapsed),
               coachingId: String(coachingIdRef.current ?? ''),
             },
@@ -119,7 +139,7 @@ export default function SingleCookingScreen() {
       ttsService.stop();
       sttService.stopListening();
     };
-  }, [recipe, id, user?.coachingEnabled, user?.coachingVoiceSpeed]);
+  }, [activeSteps, id, user?.coachingEnabled, user?.coachingVoiceSpeed]);
 
   // Set TTS speed
   useEffect(() => {
@@ -142,11 +162,12 @@ export default function SingleCookingScreen() {
     ]);
   };
 
-  if (isLoading) return <Loading message="레시피를 불러오는 중..." />;
-  if (error || !recipe) return <ErrorScreen />;
+  if (!isShortsMode && isLoading) return <Loading message="레시피를 불러오는 중..." />;
+  if (!isShortsMode && (error || !recipe)) return <ErrorScreen />;
+  if (!activeSteps) return <Loading message="준비 중..." />;
 
-  const step = recipe.steps[currentStep];
-  const progress = ((currentStep + 1) / recipe.steps.length) * 100;
+  const step = activeSteps[currentStep];
+  const progress = ((currentStep + 1) / activeSteps.length) * 100;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -156,7 +177,7 @@ export default function SingleCookingScreen() {
         </TouchableOpacity>
         <Text style={styles.elapsed}>{formatTime(elapsed)}</Text>
         <Text style={styles.stepCounter}>
-          {currentStep + 1}/{recipe.steps.length}
+          {currentStep + 1}/{activeSteps.length}
         </Text>
       </View>
 
@@ -204,7 +225,7 @@ export default function SingleCookingScreen() {
           onPress={() => engineRef.current.next()}
         >
           <Text style={styles.nextText}>
-            {currentStep >= recipe.steps.length - 1 ? '완료' : '다음'}
+            {currentStep >= activeSteps.length - 1 ? '완료' : '다음'}
           </Text>
         </TouchableOpacity>
 

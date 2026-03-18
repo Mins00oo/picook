@@ -13,8 +13,9 @@ import { getLevelForCount, getNextLevel } from '../../../src/constants/levels';
 import { formatTime } from '../../../src/utils/format';
 
 export default function CompleteScreen() {
-  const { recipeId, elapsed, coachingId } = useLocalSearchParams<{
+  const { recipeId, recipeTitle, elapsed, coachingId } = useLocalSearchParams<{
     recipeId: string;
+    recipeTitle?: string;
     elapsed: string;
     coachingId: string;
   }>();
