@@ -1,9 +1,14 @@
-import { Button, Card, Descriptions, Form, Input, Select, Space, Tag, message } from 'antd';
+import { useEffect } from 'react';
+import { Button, Card, Descriptions, Input, Select, Space, Tag, message } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { getFeedback, updateFeedbackStatus } from '@/api/feedbackApi';
 import { usePermission } from '@/hooks/usePermission';
 import { formatDateTime } from '@/utils/format';
+import { feedbackSchema, type FeedbackFormValues } from '@/schemas/feedbackSchema';
+import FormField from '@/components/common/FormField';
 import type { FeedbackStatus } from '@/types/feedback';
 
 const statusColors: Record<string, string> = {
@@ -23,12 +28,21 @@ export default function FeedbackDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { canWrite } = usePermission();
-  const [form] = Form.useForm();
+
+  const { control, handleSubmit, reset } = useForm<FeedbackFormValues>({
+    resolver: zodResolver(feedbackSchema),
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['feedback', id],
     queryFn: () => getFeedback(Number(id)),
   });
+
+  useEffect(() => {
+    if (data) {
+      reset({ status: data.status, adminMemo: data.adminMemo ?? '' });
+    }
+  }, [data, reset]);
 
   const updateMut = useMutation({
     mutationFn: (values: { status: FeedbackStatus; adminMemo?: string }) =>
@@ -40,6 +54,10 @@ export default function FeedbackDetail() {
   });
 
   if (isLoading || !data) return null;
+
+  const onSubmit = (values: FeedbackFormValues) => {
+    updateMut.mutate(values as { status: FeedbackStatus; adminMemo?: string });
+  };
 
   return (
     <div>
@@ -70,29 +88,36 @@ export default function FeedbackDetail() {
 
       {canWrite && (
         <Card title="관리자 처리">
-          <Form
-            form={form}
-            layout="vertical"
-            initialValues={{ status: data.status, adminMemo: data.adminMemo }}
-            onFinish={(values) => updateMut.mutate(values)}
-            style={{ maxWidth: 500 }}
-          >
-            <Form.Item name="status" label="상태 변경">
-              <Select
-                options={[
-                  { value: 'unread', label: '미확인' },
-                  { value: 'read', label: '확인' },
-                  { value: 'resolved', label: '처리 완료' },
-                ]}
+          <form onSubmit={handleSubmit(onSubmit)} style={{ maxWidth: 500 }}>
+            <FormField label="상태 변경">
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    {...field}
+                    options={[
+                      { value: 'unread', label: '미확인' },
+                      { value: 'read', label: '확인' },
+                      { value: 'resolved', label: '처리 완료' },
+                    ]}
+                  />
+                )}
               />
-            </Form.Item>
-            <Form.Item name="adminMemo" label="관리자 메모">
-              <Input.TextArea rows={4} />
-            </Form.Item>
+            </FormField>
+            <FormField label="관리자 메모">
+              <Controller
+                name="adminMemo"
+                control={control}
+                render={({ field }) => (
+                  <Input.TextArea {...field} value={field.value ?? ''} rows={4} />
+                )}
+              />
+            </FormField>
             <Button type="primary" htmlType="submit" loading={updateMut.isPending}>
               저장
             </Button>
-          </Form>
+          </form>
         </Card>
       )}
     </div>

@@ -1,16 +1,24 @@
 import { useEffect } from 'react';
-import { Button, Card, Form, Input, Select, Space, message } from 'antd';
+import { Button, Card, Input, Select, Space, message } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { getIngredient, createIngredient, updateIngredient } from '@/api/ingredientApi';
 import { getCategories } from '@/api/categoryApi';
+import { ingredientSchema, type IngredientFormValues } from '@/schemas/ingredientSchema';
+import FormField from '@/components/common/FormField';
 import type { AdminIngredientRequest } from '@/types/ingredient';
 
 export default function IngredientForm() {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
-  const [form] = Form.useForm();
+
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<IngredientFormValues>({
+    resolver: zodResolver(ingredientSchema),
+    defaultValues: { name: '', iconUrl: '', synonyms: [] },
+  });
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -25,14 +33,14 @@ export default function IngredientForm() {
 
   useEffect(() => {
     if (ingredient) {
-      form.setFieldsValue({
+      reset({
         name: ingredient.name,
         categoryId: ingredient.categoryId,
         iconUrl: ingredient.iconUrl,
         synonyms: ingredient.synonyms,
       });
     }
-  }, [ingredient, form]);
+  }, [ingredient, reset]);
 
   const saveMutation = useMutation({
     mutationFn: (data: AdminIngredientRequest) =>
@@ -46,37 +54,68 @@ export default function IngredientForm() {
     },
   });
 
-  const handleFinish = (values: AdminIngredientRequest) => {
-    saveMutation.mutate(values);
+  const onSubmit = (values: IngredientFormValues) => {
+    saveMutation.mutate(values as AdminIngredientRequest);
   };
 
   return (
     <div>
       <h2>{isEdit ? '재료 수정' : '재료 등록'}</h2>
       <Card>
-        <Form form={form} layout="vertical" onFinish={handleFinish} style={{ maxWidth: 500 }}>
-          <Form.Item name="name" label="재료명" rules={[{ required: true, message: '재료명을 입력하세요' }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="categoryId" label="카테고리" rules={[{ required: true, message: '카테고리를 선택하세요' }]}>
-            <Select
-              options={categories?.map((c) => ({ value: c.id, label: c.name })) ?? []}
-              placeholder="카테고리 선택"
+        <form onSubmit={handleSubmit(onSubmit)} style={{ maxWidth: 500 }}>
+          <FormField label="재료명" error={errors.name?.message} required>
+            <Controller
+              name="name"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} status={errors.name ? 'error' : undefined} />
+              )}
             />
-          </Form.Item>
-          <Form.Item name="iconUrl" label="아이콘 URL">
-            <Input placeholder="https://..." />
-          </Form.Item>
-          <Form.Item name="synonyms" label="동의어">
-            <Select mode="tags" placeholder="동의어 입력 후 Enter" />
-          </Form.Item>
+          </FormField>
+          <FormField label="카테고리" error={errors.categoryId?.message} required>
+            <Controller
+              name="categoryId"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  options={categories?.map((c) => ({ value: c.id, label: c.name })) ?? []}
+                  placeholder="카테고리 선택"
+                  status={errors.categoryId ? 'error' : undefined}
+                />
+              )}
+            />
+          </FormField>
+          <FormField label="아이콘 URL">
+            <Controller
+              name="iconUrl"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} value={field.value ?? ''} placeholder="https://..." />
+              )}
+            />
+          </FormField>
+          <FormField label="동의어">
+            <Controller
+              name="synonyms"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  mode="tags"
+                  placeholder="동의어 입력 후 Enter"
+                  value={field.value ?? []}
+                />
+              )}
+            />
+          </FormField>
           <Space>
             <Button type="primary" htmlType="submit" loading={saveMutation.isPending}>
               저장
             </Button>
             <Button onClick={() => navigate('/ingredients')}>취소</Button>
           </Space>
-        </Form>
+        </form>
       </Card>
     </div>
   );

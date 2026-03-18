@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { Button, Input, Space, Table, message, Modal, Form } from 'antd';
+import { Button, Input, Space, Table, message, Modal } from 'antd';
 import { PlusOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { getCategories, createCategory, updateCategory, deleteCategory, reorderCategories } from '@/api/categoryApi';
 import { showConfirm } from '@/components/common/ConfirmModal';
 import { usePermission } from '@/hooks/usePermission';
+import { categorySchema, type CategoryFormValues } from '@/schemas/categorySchema';
+import FormField from '@/components/common/FormField';
 import type { AdminCategoryResponse } from '@/types/ingredient';
 
 export default function CategoryManage() {
@@ -12,7 +16,11 @@ export default function CategoryManage() {
   const { canWrite } = usePermission();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form] = Form.useForm();
+
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<CategoryFormValues>({
+    resolver: zodResolver(categorySchema),
+    defaultValues: { name: '' },
+  });
 
   const { data: categories, isLoading } = useQuery({
     queryKey: ['categories'],
@@ -55,23 +63,21 @@ export default function CategoryManage() {
   const closeModal = () => {
     setModalOpen(false);
     setEditingId(null);
-    form.resetFields();
+    reset({ name: '' });
   };
 
   const handleEdit = (cat: AdminCategoryResponse) => {
     setEditingId(cat.id);
-    form.setFieldsValue({ name: cat.name });
+    reset({ name: cat.name });
     setModalOpen(true);
   };
 
-  const handleSave = () => {
-    form.validateFields().then((values) => {
-      if (editingId) {
-        updateMut.mutate({ id: editingId, data: values });
-      } else {
-        createMut.mutate(values);
-      }
-    });
+  const onSubmit = (values: CategoryFormValues) => {
+    if (editingId) {
+      updateMut.mutate({ id: editingId, data: values });
+    } else {
+      createMut.mutate(values);
+    }
   };
 
   const handleMove = (index: number, direction: 'up' | 'down') => {
@@ -151,15 +157,21 @@ export default function CategoryManage() {
       <Modal
         title={editingId ? '카테고리 수정' : '카테고리 추가'}
         open={modalOpen}
-        onOk={handleSave}
+        onOk={handleSubmit(onSubmit)}
         onCancel={closeModal}
         confirmLoading={createMut.isPending || updateMut.isPending}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item name="name" label="카테고리명" rules={[{ required: true, message: '이름을 입력하세요' }]}>
-            <Input />
-          </Form.Item>
-        </Form>
+        <form>
+          <FormField label="카테고리명" error={errors.name?.message} required>
+            <Controller
+              name="name"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} status={errors.name ? 'error' : undefined} />
+              )}
+            />
+          </FormField>
+        </form>
       </Modal>
     </div>
   );

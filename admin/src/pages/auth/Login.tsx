@@ -1,17 +1,25 @@
-import { Button, Card, Form, Input, message, Typography } from 'antd';
+import { Button, Card, Input, message, Typography } from 'antd';
 import { LockOutlined, MailOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { login } from '@/api/authApi';
 import { useAuthStore } from '@/stores/authStore';
-import type { AdminLoginRequest } from '@/types/admin';
+import { loginSchema, type LoginFormValues } from '@/schemas/loginSchema';
+import FormField from '@/components/common/FormField';
 
 export default function Login() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
 
+  const { control, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
+
   const mutation = useMutation({
-    mutationFn: (data: AdminLoginRequest) => login(data),
+    mutationFn: (data: LoginFormValues) => login(data),
     onSuccess: (res) => {
       setAuth(res.accessToken, res.admin);
       if (res.refreshToken) {
@@ -25,7 +33,7 @@ export default function Login() {
     },
   });
 
-  const handleFinish = (values: AdminLoginRequest) => {
+  const onSubmit = (values: LoginFormValues) => {
     mutation.mutate(values);
   };
 
@@ -43,19 +51,41 @@ export default function Login() {
         <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 32 }}>
           Picook 백오피스
         </Typography.Title>
-        <Form layout="vertical" onFinish={handleFinish}>
-          <Form.Item name="email" rules={[{ required: true, type: 'email', message: '이메일을 입력해주세요' }]}>
-            <Input prefix={<MailOutlined />} placeholder="이메일" size="large" />
-          </Form.Item>
-          <Form.Item name="password" rules={[{ required: true, message: '비밀번호를 입력해주세요' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="비밀번호" size="large" />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" block size="large" loading={mutation.isPending}>
-              로그인
-            </Button>
-          </Form.Item>
-        </Form>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <FormField error={errors.email?.message}>
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  prefix={<MailOutlined />}
+                  placeholder="이메일"
+                  size="large"
+                  status={errors.email ? 'error' : undefined}
+                />
+              )}
+            />
+          </FormField>
+          <FormField error={errors.password?.message}>
+            <Controller
+              name="password"
+              control={control}
+              render={({ field }) => (
+                <Input.Password
+                  {...field}
+                  prefix={<LockOutlined />}
+                  placeholder="비밀번호"
+                  size="large"
+                  status={errors.password ? 'error' : undefined}
+                />
+              )}
+            />
+          </FormField>
+          <Button type="primary" htmlType="submit" block size="large" loading={mutation.isPending}>
+            로그인
+          </Button>
+        </form>
       </Card>
     </div>
   );

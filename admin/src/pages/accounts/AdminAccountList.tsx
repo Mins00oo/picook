@@ -1,9 +1,13 @@
 import { useState } from 'react';
-import { Button, Form, Input, Modal, Select, Space, Table, message } from 'antd';
+import { Button, Input, Modal, Select, Space, Table, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { getAdminAccounts, createAdmin, updateAdminRole, deleteAdmin } from '@/api/accountApi';
 import { showConfirm } from '@/components/common/ConfirmModal';
+import { adminAccountSchema, type AdminAccountFormValues } from '@/schemas/adminAccountSchema';
+import FormField from '@/components/common/FormField';
 import type { AdminInfo, AdminRole } from '@/types/admin';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -13,11 +17,14 @@ const ROLE_OPTIONS = [
   { value: 'VIEWER', label: '뷰어' },
 ];
 
-
 export default function AdminAccountList() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
-  const [form] = Form.useForm();
+
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<AdminAccountFormValues>({
+    resolver: zodResolver(adminAccountSchema),
+    defaultValues: { email: '', password: '', role: undefined as unknown as AdminAccountFormValues['role'] },
+  });
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ['admin-accounts'],
@@ -30,7 +37,7 @@ export default function AdminAccountList() {
       message.success('관리자가 추가되었습니다.');
       queryClient.invalidateQueries({ queryKey: ['admin-accounts'] });
       setModalOpen(false);
-      form.resetFields();
+      reset();
     },
     onError: (err: { message?: string }) => {
       message.error(err?.message ?? '추가에 실패했습니다.');
@@ -52,6 +59,10 @@ export default function AdminAccountList() {
       queryClient.invalidateQueries({ queryKey: ['admin-accounts'] });
     },
   });
+
+  const onSubmit = (values: AdminAccountFormValues) => {
+    createMut.mutate(values);
+  };
 
   const columns: ColumnsType<AdminInfo> = [
     { title: 'ID', dataIndex: 'id', width: 60 },
@@ -110,26 +121,44 @@ export default function AdminAccountList() {
         open={modalOpen}
         onCancel={() => {
           setModalOpen(false);
-          form.resetFields();
+          reset();
         }}
-        onOk={() => form.submit()}
+        onOk={handleSubmit(onSubmit)}
         confirmLoading={createMut.isPending}
       >
-        <Form form={form} layout="vertical" onFinish={(v) => createMut.mutate(v)}>
-          <Form.Item name="email" label="이메일" rules={[{ required: true, type: 'email' }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="password"
-            label="비밀번호"
-            rules={[{ required: true, min: 6, message: '6자 이상 입력하세요' }]}
-          >
-            <Input.Password />
-          </Form.Item>
-          <Form.Item name="role" label="역할" rules={[{ required: true }]}>
-            <Select options={ROLE_OPTIONS} />
-          </Form.Item>
-        </Form>
+        <form>
+          <FormField label="이메일" error={errors.email?.message} required>
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} status={errors.email ? 'error' : undefined} />
+              )}
+            />
+          </FormField>
+          <FormField label="비밀번호" error={errors.password?.message} required>
+            <Controller
+              name="password"
+              control={control}
+              render={({ field }) => (
+                <Input.Password {...field} status={errors.password ? 'error' : undefined} />
+              )}
+            />
+          </FormField>
+          <FormField label="역할" error={errors.role?.message} required>
+            <Controller
+              name="role"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  options={ROLE_OPTIONS}
+                  status={errors.role ? 'error' : undefined}
+                />
+              )}
+            />
+          </FormField>
+        </form>
       </Modal>
     </div>
   );
