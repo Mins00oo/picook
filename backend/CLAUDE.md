@@ -5,7 +5,7 @@
 - Spring Security + JWT (액세스 1h, 리프레시 30d, bcrypt)
 - Spring Data JPA + PostgreSQL 15 (Docker)
 - Flyway (마이그레이션)
-- AWS S3 SDK v2 (이미지)
+- 로컬 파일 저장소 (이미지 — /data/picook/uploads/)
 - Apache POI (엑셀 파싱)
 - yt-dlp + ffmpeg (쇼츠 음성 추출, 서버에 설치 필요)
 - OpenAI API (Whisper STT + gpt-5.4-mini 구조화)

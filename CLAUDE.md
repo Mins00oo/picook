@@ -23,9 +23,9 @@
       [Spring Boot 4.0.3 — 모놀리식 단일 서버]
       │  인증(JWT)  │  사용자 API   │  관리자 API  │
       │  레시피 추천 │  코칭 로그    │  쇼츠 변환   │
-      │  S3 파일    │  엑셀 일괄등록│             │
+      │  파일 업로드 │  엑셀 일괄등록│             │
               │
-      [Docker PostgreSQL 15]     [AWS S3]
+      [Docker PostgreSQL 15]     [로컬 파일 저장소]
 ```
 
 ## 기술 스택 (확정)
@@ -35,7 +35,7 @@
 - Spring Security + JWT (액세스 1h, 리프레시 30d)
 - Spring Data JPA + PostgreSQL 15 (Docker)
 - Flyway (DB 마이그레이션)
-- AWS S3 SDK (이미지 업로드)
+- 로컬 파일 저장소 (이미지 업로드 — /data/picook/uploads/)
 - Apache POI (엑셀 일괄등록)
 - yt-dlp + ffmpeg (쇼츠 음성 추출)
 - OpenAI Whisper API (쇼츠 STT)
@@ -60,7 +60,7 @@
 ### 인프라
 - 서버: AWS EC2 / Lightsail
 - DB: Docker PostgreSQL 15
-- 스토리지: AWS S3
+- 스토리지: 서버 로컬 디스크 (/data/picook/uploads/)
 - 모바일 빌드: Expo EAS
 - 백오피스 호스팅: Vercel
 - 모니터링: Sentry
@@ -77,7 +77,7 @@ picook/                    ← 루트
 │   ├── build.gradle
 │   ├── docker-compose.yml     ← PostgreSQL 로컬
 │   └── src/main/java/com/picook/
-│       ├── config/            ← Security, JWT, S3, CORS
+│       ├── config/            ← Security, JWT, WebConfig, CORS
 │       ├── domain/
 │       │   ├── auth/          ← Apple, 카카오, 이메일, JWT
 │       │   ├── user/          ← 사용자, 프로필, 등급
@@ -86,7 +86,7 @@ picook/                    ← 루트
 │       │   ├── coaching/      ← 코칭 로그
 │       │   ├── shorts/        ← 쇼츠 변환 + 캐싱
 │       │   ├── favorite/      ← 즐겨찾기
-│       │   ├── file/          ← S3 업로드
+│       │   ├── file/          ← 파일 업로드 (로컬 저장소)
 │       │   └── admin/         ← 백오피스 API + 엑셀 일괄등록
 │       └── global/            ← 예외처리, 응답, 페이징
 ├── mobile/                    ← React Native (Expo)
