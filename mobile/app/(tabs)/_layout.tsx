@@ -49,7 +49,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen name="recipe" options={{ href: null }} />
-      <Tabs.Screen name="cooking" options={{ href: null }} />
     </Tabs>
   );
 }

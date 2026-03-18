@@ -4,15 +4,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useKeepAwake } from 'expo-keep-awake';
-import { Colors } from '../../../src/constants/colors';
-import { Loading } from '../../../src/components/common/Loading';
-import { recipeApi } from '../../../src/api/recipeApi';
-import { coachingApi } from '../../../src/api/coachingApi';
-import { TimelineEngine, TimelineItem } from '../../../src/engines/TimelineEngine';
-import { ttsService } from '../../../src/services/TTSService';
-import { TimerManager } from '../../../src/engines/TimerManager';
-import { useAuthStore } from '../../../src/stores/authStore';
-import { formatTime } from '../../../src/utils/format';
+import { Colors } from '../../src/constants/colors';
+import { Loading } from '../../src/components/common/Loading';
+import { recipeApi } from '../../src/api/recipeApi';
+import { coachingApi } from '../../src/api/coachingApi';
+import { TimelineEngine, TimelineItem } from '../../src/engines/TimelineEngine';
+import { ttsService } from '../../src/services/TTSService';
+import { TimerManager } from '../../src/engines/TimerManager';
+import { useAuthStore } from '../../src/stores/authStore';
+import { formatTime } from '../../src/utils/format';
 
 export default function MultiCookingScreen() {
   useKeepAwake();
@@ -92,7 +92,7 @@ export default function MultiCookingScreen() {
     timerRef.current.stop();
     if (currentIdx >= timeline.length - 1) {
       router.replace({
-        pathname: '/(tabs)/cooking/complete',
+        pathname: '/cooking/complete',
         params: {
           recipeId: String(recipeIds[0]),
           elapsed: String(elapsed),

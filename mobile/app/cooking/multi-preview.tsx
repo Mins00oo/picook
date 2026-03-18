@@ -3,12 +3,12 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { Colors } from '../../../src/constants/colors';
-import { Button } from '../../../src/components/common/Button';
-import { Loading } from '../../../src/components/common/Loading';
-import { recipeApi } from '../../../src/api/recipeApi';
-import { TimelineEngine } from '../../../src/engines/TimelineEngine';
-import { formatTime } from '../../../src/utils/format';
+import { Colors } from '../../src/constants/colors';
+import { Button } from '../../src/components/common/Button';
+import { Loading } from '../../src/components/common/Loading';
+import { recipeApi } from '../../src/api/recipeApi';
+import { TimelineEngine } from '../../src/engines/TimelineEngine';
+import { formatTime } from '../../src/utils/format';
 
 export default function MultiPreviewScreen() {
   const router = useRouter();
@@ -78,7 +78,7 @@ export default function MultiPreviewScreen() {
         <Button
           title="멀티 코칭 시작"
           onPress={() => router.replace({
-            pathname: '/(tabs)/cooking/multi-cooking',
+            pathname: '/cooking/multi-cooking',
             params: { ids },
           })}
           size="large"

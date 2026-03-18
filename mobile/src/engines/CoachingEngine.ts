@@ -43,6 +43,16 @@ export class CoachingEngine {
     this.processCurrentStep();
   }
 
+  prev() {
+    if (this.currentStep <= 0) return;
+    this.clearTimer();
+    this.currentStep--;
+    this.status = 'PLAYING';
+    this.emit({ type: 'STATUS_CHANGED', status: 'PLAYING' });
+    this.emit({ type: 'STEP_CHANGED', step: this.currentStep });
+    this.processCurrentStep();
+  }
+
   repeat() {
     this.clearTimer();
     this.emit({ type: 'STEP_CHANGED', step: this.currentStep });

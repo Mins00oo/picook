@@ -6,8 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  BackHandler,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { colors, typography, spacing, borderRadius } from '../../../src/constants/theme';
@@ -17,6 +18,7 @@ import { ErrorScreen } from '../../../src/components/common/ErrorScreen';
 import { ConvertingProgress } from '../../../src/components/shorts/ConvertingProgress';
 import { shortsApi } from '../../../src/api/shortsApi';
 import { coachingApi } from '../../../src/api/coachingApi';
+import { useCoachingStore } from '../../../src/stores/coachingStore';
 import { useShortsConvertStore } from '../../../src/stores/shortsConvertStore';
 import type { ShortsConvertResponse, ShortsStep } from '../../../src/types/shorts';
 
@@ -24,7 +26,11 @@ export default function ShortsResultScreen() {
   const { id, mode } = useLocalSearchParams<{ id?: string; mode?: string }>();
   const router = useRouter();
 
+  const navigation = useNavigation();
   const isConvertMode = mode === 'converting';
+
+  const [isStartingCoaching, setIsStartingCoaching] = useState(false);
+  const setShortsCookingData = useCoachingStore((s) => s.setShortsCookingData);
 
   // ─── 변환 모드: 스토어에서 상태 읽기 ───
   const convertStatus = useShortsConvertStore((s) => s.status);
@@ -50,6 +56,24 @@ export default function ShortsResultScreen() {
       if (isConvertMode) reset();
     };
   }, [isConvertMode, reset]);
+
+  // 변환 중 iOS 스와이프 뒤로가기 차단
+  useEffect(() => {
+    navigation.setOptions({ gestureEnabled: convertStatus !== 'converting' });
+  }, [convertStatus, navigation]);
+
+  // 변환 중 Android 뒤로가기 차단
+  useEffect(() => {
+    if (convertStatus !== 'converting') return;
+    const handler = BackHandler.addEventListener('hardwareBackPress', () => {
+      Alert.alert('변환 취소', '변환을 취소하시겠어요?', [
+        { text: '계속 진행', style: 'cancel' },
+        { text: '취소', style: 'destructive', onPress: () => { reset(); router.back(); } },
+      ]);
+      return true;
+    });
+    return () => handler.remove();
+  }, [convertStatus, reset, router]);
 
   // ─── 변환 모드: 진행/완료/에러 분기 ───
   if (isConvertMode) {
@@ -144,8 +168,6 @@ export default function ShortsResultScreen() {
   }
 
   // ─── 코칭 시작 핸들러 ───
-  const [isStartingCoaching, setIsStartingCoaching] = useState(false);
-
   async function handleStartCoaching(data: ShortsConvertResponse) {
     if (!data.recipe?.steps?.length) {
       Alert.alert('알림', '조리 단계가 없어 코칭을 시작할 수 없어요.');
@@ -160,14 +182,16 @@ export default function ShortsResultScreen() {
       const coachingLogId = res.data.data.id;
       const mappedSteps = mapShortsStepsToCoachingSteps(data.recipe.steps);
 
+      // 스토어 경유 (navigation params 크기 제한 우회)
+      setShortsCookingData({
+        coachingId: coachingLogId,
+        title: data.recipe.title,
+        steps: mappedSteps as any,
+      });
+
       router.push({
-        pathname: '/(tabs)/cooking/single/[id]',
-        params: {
-          id: 'shorts',
-          coachingId: String(coachingLogId),
-          title: data.recipe.title,
-          steps: JSON.stringify(mappedSteps),
-        },
+        pathname: '/cooking/single/[id]',
+        params: { id: 'shorts' },
       });
     } catch {
       Alert.alert('오류', '코칭을 시작할 수 없어요. 다시 시도해주세요.');

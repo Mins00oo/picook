@@ -157,7 +157,7 @@ export default function ResultsScreen() {
             title={`타임라인 미리보기 (${multiSelected.length}개)`}
             onPress={() =>
               router.push({
-                pathname: '/(tabs)/cooking/multi-preview',
+                pathname: '/cooking/multi-preview',
                 params: { ids: multiSelected.join(',') },
               })
             }

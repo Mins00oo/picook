@@ -1,5 +1,13 @@
 import { create } from 'zustand';
 import type { CoachingStatus } from '../types/coaching';
+import type { RecipeStep } from '../types/recipe';
+
+/** 쇼츠→코칭 전달용 (navigation params 대신 스토어 경유) */
+interface ShortsCookingData {
+  coachingId: number;
+  title: string;
+  steps: RecipeStep[];
+}
 
 interface CoachingStoreState {
   recipeId: number | null;
@@ -9,6 +17,10 @@ interface CoachingStoreState {
   remainingSeconds: number | null;
   startedAt: string | null;
   elapsedSeconds: number;
+
+  /** 쇼츠 코칭 데이터 (네비게이션 params 크기 제한 우회) */
+  shortsCookingData: ShortsCookingData | null;
+  setShortsCookingData: (data: ShortsCookingData) => void;
 
   start: (recipeId: number, totalSteps: number) => void;
   setStep: (step: number) => void;
@@ -26,6 +38,9 @@ export const useCoachingStore = create<CoachingStoreState>((set) => ({
   remainingSeconds: null,
   startedAt: null,
   elapsedSeconds: 0,
+  shortsCookingData: null,
+
+  setShortsCookingData: (data) => set({ shortsCookingData: data }),
 
   start: (recipeId, totalSteps) =>
     set({
@@ -58,5 +73,6 @@ export const useCoachingStore = create<CoachingStoreState>((set) => ({
       remainingSeconds: null,
       startedAt: null,
       elapsedSeconds: 0,
+      shortsCookingData: null,
     }),
 }));

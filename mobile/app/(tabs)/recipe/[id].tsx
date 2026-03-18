@@ -134,7 +134,7 @@ export default function RecipeDetailScreen() {
       <View style={styles.footer}>
         <Button
           title="코칭 시작"
-          onPress={() => router.push(`/(tabs)/cooking/single/${id}`)}
+          onPress={() => router.push(`/cooking/single/${id}`)}
           size="large"
           style={styles.coachButton}
         />
