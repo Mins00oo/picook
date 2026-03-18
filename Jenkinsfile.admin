@@ -22,8 +22,8 @@ pipeline {
             steps {
                 sh '''
                     docker run --rm \
-                        -v ${APP_DIR}/admin:/app \
-                        -w /app \
+                        -v ${APP_DIR}:/app \
+                        -w /app/admin \
                         node:20-alpine \
                         sh -c "npm ci && npm run build"
                 '''
