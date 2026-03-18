@@ -5,6 +5,10 @@
 // ============================================
 pipeline {
     agent any
+	
+    options {
+        lock('picook-git')    // 이 줄 추가
+    }
 
     environment {
         COMPOSE_FILE = '/opt/picook/docker-compose.yml'
@@ -18,6 +22,7 @@ pipeline {
                 sh '''
                     git config --global --add safe.directory /opt/picook/app
                     cd ${APP_DIR}
+					git gc --prune=now || true
                     git fetch origin main
                     git reset --hard origin/main
                 '''

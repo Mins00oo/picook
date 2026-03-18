@@ -1,5 +1,9 @@
 pipeline {
     agent any
+	
+    options {
+        lock('picook-git')    // 이 줄 추가
+    }
 
     environment {
         APP_DIR = '/opt/picook/app'
@@ -12,6 +16,7 @@ pipeline {
                 sh '''
                     git config --global --add safe.directory /opt/picook/app
                     cd ${APP_DIR}
+					git gc --prune=now || true
                     git fetch origin main
                     git reset --hard origin/main
                 '''
