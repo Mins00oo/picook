@@ -243,7 +243,7 @@ class STTService {
 |------|------|
 | Expo SDK | 54 |
 | React Native | 0.81.5 |
-| @react-native-seoul/kakao-login | 5.4.2 |
+| @react-native-seoul/kakao-login | ~5.4.0 |
 | @expo/config-plugins | SDK 54 번들 |
 | 빌드 | EAS Build (iOS development profile) |
 

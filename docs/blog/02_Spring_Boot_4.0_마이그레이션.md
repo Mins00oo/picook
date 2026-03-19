@@ -105,6 +105,8 @@ import tools.jackson.core.JacksonException;
 
 Jackson의 `ObjectMapper`를 직접 주입받아 쓰는 곳이 아니라, Spring이 내부적으로 처리하는 `@RequestBody`/`@ResponseBody` 변환은 자동으로 Jackson 3.x를 사용하므로 수정할 필요가 없다. **직접 `ObjectMapper`를 사용하는 코드만 수정하면 된다.**
 
+한 가지 더 — `@JsonValue`, `@JsonInclude` 같은 **Jackson 어노테이션만 사용하는 파일**은 `com.fasterxml.jackson.annotation` import를 유지해도 컴파일·런타임 모두 정상 동작했다. Spring Boot 4.0이 어노테이션 하위 호환을 유지하고 있기 때문이다. 일관성을 위해 `tools.jackson.annotation.*`으로 통일하는 것을 권장하지만, **당장 안 바꿔도 깨지지는 않는다.**
+
 ### 마이그레이션 체크리스트
 
 ```
