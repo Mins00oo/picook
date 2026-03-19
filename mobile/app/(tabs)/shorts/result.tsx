@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  AppState,
   BackHandler,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { colors, typography, spacing, borderRadius } from '../../../src/constants/theme';
 import { Button } from '../../../src/components/common/Button';
 import { Loading } from '../../../src/components/common/Loading';
@@ -31,6 +32,53 @@ export default function ShortsResultScreen() {
 
   const [isStartingCoaching, setIsStartingCoaching] = useState(false);
   const setShortsCookingData = useCoachingStore((s) => s.setShortsCookingData);
+  const queryClient = useQueryClient();
+
+  // ─── 쇼츠 즐겨찾기 ───
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favoriteId, setFavoriteId] = useState<number | null>(null);
+
+  const addFavMutation = useMutation({
+    mutationFn: (cacheId: number) => shortsApi.addFavorite(cacheId),
+    onSuccess: (res) => {
+      setIsFavorited(true);
+      setFavoriteId(res.data.data.id);
+      queryClient.invalidateQueries({ queryKey: ['shorts-favorites'] });
+    },
+    onError: (err: any) => {
+      const code = err?.response?.data?.error?.code;
+      if (code === 'SHORTS_FAVORITE_DUPLICATE') {
+        setIsFavorited(true);
+      } else if (code === 'SHORTS_FAVORITE_LIMIT') {
+        Alert.alert('알림', '즐겨찾기는 최대 20개까지 저장할 수 있어요.');
+      } else {
+        Alert.alert('오류', '즐겨찾기 저장에 실패했어요.');
+      }
+    },
+  });
+
+  const removeFavMutation = useMutation({
+    mutationFn: (favId: number) => shortsApi.removeFavorite(favId),
+    onSuccess: () => {
+      setIsFavorited(false);
+      setFavoriteId(null);
+      queryClient.invalidateQueries({ queryKey: ['shorts-favorites'] });
+    },
+  });
+
+  // 결과 데이터가 로드되면 즐겨찾기 여부 확인
+  const checkFavoriteStatus = async (cacheId: number) => {
+    try {
+      const res = await shortsApi.getFavorites();
+      const match = res.data.data.find((f) => f.shortsCacheId === cacheId);
+      if (match) {
+        setIsFavorited(true);
+        setFavoriteId(match.id);
+      }
+    } catch {
+      // 무시
+    }
+  };
 
   // ─── 변환 모드: 스토어에서 상태 읽기 ───
   const convertStatus = useShortsConvertStore((s) => s.status);
@@ -39,6 +87,8 @@ export default function ShortsResultScreen() {
   const startedAt = useShortsConvertStore((s) => s.startedAt);
   const retry = useShortsConvertStore((s) => s.retry);
   const reset = useShortsConvertStore((s) => s.reset);
+
+  const appStateRef = useRef(AppState.currentState);
 
   // ─── 히스토리 모드: 서버에서 조회 ───
   const { data: historyData, isLoading, error, refetch } = useQuery({
@@ -50,12 +100,44 @@ export default function ShortsResultScreen() {
     enabled: !isConvertMode && !!id,
   });
 
+  // 즐겨찾기 상태 확인 (변환 완료 시 / 히스토리 모드)
+  useEffect(() => {
+    if (convertStatus === 'done' && convertResult?.cacheId) {
+      checkFavoriteStatus(convertResult.cacheId);
+    }
+  }, [convertStatus, convertResult?.cacheId]);
+
+  useEffect(() => {
+    if (!isConvertMode && historyData?.cacheId) {
+      checkFavoriteStatus(historyData.cacheId);
+    }
+  }, [isConvertMode, historyData?.cacheId]);
+
   // 변환 완료 시 스토어 초기화는 화면 떠날 때
   useEffect(() => {
     return () => {
       if (isConvertMode) reset();
     };
   }, [isConvertMode, reset]);
+
+  // 백그라운드 → 포그라운드 복귀 시 자동 복구
+  useEffect(() => {
+    if (!isConvertMode) return;
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      // background/inactive → active 전환 시
+      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+        // 스토어에서 최신 상태를 직접 읽음 (클로저 의존 X)
+        const state = useShortsConvertStore.getState();
+        if (state.needsRecovery) {
+          state.recoverFromBackground();
+        }
+      }
+      appStateRef.current = nextAppState;
+    });
+
+    return () => subscription.remove();
+  }, [isConvertMode]); // convertStatus 의존 제거 — getState()로 직접 읽음
 
   // 변환 중 iOS 스와이프 뒤로가기 차단
   useEffect(() => {
@@ -249,9 +331,16 @@ export default function ShortsResultScreen() {
 
         <View style={styles.footer}>
           <Button
-            title="즐겨찾기 저장"
-            onPress={() => Alert.alert('알림', '쇼츠 레시피 즐겨찾기 기능은 준비 중입니다.')}
-            variant="outline"
+            title={isFavorited ? '즐겨찾기 해제' : '즐겨찾기 저장'}
+            onPress={() => {
+              if (isFavorited && favoriteId) {
+                removeFavMutation.mutate(favoriteId);
+              } else {
+                addFavMutation.mutate(data.cacheId);
+              }
+            }}
+            variant={isFavorited ? 'primary' : 'outline'}
+            loading={addFavMutation.isPending || removeFavMutation.isPending}
             size="medium"
             style={styles.halfBtn}
           />

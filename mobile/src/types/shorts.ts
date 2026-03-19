@@ -35,3 +35,13 @@ export interface ShortsHistory {
   channelName: string | null;
   convertedAt: string;
 }
+
+export interface ShortsFavorite {
+  id: number;
+  shortsCacheId: number;
+  youtubeUrl: string;
+  title: string;
+  thumbnailUrl: string | null;
+  channelName: string;
+  createdAt: string;
+}
