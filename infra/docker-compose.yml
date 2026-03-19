@@ -27,6 +27,7 @@ services:
       - "8080:8080"
     volumes:
       - picook_uploads:/data/picook/uploads
+      - picook_logs:/var/log/picook
     depends_on:
       - postgres
     restart: unless-stopped
@@ -34,3 +35,4 @@ services:
 volumes:
   picook_pgdata:
   picook_uploads:
+  picook_logs:

@@ -48,8 +48,3 @@ shorts:
 # Apple Sign-In
 apple:
   bundle-id: ${APPLE_BUNDLE_ID:com.picook.app}
-
-logging:
-  level:
-    com.picook: DEBUG
-    org.hibernate.SQL: DEBUG

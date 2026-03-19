@@ -14,6 +14,9 @@ FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
+# 로그 디렉토리 생성
+RUN mkdir -p /var/log/picook
+
 # yt-dlp + ffmpeg 설치
 RUN apt-get update && apt-get install -y python3 python3-pip curl xz-utils && \
     pip3 install yt-dlp --break-system-packages && \
