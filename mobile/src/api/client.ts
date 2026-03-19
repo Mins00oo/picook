@@ -9,6 +9,12 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// --- 네트워크 Alert 글로벌 억제 (recovery 등에서 사용) ---
+let _suppressNetworkAlerts = false;
+export function setSuppressNetworkAlerts(suppress: boolean) {
+  _suppressNetworkAlerts = suppress;
+}
+
 // --- Request: JWT 자동 첨부 ---
 api.interceptors.request.use(async (config) => {
   const token = await SecureStore.getItemAsync(Config.JWT_ACCESS_KEY);
@@ -91,7 +97,11 @@ api.interceptors.response.use(
 
     // 네트워크 끊김 (response 없음)
     if (!error.response) {
-      Alert.alert('네트워크 오류', '인터넷 연결을 확인해주세요.');
+      // _skipNetworkAlert: 요청별 억제 / _suppressNetworkAlerts: 글로벌 억제
+      const config = error.config as InternalAxiosRequestConfig & { _skipNetworkAlert?: boolean };
+      if (!config?._skipNetworkAlert && !_suppressNetworkAlerts) {
+        Alert.alert('네트워크 오류', '인터넷 연결을 확인해주세요.');
+      }
       return Promise.reject(error);
     }
 
