@@ -9,6 +9,7 @@ import com.picook.domain.ingredient.repository.IngredientRepository;
 import com.picook.global.exception.BusinessException;
 import com.picook.global.util.PageResponse;
 import jakarta.persistence.EntityManager;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -69,6 +70,7 @@ public class AdminIngredientService {
     }
 
     @Transactional
+    @CacheEvict(value = "ingredients", allEntries = true)
     public AdminIngredientResponse createIngredient(AdminIngredientRequest request) {
         if (ingredientRepository.existsByName(request.name())) {
             throw new BusinessException("DUPLICATE_INGREDIENT", "이미 존재하는 재료명입니다", HttpStatus.BAD_REQUEST);
@@ -91,6 +93,7 @@ public class AdminIngredientService {
     }
 
     @Transactional
+    @CacheEvict(value = "ingredients", allEntries = true)
     public AdminIngredientResponse updateIngredient(Integer id, AdminIngredientRequest request) {
         Ingredient ingredient = ingredientRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("INGREDIENT_NOT_FOUND", "재료를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
@@ -120,6 +123,7 @@ public class AdminIngredientService {
     }
 
     @Transactional
+    @CacheEvict(value = "ingredients", allEntries = true)
     public void deleteIngredient(Integer id) {
         Ingredient ingredient = ingredientRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("INGREDIENT_NOT_FOUND", "재료를 찾을 수 없습니다", HttpStatus.NOT_FOUND));

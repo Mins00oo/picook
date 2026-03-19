@@ -19,7 +19,8 @@ com.picook/
 │   ├── JwtProvider.java
 │   ├── JwtAuthenticationFilter.java
 │   ├── CorsConfig.java
-│   └── S3Config.java
+│   ├── RequestLoggingFilter.java
+│   └── WebConfig.java
 ├── domain/
 │   ├── auth/
 │   │   ├── controller/AuthController.java
@@ -109,6 +110,7 @@ com.picook/
 │           ├── service/AdminAccountService.java
 │           └── dto/
 └── global/
+    ├── aop/PerformanceLoggingAspect.java
     ├── response/ApiResponse.java
     ├── exception/GlobalExceptionHandler.java
     ├── exception/BusinessException.java
@@ -338,6 +340,27 @@ http.authorizeHttpRequests(auth -> auth
 - ✅ V7: 테스트 시드 데이터
 - ✅ V8: 쇼츠 변환 로그 테이블
 - ✅ V9: shorts_cache 유튜브 메타데이터 컬럼 (channel_name, original_title, duration_seconds)
+
+### 로깅 시스템
+- ✅ logback-spring.xml (local: 콘솔 DEBUG / prod: 4파일 분리)
+- ✅ RequestLoggingFilter (API 요청/응답/에러 로깅)
+- ✅ PerformanceLoggingAspect (서비스 메서드 성능 측정)
+- ✅ JwtAuthenticationFilter 인증 실패 로깅
+
+#### prod 로그 파일 구조
+| 파일 | 레벨 | 보관 | 용도 |
+|------|------|------|------|
+| `/var/log/picook/app.log` | INFO+ | 30일, 1GB | 일반 운영 로그 |
+| `/var/log/picook/error.log` | ERROR | 90일, 500MB | 에러만 별도 수집 |
+| `/var/log/picook/sql.log` | OFF (필요 시 활성화) | 7일 | SQL 쿼리 |
+| `/var/log/picook/perf.log` | INFO | 30일 | 서비스 메서드 성능 |
+
+### Spring Cache (재료/카테고리)
+- ✅ CacheConfig.java — ConcurrentMapCacheManager("ingredients", "categories")
+- ✅ IngredientService: getAllIngredients(), getCategories() → @Cacheable
+- ✅ AdminIngredientService: create/update/delete → @CacheEvict("ingredients")
+- ✅ IngredientBulkUploadService: uploadFromExcel → @CacheEvict("ingredients")
+- ✅ AdminCategoryService: create/update/delete/reorder → @CacheEvict("categories")
 
 ### 테스트 (17개 파일, 전체 통과)
 - ✅ JwtProvider, JwtAuthenticationFilter

@@ -9,6 +9,7 @@ import com.picook.domain.ingredient.repository.IngredientRepository;
 import com.picook.global.exception.BusinessException;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ public class IngredientBulkUploadService {
     }
 
     @Transactional
+    @CacheEvict(value = "ingredients", allEntries = true)
     public IngredientBulkUploadResponse uploadFromExcel(MultipartFile file) {
         if (file.isEmpty()) {
             throw new BusinessException("EMPTY_FILE", "파일이 비어있습니다", HttpStatus.BAD_REQUEST);

@@ -7,6 +7,7 @@ import com.picook.domain.ingredient.entity.IngredientCategory;
 import com.picook.domain.ingredient.repository.IngredientCategoryRepository;
 import com.picook.domain.ingredient.repository.IngredientRepository;
 import com.picook.global.exception.BusinessException;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +48,7 @@ public class AdminCategoryService {
     }
 
     @Transactional
+    @CacheEvict(value = "categories", allEntries = true)
     public AdminCategoryResponse createCategory(AdminCategoryRequest request) {
         if (categoryRepository.existsByName(request.name())) {
             throw new BusinessException("DUPLICATE_CATEGORY", "이미 존재하는 카테고리명입니다", HttpStatus.BAD_REQUEST);
@@ -63,6 +65,7 @@ public class AdminCategoryService {
     }
 
     @Transactional
+    @CacheEvict(value = "categories", allEntries = true)
     public AdminCategoryResponse updateCategory(Integer id, AdminCategoryRequest request) {
         IngredientCategory category = categoryRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
@@ -82,6 +85,7 @@ public class AdminCategoryService {
     }
 
     @Transactional
+    @CacheEvict(value = "categories", allEntries = true)
     public void deleteCategory(Integer id) {
         IngredientCategory category = categoryRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
@@ -94,6 +98,7 @@ public class AdminCategoryService {
     }
 
     @Transactional
+    @CacheEvict(value = "categories", allEntries = true)
     public void reorderCategories(CategoryReorderRequest request) {
         Map<Integer, IngredientCategory> categoryMap = categoryRepository.findAllById(request.orderedIds())
                 .stream()
