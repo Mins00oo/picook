@@ -1,0 +1,55 @@
+{
+  "completed": {},
+  "failed": [
+    {
+      "seq": "28",
+      "name": "새우 두부 계란찜",
+      "error": "Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZBzL3NPH2yt5hESvnyUK'}"
+    },
+    {
+      "seq": "29",
+      "name": "부추 콩가루 찜",
+      "error": "Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZBzMH6ALrv19offMVk3T'}"
+    },
+    {
+      "seq": "31",
+      "name": "방울토마토 소박이",
+      "error": "Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZBzNXB1uon9XkyTC1gi3'}"
+    },
+    {
+      "seq": "32",
+      "name": "순두부 사과 소스 오이무침",
+      "error": "Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZBzPmBugEQfScpYHny66'}"
+    },
+    {
+      "seq": "33",
+      "name": "사과 새우 북엇국",
+      "error": "Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZBzQzrU6RVYovfJefQw3'}"
+    },
+    {
+      "seq": "28",
+      "name": "새우 두부 계란찜",
+      "error": "Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZC14yWuKkcydn5DRWFrb'}"
+    },
+    {
+      "seq": "29",
+      "name": "부추 콩가루 찜",
+      "error": "Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZC16DDShP99drrso9T6E'}"
+    },
+    {
+      "seq": "31",
+      "name": "방울토마토 소박이",
+      "error": "Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZC17T1h677fj3qSeWjQo'}"
+    },
+    {
+      "seq": "32",
+      "name": "순두부 사과 소스 오이무침",
+      "error": "Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZC18iGzJa5dY9CBaccxk'}"
+    },
+    {
+      "seq": "33",
+      "name": "사과 새우 북엇국",
+      "error": "Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZC19x7xSzvA4zxLM8z9v'}"
+    }
+  ]
+}
