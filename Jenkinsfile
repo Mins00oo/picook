@@ -21,7 +21,9 @@ pipeline {
                 sh '''
                     git config --global --add safe.directory /opt/picook/app
                     cd ${APP_DIR}
-                    rm -f .git/index.lock
+					find .git -name "*.lock" -delete 2>/dev/null || true
+					rm -rf .git/refs/remotes/origin
+					sed -i "/refs\\/remotes\\/origin/d" .git/packed-refs 2>/dev/null || true
                     git fetch --force origin main
                     git reset --hard origin/main
                 '''
