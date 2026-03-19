@@ -1,9 +1,14 @@
+// ============================================
+// Picook Admin CI/CD Pipeline
+// 트리거: GitHub webhook → Jenkins
+// 흐름: Pull → 변경 감지 → npm 빌드 → 정적 파일 배포
+// ============================================
 pipeline {
     agent any
-	
-	options {
-		disableConcurrentBuilds()
-	}
+
+    options {
+        disableConcurrentBuilds()
+    }
 
     environment {
         APP_DIR = '/opt/picook/app'
@@ -16,11 +21,29 @@ pipeline {
                 sh '''
                     git config --global --add safe.directory /opt/picook/app
                     cd ${APP_DIR}
-					rm -f .git/index.lock
-					rm -rf .git/refs/remotes/origin
-                    git fetch origin main
+                    rm -f .git/index.lock
+                    git fetch --force origin main
                     git reset --hard origin/main
                 '''
+            }
+        }
+
+        stage('Check Changes') {
+            steps {
+                script {
+                    def changes = sh(
+                        script: "cd ${APP_DIR} && git diff --name-only HEAD~1 HEAD | grep -E '^(admin/|shared/)' || true",
+                        returnStdout: true
+                    ).trim()
+
+                    if (changes == '') {
+                        echo 'admin/shared 변경 없음 — 배포 스킵'
+                        currentBuild.result = 'NOT_BUILT'
+                        error('No admin/shared changes detected')
+                    }
+
+                    echo "변경된 파일:\n${changes}"
+                }
             }
         }
 
