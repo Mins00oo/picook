@@ -4,6 +4,7 @@ import com.picook.domain.user.dto.UpdateProfileRequest;
 import com.picook.domain.user.dto.UserProfileResponse;
 import com.picook.domain.user.service.UserService;
 import com.picook.global.response.ApiResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,7 +30,7 @@ public class UserController {
     }
 
     @PutMapping("/me")
-    public ResponseEntity<ApiResponse<UserProfileResponse>> updateProfile(@RequestBody UpdateProfileRequest request) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         UserProfileResponse response = userService.updateProfile(getCurrentUserId(), request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
