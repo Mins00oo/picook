@@ -10,11 +10,16 @@ export interface AdminUserListItem {
   email?: string;
   displayName?: string;
   loginType: string;
-  cookingLevel: string;
   completedCookingCount: number;
   status: string;
   lastLoginAt?: string;
   createdAt: string;
+}
+
+export interface AdminUserActivitySummary {
+  coachingCount: number;
+  completionCount: number;
+  favoriteCount: number;
 }
 
 export interface AdminUserDetail {
@@ -26,28 +31,31 @@ export interface AdminUserDetail {
   cookingLevel: string;
   coachingEnabled: boolean;
   completedCookingCount: number;
+  isOnboarded: boolean;
   status: string;
+  suspendedReason?: string;
   lastLoginAt?: string;
   createdAt: string;
-  coachingLogs: AdminCoachingLogItem[];
-  cookingCompletions: AdminCookingCompletionItem[];
-  favorites: AdminFavoriteItem[];
-  searchHistory: AdminSearchHistoryItem[];
+  updatedAt: string;
+  activitySummary: AdminUserActivitySummary;
 }
 
 export interface AdminCoachingLogItem {
   id: number;
-  recipeNames: string[];
   mode: string;
+  recipeIds: number[];
+  estimatedSeconds?: number;
   actualSeconds?: number;
   completed: boolean;
   startedAt: string;
+  completedAt?: string;
 }
 
 export interface AdminCookingCompletionItem {
   id: number;
+  recipeId: number;
   recipeName: string;
-  photoUrl: string;
+  photoUrl?: string;
   createdAt: string;
 }
 

@@ -13,6 +13,13 @@ const STATUS_OPTIONS = [
   { value: 'suspended', label: '정지' },
 ];
 
+const LOGIN_TYPE_OPTIONS = [
+  { value: '', label: '전체 로그인' },
+  { value: 'KAKAO', label: '카카오' },
+  { value: 'APPLE', label: 'Apple' },
+  { value: 'EMAIL', label: '이메일' },
+];
+
 const statusColors: Record<string, string> = {
   active: 'green',
   suspended: 'red',
@@ -23,12 +30,19 @@ export default function UserList() {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [status, setStatus] = useState('');
+  const [loginType, setLoginType] = useState('');
   const [keyword, setKeyword] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['users', page, status, keyword],
+    queryKey: ['users', page, status, loginType, keyword],
     queryFn: () =>
-      getUsers({ page, size: 10, status: status || undefined, keyword: keyword || undefined }),
+      getUsers({
+        page,
+        size: 10,
+        status: status || undefined,
+        loginType: loginType || undefined,
+        keyword: keyword || undefined,
+      }),
   });
 
   const columns: ColumnsType<AdminUserListItem> = [
@@ -36,7 +50,6 @@ export default function UserList() {
     { title: '닉네임', dataIndex: 'displayName' },
     { title: '이메일', dataIndex: 'email', ellipsis: true },
     { title: '로그인', dataIndex: 'loginType', width: 80 },
-    { title: '실력', dataIndex: 'cookingLevel', width: 80 },
     { title: '완료', dataIndex: 'completedCookingCount', width: 60 },
     {
       title: '상태',
@@ -44,6 +57,7 @@ export default function UserList() {
       width: 80,
       render: (v: string) => <Tag color={statusColors[v]}>{v}</Tag>,
     },
+    { title: '최근 접속', dataIndex: 'lastLoginAt', width: 100, render: (v?: string) => (v ? formatDate(v) : '-') },
     { title: '가입일', dataIndex: 'createdAt', width: 100, render: (v: string) => formatDate(v) },
     {
       title: '액션',
@@ -64,6 +78,12 @@ export default function UserList() {
           options={STATUS_OPTIONS}
           value={status}
           onChange={setStatus}
+          style={{ width: 120 }}
+        />
+        <Select
+          options={LOGIN_TYPE_OPTIONS}
+          value={loginType}
+          onChange={setLoginType}
           style={{ width: 120 }}
         />
         <Input.Search
