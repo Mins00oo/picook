@@ -53,7 +53,8 @@ public class LocalFileService implements FileStorageService {
         String datePath = LocalDate.now().format(DATE_FORMAT);
         String fileName = UUID.randomUUID() + "." + extension;
 
-        Path dir = uploadDir.resolve(subDir).resolve(datePath);
+        Path dir = uploadDir.resolve(subDir).resolve(datePath).normalize();
+        validatePathWithinUploadDir(dir);
         Path filePath = dir.resolve(fileName);
 
         try {
@@ -71,7 +72,8 @@ public class LocalFileService implements FileStorageService {
     public void delete(String fileUrl) {
         try {
             String relativePath = fileUrl.replaceFirst("^/uploads/", "");
-            Path filePath = uploadDir.resolve(relativePath);
+            Path filePath = uploadDir.resolve(relativePath).normalize();
+            validatePathWithinUploadDir(filePath);
             if (Files.exists(filePath)) {
                 Files.delete(filePath);
                 log.debug("Deleted file: {}", filePath);
@@ -87,6 +89,12 @@ public class LocalFileService implements FileStorageService {
     public FileUploadResponse uploadWithResponse(MultipartFile file, String subDir) {
         String url = upload(file, subDir);
         return new FileUploadResponse(url, file.getOriginalFilename(), file.getSize());
+    }
+
+    private void validatePathWithinUploadDir(Path path) {
+        if (!path.startsWith(uploadDir.normalize())) {
+            throw new BusinessException("INVALID_PATH", "잘못된 파일 경로입니다", HttpStatus.BAD_REQUEST);
+        }
     }
 
     private void validateFile(MultipartFile file) {
