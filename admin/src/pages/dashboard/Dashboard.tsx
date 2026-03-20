@@ -2,41 +2,79 @@ import { useState } from 'react';
 import { Card, Col, Empty, List, Radio, Row, Spin, Table, Tag, Typography } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { Line } from '@ant-design/charts';
-import { getDashboardStats } from '@/api/dashboardApi';
+import { getDashboardData } from '@/api/dashboardApi';
 import StatsCard from '@/components/common/StatsCard';
 import { formatNumber } from '@/utils/format';
+import type { DailyCount } from '@/types/stats';
+
+const LEVEL_TITLES: Record<string, string> = {
+  LV1: '병아리',
+  LV2: '요리 입문',
+  LV3: '집밥 견습',
+  LV4: '집밥 장인',
+  LV5: '요리 고수',
+  LV6: '마스터 셰프',
+  LV7: '전설',
+};
 
 export default function Dashboard() {
   const [period, setPeriod] = useState('7d');
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['dashboard', period],
-    queryFn: () => getDashboardStats(period),
+    queryFn: () => getDashboardData(period),
   });
 
   if (isLoading) return <Spin style={{ display: 'block', textAlign: 'center', marginTop: 100 }} />;
   if (isError || !data) return <Empty description="대시보드 데이터를 불러올 수 없습니다." />;
 
-  const trendData = (data.dailyTrend ?? []).flatMap((d) => [
-    { date: d.date, value: d.signups, type: '가입' },
-    { date: d.date, value: d.searches, type: '검색' },
-    { date: d.date, value: d.coachingSessions, type: '코칭' },
-    { date: d.date, value: d.shortsConversions, type: '쇼츠' },
-  ]);
+  // Merge chart series by date
+  const dateMap = new Map<string, { signups: number; coaching: number; shorts: number }>();
+  const mergeSeries = (items: DailyCount[], key: 'signups' | 'coaching' | 'shorts') => {
+    for (const item of items) {
+      const entry = dateMap.get(item.date) ?? { signups: 0, coaching: 0, shorts: 0 };
+      entry[key] = item.count;
+      dateMap.set(item.date, entry);
+    }
+  };
+  mergeSeries(data.charts.userSignups ?? [], 'signups');
+  mergeSeries(data.charts.coachingSessions ?? [], 'coaching');
+  mergeSeries(data.charts.shortsConversions ?? [], 'shorts');
+
+  const trendData = Array.from(dateMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .flatMap(([date, v]) => [
+      { date, value: v.signups, type: '가입' },
+      { date, value: v.coaching, type: '코칭' },
+      { date, value: v.shorts, type: '쇼츠' },
+    ]);
+
+  // Coaching completion rate
+  const coachingRate =
+    data.summary.totalCoachingSessions > 0
+      ? data.summary.completedCoachingSessions / data.summary.totalCoachingSessions
+      : 0;
+
+  // Level distribution from rankDistribution object
+  const levelDistribution = Object.entries(data.summary.rankDistribution ?? {})
+    .map(([key, count]) => {
+      const levelNum = parseInt(key.replace(/\D/g, ''), 10) || 0;
+      return { level: levelNum, title: LEVEL_TITLES[key] ?? key, count };
+    })
+    .sort((a, b) => a.level - b.level);
 
   return (
     <div>
       <Row gutter={[16, 16]}>
-        <Col span={6}><StatsCard title="총 사용자" value={formatNumber(data.totalUsers)} /></Col>
-        <Col span={6}><StatsCard title="오늘 가입" value={formatNumber(data.todaySignups)} /></Col>
-        <Col span={6}><StatsCard title="DAU" value={formatNumber(data.dau)} /></Col>
-        <Col span={6}><StatsCard title="MAU" value={formatNumber(data.mau)} /></Col>
+        <Col span={6}><StatsCard title="총 사용자" value={formatNumber(data.summary.totalUsers)} /></Col>
+        <Col span={6}><StatsCard title="활성 사용자" value={formatNumber(data.summary.activeUsers)} /></Col>
+        <Col span={6}><StatsCard title="총 레시피" value={formatNumber(data.summary.totalRecipes)} /></Col>
+        <Col span={6}><StatsCard title="쇼츠 변환" value={formatNumber(data.summary.totalShortsConversions)} /></Col>
       </Row>
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col span={6}><StatsCard title="총 레시피" value={formatNumber(data.totalRecipes)} /></Col>
-        <Col span={6}><StatsCard title="공개중" value={formatNumber(data.publishedRecipes)} /></Col>
-        <Col span={6}><StatsCard title="코칭 이용률" value={`${(data.coachingUsageRate * 100).toFixed(1)}%`} /></Col>
-        <Col span={6}><StatsCard title="쇼츠 변환" value={formatNumber(data.totalShortsConversions)} /></Col>
+        <Col span={8}><StatsCard title="코칭 세션" value={formatNumber(data.summary.totalCoachingSessions)} /></Col>
+        <Col span={8}><StatsCard title="코칭 완료" value={formatNumber(data.summary.completedCoachingSessions)} /></Col>
+        <Col span={8}><StatsCard title="코칭 완료율" value={`${(coachingRate * 100).toFixed(1)}%`} /></Col>
       </Row>
 
       <Card
@@ -62,11 +100,11 @@ export default function Dashboard() {
           <Card title="인기 레시피 TOP 10" size="small">
             <List
               size="small"
-              dataSource={data.popularRecipes ?? []}
+              dataSource={data.rankings.topRecipesByViews ?? []}
               renderItem={(item, i) => (
                 <List.Item>
-                  <Typography.Text>{i + 1}. {item.name}</Typography.Text>
-                  <Tag>{item.count}회</Tag>
+                  <Typography.Text>{i + 1}. {item.title}</Typography.Text>
+                  <Tag>{item.viewCount}회</Tag>
                 </List.Item>
               )}
             />
@@ -76,11 +114,11 @@ export default function Dashboard() {
           <Card title="인기 재료 TOP 10" size="small">
             <List
               size="small"
-              dataSource={data.popularIngredients ?? []}
+              dataSource={data.rankings.topIngredientsByUsage ?? []}
               renderItem={(item, i) => (
                 <List.Item>
-                  <Typography.Text>{i + 1}. {item.name}</Typography.Text>
-                  <Tag>{item.count}회</Tag>
+                  <Typography.Text>{i + 1}. {item.ingredientName}</Typography.Text>
+                  <Tag>{item.usageCount}회</Tag>
                 </List.Item>
               )}
             />
@@ -90,24 +128,10 @@ export default function Dashboard() {
 
       <Row gutter={16} style={{ marginTop: 16 }}>
         <Col span={12}>
-          <Card title="인기 코칭 TOP 5" size="small">
+          <Card title="최근 피드백" size="small">
             <List
               size="small"
-              dataSource={data.popularCoaching ?? []}
-              renderItem={(item, i) => (
-                <List.Item>
-                  <Typography.Text>{i + 1}. {item.name}</Typography.Text>
-                  <Tag>{item.count}회</Tag>
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-        <Col span={12}>
-          <Card title="최근 피드백 5건" size="small">
-            <List
-              size="small"
-              dataSource={data.recentFeedback ?? []}
+              dataSource={data.rankings.recentFeedback ?? []}
               renderItem={(item) => (
                 <List.Item>
                   <Typography.Text>
@@ -121,21 +145,22 @@ export default function Dashboard() {
             />
           </Card>
         </Col>
+        <Col span={12}>
+          <Card title="등급 분포" size="small">
+            <Table
+              rowKey="level"
+              dataSource={levelDistribution}
+              pagination={false}
+              size="small"
+              columns={[
+                { title: '레벨', dataIndex: 'level' },
+                { title: '등급명', dataIndex: 'title' },
+                { title: '인원', dataIndex: 'count' },
+              ]}
+            />
+          </Card>
+        </Col>
       </Row>
-
-      <Card title="등급 분포" style={{ marginTop: 16 }}>
-        <Table
-          rowKey="level"
-          dataSource={data.levelDistribution ?? []}
-          pagination={false}
-          size="small"
-          columns={[
-            { title: '레벨', dataIndex: 'level' },
-            { title: '등급명', dataIndex: 'title' },
-            { title: '인원', dataIndex: 'count' },
-          ]}
-        />
-      </Card>
     </div>
   );
 }

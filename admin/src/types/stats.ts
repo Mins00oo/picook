@@ -1,27 +1,51 @@
-export interface DashboardStats {
+// --- Dashboard types (matching backend 3-endpoint API) ---
+
+export interface DashboardSummary {
   totalUsers: number;
-  todaySignups: number;
-  dau: number;
-  mau: number;
+  activeUsers: number;
   totalRecipes: number;
-  publishedRecipes: number;
-  coachingUsageRate: number;
+  totalCoachingSessions: number;
+  completedCoachingSessions: number;
   totalShortsConversions: number;
-  dailyTrend: DailyTrendItem[];
-  popularRecipes: RankingItem[];
-  popularIngredients: RankingItem[];
-  popularCoaching: RankingItem[];
-  recentFeedback: RecentFeedbackItem[];
-  levelDistribution: LevelDistItem[];
+  rankDistribution: Record<string, number>;
 }
 
-export interface DailyTrendItem {
-  date: string;
-  signups: number;
-  searches: number;
-  coachingSessions: number;
-  shortsConversions: number;
+export interface RecipeRanking {
+  id: number;
+  title: string;
+  viewCount: number;
 }
+
+export interface IngredientRanking {
+  ingredientId: number;
+  ingredientName: string;
+  usageCount: number;
+}
+
+export interface DashboardRankings {
+  topRecipesByViews: RecipeRanking[];
+  topIngredientsByUsage: IngredientRanking[];
+  recentFeedback: RecentFeedbackItem[];
+}
+
+export interface DailyCount {
+  date: string;
+  count: number;
+}
+
+export interface DashboardCharts {
+  userSignups: DailyCount[];
+  coachingSessions: DailyCount[];
+  shortsConversions: DailyCount[];
+}
+
+export interface DashboardData {
+  summary: DashboardSummary;
+  rankings: DashboardRankings;
+  charts: DashboardCharts;
+}
+
+// --- Legacy sub-types still used by other pages ---
 
 export interface RankingItem {
   id: number;
@@ -45,38 +69,45 @@ export interface LevelDistItem {
 }
 
 export interface UserStatsData {
+  totalUsers: number;
+  activeUsers: number;
   signupTrend: { date: string; count: number }[];
   dau: number;
   mau: number;
-  loginTypeDistribution: { type: string; count: number }[];
+  loginTypeDistribution: Record<string, number>;
 }
 
 export interface RecipeStatsData {
-  categoryDistribution: { category: string; count: number }[];
-  popularRecipes: RankingItem[];
+  categoryDistribution: Record<string, number>;
+  popularRecipes: RecipeRanking[];
   coachingReadyRate: number;
   totalRecipes: number;
 }
 
 export interface IngredientStatsData {
-  popularIngredients: RankingItem[];
-  unusedIngredients: { id: number; name: string }[];
+  popularIngredients: IngredientRanking[];
+  unusedIngredients: IngredientRanking[];
 }
 
 export interface CoachingStatsData {
-  usageRate: number;
+  totalSessions: number;
+  completedSessions: number;
   completionRate: number;
-  hourlyDistribution: { hour: number; count: number }[];
+  averageDurationSeconds: number;
+  hourlyDistribution: Record<string, number>;
   dailyTrend: { date: string; count: number }[];
 }
 
 export interface ShortsStatsPageData {
-  conversionTrend: { date: string; count: number; successCount: number }[];
-  successRate: number;
   totalConversions: number;
+  totalCacheEntries: number;
+  modelVersionDistribution: Record<string, number>;
 }
 
 export interface RankingStatsData {
-  levelDistribution: LevelDistItem[];
+  levelDistribution: Record<string, number>;
+  averageLevel: number;
+  totalCompletions: number;
+  photoUploads: number;
   photoUploadRate: number;
 }
