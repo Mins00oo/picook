@@ -20,12 +20,11 @@ pipeline {
             steps {
                 sh '''
                     git config --global --add safe.directory /opt/picook/app
-                    cd ${APP_DIR}
-					find .git -name "*.lock" -delete 2>/dev/null || true
-					rm -rf .git/refs/remotes/origin
-					sed -i "/refs\\/remotes\\/origin/d" .git/packed-refs 2>/dev/null || true
-                    git fetch --force origin main
-                    git reset --hard origin/main
+					flock /tmp/picook-git.lock -c "
+						cd /opt/picook/app &&
+						git fetch --force origin main &&
+						git reset --hard FETCH_HEAD
+					"
                 '''
             }
         }
