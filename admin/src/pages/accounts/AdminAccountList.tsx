@@ -1,14 +1,22 @@
 import { useState } from 'react';
-import { Button, Input, Modal, Select, Space, Table, message } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { Button, Input, Modal, Select, Space, Table, Tag, message } from 'antd';
+import { PlusOutlined, UnlockOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { getAdminAccounts, createAdmin, updateAdminRole, deleteAdmin } from '@/api/accountApi';
+import {
+  getAdminAccounts,
+  createAdmin,
+  updateAdminRole,
+  deleteAdmin,
+  unlockAdmin,
+} from '@/api/accountApi';
 import { showConfirm } from '@/components/common/ConfirmModal';
 import { adminAccountSchema, type AdminAccountFormValues } from '@/schemas/adminAccountSchema';
 import FormField from '@/components/common/FormField';
-import type { AdminInfo, AdminRole } from '@/types/admin';
+import { useAuthStore } from '@/stores/authStore';
+import { formatDateTime } from '@/utils/format';
+import type { AdminAccountItem, AdminRole } from '@/types/admin';
 import type { ColumnsType } from 'antd/es/table';
 
 const ROLE_OPTIONS = [
@@ -19,6 +27,7 @@ const ROLE_OPTIONS = [
 
 export default function AdminAccountList() {
   const queryClient = useQueryClient();
+  const admin = useAuthStore((s) => s.admin);
   const [modalOpen, setModalOpen] = useState(false);
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<AdminAccountFormValues>({
@@ -53,9 +62,17 @@ export default function AdminAccountList() {
   });
 
   const deleteMut = useMutation({
-    mutationFn: deleteAdmin,
+    mutationFn: (id: number) => deleteAdmin(id, admin!.id),
     onSuccess: () => {
       message.success('삭제되었습니다.');
+      queryClient.invalidateQueries({ queryKey: ['admin-accounts'] });
+    },
+  });
+
+  const unlockMut = useMutation({
+    mutationFn: unlockAdmin,
+    onSuccess: () => {
+      message.success('잠금이 해제되었습니다.');
       queryClient.invalidateQueries({ queryKey: ['admin-accounts'] });
     },
   });
@@ -64,14 +81,14 @@ export default function AdminAccountList() {
     createMut.mutate(values);
   };
 
-  const columns: ColumnsType<AdminInfo> = [
+  const columns: ColumnsType<AdminAccountItem> = [
     { title: 'ID', dataIndex: 'id', width: 60 },
     { title: '이메일', dataIndex: 'email' },
     {
       title: '역할',
       dataIndex: 'role',
       width: 140,
-      render: (role: AdminRole, record: AdminInfo) => (
+      render: (role: AdminRole, record: AdminAccountItem) => (
         <Select
           value={role}
           options={ROLE_OPTIONS}
@@ -81,22 +98,58 @@ export default function AdminAccountList() {
       ),
     },
     {
-      title: '액션',
+      title: '잠금',
+      dataIndex: 'isLocked',
       width: 80,
-      render: (_: unknown, record: AdminInfo) => (
-        <Button
-          size="small"
-          danger
-          onClick={() =>
-            showConfirm({
-              title: '관리자 삭제',
-              content: `"${record.email}"을(를) 삭제하시겠습니까?`,
-              onConfirm: () => deleteMut.mutate(record.id),
-            })
-          }
-        >
-          삭제
-        </Button>
+      render: (v: boolean) =>
+        v ? <Tag color="red">잠금</Tag> : <Tag color="green">정상</Tag>,
+    },
+    {
+      title: '최근 로그인',
+      dataIndex: 'lastLoginAt',
+      width: 150,
+      render: (v?: string) => (v ? formatDateTime(v) : '-'),
+    },
+    {
+      title: '생성일',
+      dataIndex: 'createdAt',
+      width: 150,
+      render: (v: string) => formatDateTime(v),
+    },
+    {
+      title: '액션',
+      width: 130,
+      render: (_: unknown, record: AdminAccountItem) => (
+        <Space size="small">
+          {record.isLocked && (
+            <Button
+              size="small"
+              icon={<UnlockOutlined />}
+              onClick={() =>
+                showConfirm({
+                  title: '잠금 해제',
+                  content: `"${record.email}"의 잠금을 해제하시겠습니까?`,
+                  onConfirm: () => unlockMut.mutate(record.id),
+                })
+              }
+            >
+              해제
+            </Button>
+          )}
+          <Button
+            size="small"
+            danger
+            onClick={() =>
+              showConfirm({
+                title: '관리자 삭제',
+                content: `"${record.email}"을(를) 삭제하시겠습니까?`,
+                onConfirm: () => deleteMut.mutate(record.id),
+              })
+            }
+          >
+            삭제
+          </Button>
+        </Space>
       ),
     },
   ];
