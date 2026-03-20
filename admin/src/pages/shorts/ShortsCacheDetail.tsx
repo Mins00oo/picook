@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Button, Card, Descriptions, Space, Table, Tag, message } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -5,6 +6,7 @@ import { getShortsCacheDetail, reconvertShorts, deleteShortCache } from '@/api/s
 import { showConfirm } from '@/components/common/ConfirmModal';
 import { usePermission } from '@/hooks/usePermission';
 import { formatDateTime } from '@/utils/format';
+import type { ShortsConvertResult } from '@/types/shorts';
 
 export default function ShortsCacheDetail() {
   const { id } = useParams();
@@ -32,6 +34,15 @@ export default function ShortsCacheDetail() {
       navigate('/shorts');
     },
   });
+
+  const parsedResult = useMemo<ShortsConvertResult | null>(() => {
+    if (!data?.result) return null;
+    try {
+      return JSON.parse(data.result) as ShortsConvertResult;
+    } catch {
+      return null;
+    }
+  }, [data?.result]);
 
   if (isLoading || !data) return null;
 
@@ -65,49 +76,61 @@ export default function ShortsCacheDetail() {
           <Descriptions.Item label="URL">{data.youtubeUrl}</Descriptions.Item>
           <Descriptions.Item label="제목">{data.title ?? '-'}</Descriptions.Item>
           <Descriptions.Item label="AI 모델">{data.aiModelVersion}</Descriptions.Item>
+          <Descriptions.Item label="URL 해시">{data.urlHash}</Descriptions.Item>
           <Descriptions.Item label="생성일">{formatDateTime(data.createdAt)}</Descriptions.Item>
+          <Descriptions.Item label="수정일">{formatDateTime(data.updatedAt)}</Descriptions.Item>
         </Descriptions>
       </Card>
 
-      <Card title="추출 재료" style={{ marginBottom: 16 }}>
-        <Table
-          rowKey="name"
-          dataSource={data.ingredients}
-          pagination={false}
-          size="small"
-          columns={[
-            { title: '재료명', dataIndex: 'name' },
-            { title: '수량', dataIndex: 'amount' },
-            { title: '단위', dataIndex: 'unit' },
-          ]}
-        />
-      </Card>
+      {parsedResult?.ingredients && parsedResult.ingredients.length > 0 && (
+        <Card title="추출 재료" style={{ marginBottom: 16 }}>
+          <Table
+            rowKey="name"
+            dataSource={parsedResult.ingredients}
+            pagination={false}
+            size="small"
+            columns={[
+              { title: '재료명', dataIndex: 'name' },
+              { title: '수량', dataIndex: 'amount' },
+              { title: '단위', dataIndex: 'unit' },
+            ]}
+          />
+        </Card>
+      )}
 
-      <Card title="변환 단계">
-        <Table
-          rowKey="stepNumber"
-          dataSource={data.steps}
-          pagination={false}
-          size="small"
-          columns={[
-            { title: '순서', dataIndex: 'stepNumber', width: 60 },
-            { title: '설명', dataIndex: 'description' },
-            {
-              title: '유형',
-              dataIndex: 'stepType',
-              width: 80,
-              render: (v: string) =>
-                v === 'active' ? <Tag color="blue">능동</Tag> : <Tag color="orange">대기</Tag>,
-            },
-            {
-              title: '소요시간',
-              dataIndex: 'durationSeconds',
-              width: 100,
-              render: (v: number) => (v ? `${v}초` : '-'),
-            },
-          ]}
-        />
-      </Card>
+      {parsedResult?.steps && parsedResult.steps.length > 0 && (
+        <Card title="변환 단계">
+          <Table
+            rowKey="stepNumber"
+            dataSource={parsedResult.steps}
+            pagination={false}
+            size="small"
+            columns={[
+              { title: '순서', dataIndex: 'stepNumber', width: 60 },
+              { title: '설명', dataIndex: 'description' },
+              {
+                title: '유형',
+                dataIndex: 'stepType',
+                width: 80,
+                render: (v: string) =>
+                  v === 'active' ? <Tag color="blue">능동</Tag> : <Tag color="orange">대기</Tag>,
+              },
+              {
+                title: '소요시간',
+                dataIndex: 'durationSeconds',
+                width: 100,
+                render: (v: number) => (v ? `${v}초` : '-'),
+              },
+            ]}
+          />
+        </Card>
+      )}
+
+      {!parsedResult && (
+        <Card title="변환 결과 (원본)">
+          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{data.result}</pre>
+        </Card>
+      )}
     </div>
   );
 }

@@ -42,7 +42,6 @@ export default function ShortsCacheList() {
     { title: 'URL', dataIndex: 'youtubeUrl', ellipsis: true },
     { title: '제목', dataIndex: 'title', ellipsis: true },
     { title: '모델 버전', dataIndex: 'aiModelVersion', width: 130 },
-    { title: '단계 수', dataIndex: 'stepCount', width: 80 },
     { title: '생성일', dataIndex: 'createdAt', width: 100, render: (v: string) => formatDate(v) },
     {
       title: '액션',
