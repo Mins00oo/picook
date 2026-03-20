@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { getFeedback, updateFeedbackStatus } from '@/api/feedbackApi';
+import { getFeedback, updateFeedbackStatus, updateFeedbackNote } from '@/api/feedbackApi';
 import { usePermission } from '@/hooks/usePermission';
 import { formatDateTime } from '@/utils/format';
 import { feedbackSchema, type FeedbackFormValues } from '@/schemas/feedbackSchema';
@@ -40,23 +40,49 @@ export default function FeedbackDetail() {
 
   useEffect(() => {
     if (data) {
-      reset({ status: data.status, adminMemo: data.adminMemo ?? '' });
+      reset({ status: data.adminStatus, adminNote: data.adminNote ?? '' });
     }
   }, [data, reset]);
 
-  const updateMut = useMutation({
-    mutationFn: (values: { status: FeedbackStatus; adminMemo?: string }) =>
-      updateFeedbackStatus(Number(id), values),
+  const statusMut = useMutation({
+    mutationFn: (status: string) =>
+      updateFeedbackStatus(Number(id), { status }),
     onSuccess: () => {
-      message.success('업데이트되었습니다.');
+      message.success('상태가 업데이트되었습니다.');
+      queryClient.invalidateQueries({ queryKey: ['feedback', id] });
+    },
+  });
+
+  const noteMut = useMutation({
+    mutationFn: (note: string) =>
+      updateFeedbackNote(Number(id), { note }),
+    onSuccess: () => {
+      message.success('메모가 저장되었습니다.');
       queryClient.invalidateQueries({ queryKey: ['feedback', id] });
     },
   });
 
   if (isLoading || !data) return null;
 
-  const onSubmit = (values: FeedbackFormValues) => {
-    updateMut.mutate(values as { status: FeedbackStatus; adminMemo?: string });
+  const onSubmit = async (values: FeedbackFormValues) => {
+    const promises: Promise<void>[] = [];
+
+    if (values.status !== data.adminStatus) {
+      promises.push(statusMut.mutateAsync(values.status));
+    }
+
+    const newNote = values.adminNote ?? '';
+    const oldNote = data.adminNote ?? '';
+    if (newNote !== oldNote) {
+      promises.push(noteMut.mutateAsync(newNote));
+    }
+
+    if (promises.length === 0) {
+      message.info('변경사항이 없습니다.');
+      return;
+    }
+
+    await Promise.all(promises);
   };
 
   return (
@@ -68,14 +94,13 @@ export default function FeedbackDetail() {
       <Card title="피드백 상세" style={{ marginBottom: 16 }}>
         <Descriptions column={2}>
           <Descriptions.Item label="레시피">{data.recipeTitle}</Descriptions.Item>
-          <Descriptions.Item label="카테고리">{data.recipeCategory}</Descriptions.Item>
-          <Descriptions.Item label="사용자">{data.userName}</Descriptions.Item>
+          <Descriptions.Item label="사용자">{data.userDisplayName}</Descriptions.Item>
           <Descriptions.Item label="이메일">{data.userEmail ?? '-'}</Descriptions.Item>
           <Descriptions.Item label="평가">
             <Tag color={ratingColors[data.rating]}>{data.rating}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="상태">
-            <Tag color={statusColors[data.status]}>{data.status}</Tag>
+            <Tag color={statusColors[data.adminStatus]}>{data.adminStatus}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="등록일">{formatDateTime(data.createdAt)}</Descriptions.Item>
         </Descriptions>
@@ -107,14 +132,14 @@ export default function FeedbackDetail() {
             </FormField>
             <FormField label="관리자 메모">
               <Controller
-                name="adminMemo"
+                name="adminNote"
                 control={control}
                 render={({ field }) => (
                   <Input.TextArea {...field} value={field.value ?? ''} rows={4} />
                 )}
               />
             </FormField>
-            <Button type="primary" htmlType="submit" loading={updateMut.isPending}>
+            <Button type="primary" htmlType="submit" loading={statusMut.isPending || noteMut.isPending}>
               저장
             </Button>
           </form>

@@ -4,25 +4,34 @@ export type FeedbackRating = 'easy' | 'adequate' | 'difficult';
 
 export interface FeedbackItem {
   id: number;
-  recipeId: number;
-  recipeName: string;
   userId: string;
-  userName: string;
+  userDisplayName: string;
+  recipeId: number;
+  recipeTitle: string;
+  rating: FeedbackRating;
+  adminStatus: FeedbackStatus;
+  createdAt: string;
+}
+
+export interface FeedbackDetailResponse {
+  id: number;
+  userId: string;
+  userDisplayName: string;
+  userEmail?: string;
+  recipeId: number;
+  recipeTitle: string;
   rating: FeedbackRating;
   comment?: string;
-  status: FeedbackStatus;
-  adminMemo?: string;
+  adminStatus: FeedbackStatus;
+  adminNote?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface FeedbackDetailResponse extends FeedbackItem {
-  recipeTitle: string;
-  recipeCategory: string;
-  userEmail?: string;
+export interface UpdateFeedbackStatusRequest {
+  status: string;
 }
 
-export interface UpdateFeedbackRequest {
-  status: FeedbackStatus;
-  adminMemo?: string;
+export interface UpdateFeedbackNoteRequest {
+  note: string;
 }

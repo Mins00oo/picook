@@ -1,11 +1,16 @@
 import client from './client';
 import type { PageResponse } from '@/types/common';
-import type { FeedbackItem, FeedbackDetailResponse, UpdateFeedbackRequest } from '@/types/feedback';
+import type {
+  FeedbackItem,
+  FeedbackDetailResponse,
+  UpdateFeedbackStatusRequest,
+  UpdateFeedbackNoteRequest,
+} from '@/types/feedback';
 
 interface FeedbackListParams {
   status?: string;
   rating?: string;
-  keyword?: string;
+  recipeId?: number;
   page?: number;
   size?: number;
 }
@@ -18,6 +23,14 @@ export function getFeedback(id: number): Promise<FeedbackDetailResponse> {
   return client.get(`/admin/feedback/${id}`) as Promise<FeedbackDetailResponse>;
 }
 
-export function updateFeedbackStatus(id: number, data: UpdateFeedbackRequest): Promise<FeedbackDetailResponse> {
-  return client.patch(`/admin/feedback/${id}`, data) as Promise<FeedbackDetailResponse>;
+export function updateFeedbackStatus(id: number, data: UpdateFeedbackStatusRequest): Promise<void> {
+  return client.patch(`/admin/feedback/${id}/status`, data) as Promise<void>;
+}
+
+export function updateFeedbackNote(id: number, data: UpdateFeedbackNoteRequest): Promise<void> {
+  return client.put(`/admin/feedback/${id}/note`, data) as Promise<void>;
+}
+
+export function getFeedbackSummary(): Promise<unknown> {
+  return client.get('/admin/feedback/summary') as Promise<unknown>;
 }

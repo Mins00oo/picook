@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Input, Select, Space, Table, Tag } from 'antd';
+import { Button, Select, Space, Table, Tag } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { getFeedbackList } from '@/api/feedbackApi';
@@ -38,34 +38,31 @@ export default function FeedbackList() {
   const [page, setPage] = useState(0);
   const [status, setStatus] = useState('');
   const [rating, setRating] = useState('');
-  const [keyword, setKeyword] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['feedback', page, status, rating, keyword],
+    queryKey: ['feedback', page, status, rating],
     queryFn: () =>
       getFeedbackList({
         page,
         size: 10,
         status: status || undefined,
         rating: rating || undefined,
-        keyword: keyword || undefined,
       }),
   });
 
   const columns: ColumnsType<FeedbackItem> = [
     { title: 'ID', dataIndex: 'id', width: 60 },
-    { title: '레시피', dataIndex: 'recipeName', ellipsis: true },
-    { title: '사용자', dataIndex: 'userName', width: 100 },
+    { title: '레시피', dataIndex: 'recipeTitle', ellipsis: true },
+    { title: '사용자', dataIndex: 'userDisplayName', width: 100 },
     {
       title: '평가',
       dataIndex: 'rating',
       width: 80,
       render: (v: string) => <Tag color={ratingColors[v]}>{v}</Tag>,
     },
-    { title: '코멘트', dataIndex: 'comment', ellipsis: true },
     {
       title: '상태',
-      dataIndex: 'status',
+      dataIndex: 'adminStatus',
       width: 80,
       render: (v: string) => <Tag color={statusColors[v]}>{v}</Tag>,
     },
@@ -87,7 +84,6 @@ export default function FeedbackList() {
       <Space style={{ marginBottom: 16 }}>
         <Select options={STATUS_OPTIONS} value={status} onChange={setStatus} style={{ width: 120 }} />
         <Select options={RATING_OPTIONS} value={rating} onChange={setRating} style={{ width: 120 }} />
-        <Input.Search placeholder="레시피명 검색" onSearch={setKeyword} style={{ width: 200 }} allowClear />
       </Space>
       <Table
         rowKey="id"
