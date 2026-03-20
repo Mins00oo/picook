@@ -22,8 +22,8 @@ export default function IngredientStats() {
               dataSource={data.popularIngredients}
               renderItem={(item, i) => (
                 <List.Item>
-                  <Typography.Text>{i + 1}. {item.name}</Typography.Text>
-                  <Tag>{item.count}회</Tag>
+                  <Typography.Text>{i + 1}. {item.ingredientName}</Typography.Text>
+                  <Tag>{item.usageCount}회</Tag>
                 </List.Item>
               )}
             />
@@ -32,13 +32,13 @@ export default function IngredientStats() {
         <Col span={12}>
           <Card title="미사용 재료">
             <Table
-              rowKey="id"
+              rowKey="ingredientId"
               dataSource={data.unusedIngredients}
               pagination={false}
               size="small"
               columns={[
-                { title: 'ID', dataIndex: 'id', width: 60 },
-                { title: '재료명', dataIndex: 'name' },
+                { title: 'ID', dataIndex: 'ingredientId', width: 60 },
+                { title: '재료명', dataIndex: 'ingredientName' },
               ]}
             />
           </Card>

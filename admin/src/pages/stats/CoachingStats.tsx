@@ -13,15 +13,23 @@ export default function CoachingStats() {
   if (isLoading) return <Spin />;
   if (isError || !data) return <Empty description="데이터를 불러올 수 없습니다." />;
 
+  const hourlyData = Object.entries(data.hourlyDistribution).map(([hour, count]) => ({ hour, count }));
+
   return (
     <div>
       <h2>코칭 통계</h2>
       <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={8}>
-          <StatsCard title="이용률" value={`${(data.usageRate * 100).toFixed(1)}%`} />
+        <Col span={6}>
+          <StatsCard title="총 세션" value={data.totalSessions} />
         </Col>
-        <Col span={8}>
+        <Col span={6}>
+          <StatsCard title="완료 세션" value={data.completedSessions} />
+        </Col>
+        <Col span={6}>
           <StatsCard title="완료율" value={`${(data.completionRate * 100).toFixed(1)}%`} />
+        </Col>
+        <Col span={6}>
+          <StatsCard title="평균 소요(초)" value={data.averageDurationSeconds} />
         </Col>
       </Row>
       <Row gutter={16}>
@@ -32,7 +40,7 @@ export default function CoachingStats() {
         </Col>
         <Col span={12}>
           <Card title="시간대별 분포">
-            <Column data={data.hourlyDistribution} xField="hour" yField="count" height={300} />
+            <Column data={hourlyData} xField="hour" yField="count" height={300} />
           </Card>
         </Col>
       </Row>

@@ -13,12 +13,16 @@ export default function UserStats() {
   if (isLoading) return <Spin />;
   if (isError || !data) return <Empty description="데이터를 불러올 수 없습니다." />;
 
+  const loginTypeData = Object.entries(data.loginTypeDistribution).map(([type, count]) => ({ type, count }));
+
   return (
     <div>
       <h2>사용자 통계</h2>
       <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={8}><StatsCard title="DAU" value={data.dau} /></Col>
-        <Col span={8}><StatsCard title="MAU" value={data.mau} /></Col>
+        <Col span={6}><StatsCard title="총 사용자" value={data.totalUsers} /></Col>
+        <Col span={6}><StatsCard title="활성 사용자" value={data.activeUsers} /></Col>
+        <Col span={6}><StatsCard title="DAU" value={data.dau} /></Col>
+        <Col span={6}><StatsCard title="MAU" value={data.mau} /></Col>
       </Row>
       <Row gutter={16}>
         <Col span={16}>
@@ -29,7 +33,7 @@ export default function UserStats() {
         <Col span={8}>
           <Card title="로그인 방식">
             <Pie
-              data={data.loginTypeDistribution}
+              data={loginTypeData}
               angleField="count"
               colorField="type"
               height={300}

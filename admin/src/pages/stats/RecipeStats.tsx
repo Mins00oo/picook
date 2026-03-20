@@ -13,6 +13,8 @@ export default function RecipeStats() {
   if (isLoading) return <Spin />;
   if (isError || !data) return <Empty description="데이터를 불러올 수 없습니다." />;
 
+  const categoryData = Object.entries(data.categoryDistribution).map(([category, count]) => ({ category, count }));
+
   return (
     <div>
       <h2>레시피 통계</h2>
@@ -26,7 +28,7 @@ export default function RecipeStats() {
         <Col span={12}>
           <Card title="카테고리별 분포">
             <Pie
-              data={data.categoryDistribution}
+              data={categoryData}
               angleField="count"
               colorField="category"
               height={300}
@@ -41,8 +43,8 @@ export default function RecipeStats() {
               dataSource={data.popularRecipes}
               renderItem={(item, i) => (
                 <List.Item>
-                  <Typography.Text>{i + 1}. {item.name}</Typography.Text>
-                  <Tag>{item.count}회</Tag>
+                  <Typography.Text>{i + 1}. {item.title}</Typography.Text>
+                  <Tag>{item.viewCount}회</Tag>
                 </List.Item>
               )}
             />
