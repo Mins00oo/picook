@@ -48,3 +48,27 @@ shorts:
 # Apple Sign-In
 apple:
   bundle-id: ${APPLE_BUNDLE_ID:com.picook.app}
+
+# Actuator / Prometheus (Lighthouse 모니터링)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  health:
+    db:
+      enabled: true
+    diskspace:
+      enabled: true
+  metrics:
+    tags:
+      application: picook-backend
+
+# Lighthouse 모니터링 IP 화이트리스트
+monitoring:
+  allowed-ips:
+    - ${LIGHTHOUSE_IP:127.0.0.1}

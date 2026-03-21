@@ -6,14 +6,47 @@
 
     <!-- ===== LOCAL 프로필 ===== -->
     <springProfile name="local">
+        <property name="LOG_DIR" value="C:/work/logs/picook-backend"/>
+
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
                 <pattern>${LOG_PATTERN}</pattern>
             </encoder>
         </appender>
 
+        <!-- Lighthouse 모니터링 수집용 JSON (LogstashEncoder) -->
+        <appender name="LIGHTHOUSE_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_DIR}/lighthouse.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_DIR}/lighthouse-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>50MB</maxFileSize>
+                <maxHistory>7</maxHistory>
+                <totalSizeCap>500MB</totalSizeCap>
+            </rollingPolicy>
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <customFields>{"service":"picook-backend"}</customFields>
+                <includeMdcKeyName>http_method</includeMdcKeyName>
+                <includeMdcKeyName>http_path</includeMdcKeyName>
+                <includeMdcKeyName>http_status</includeMdcKeyName>
+                <includeMdcKeyName>response_time_ms</includeMdcKeyName>
+                <includeMdcKeyName>client_ip</includeMdcKeyName>
+                <includeMdcKeyName>exception_class</includeMdcKeyName>
+                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                    <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                    <shortenedClassNameLength>36</shortenedClassNameLength>
+                    <rootCauseFirst>true</rootCauseFirst>
+                </throwableConverter>
+            </encoder>
+        </appender>
+
+        <!-- Lighthouse 수집 전용 로거 -->
+        <logger name="lighthouse_access" level="INFO" additivity="false">
+            <appender-ref ref="LIGHTHOUSE_FILE"/>
+        </logger>
+
         <root level="INFO">
             <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="LIGHTHOUSE_FILE"/>
         </root>
 
         <logger name="com.picook" level="DEBUG"/>
@@ -108,6 +141,36 @@
         <!-- 성능 로거: perf.log 전용 -->
         <logger name="com.picook.global.aop" level="INFO" additivity="false">
             <appender-ref ref="PERF_FILE"/>
+        </logger>
+
+        <!-- 5) lighthouse.log — Lighthouse 모니터링 수집용 JSON (LogstashEncoder) -->
+        <appender name="LIGHTHOUSE_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_DIR}/lighthouse.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_DIR}/lighthouse-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>50MB</maxFileSize>
+                <maxHistory>7</maxHistory>
+                <totalSizeCap>500MB</totalSizeCap>
+            </rollingPolicy>
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <customFields>{"service":"picook-backend"}</customFields>
+                <includeMdcKeyName>http_method</includeMdcKeyName>
+                <includeMdcKeyName>http_path</includeMdcKeyName>
+                <includeMdcKeyName>http_status</includeMdcKeyName>
+                <includeMdcKeyName>response_time_ms</includeMdcKeyName>
+                <includeMdcKeyName>client_ip</includeMdcKeyName>
+                <includeMdcKeyName>exception_class</includeMdcKeyName>
+                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                    <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                    <shortenedClassNameLength>36</shortenedClassNameLength>
+                    <rootCauseFirst>true</rootCauseFirst>
+                </throwableConverter>
+            </encoder>
+        </appender>
+
+        <!-- Lighthouse 수집 전용 로거 -->
+        <logger name="lighthouse_access" level="INFO" additivity="false">
+            <appender-ref ref="LIGHTHOUSE_FILE"/>
         </logger>
 
         <!-- 루트 및 애플리케이션 로거 -->

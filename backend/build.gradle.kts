@@ -47,6 +47,13 @@ dependencies {
     // Swagger / OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2")
 
+    // Lighthouse 로그 수집 (구조화 JSON 출력)
+    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
+
+    // Actuator + Prometheus 메트릭 (Lighthouse 모니터링)
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus")
+
     // Dev
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")

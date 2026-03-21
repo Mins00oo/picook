@@ -34,6 +34,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/actuator/prometheus", "/actuator/info").permitAll()
+                        .requestMatchers("/api/monitoring/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/admin/auth/login", "/api/admin/auth/refresh").permitAll()
                         .requestMatchers("/api/admin/accounts/**").hasRole("SUPER_ADMIN")
