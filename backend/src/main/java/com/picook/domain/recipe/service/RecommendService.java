@@ -5,6 +5,8 @@ import com.picook.domain.recipe.dto.RecommendResponse;
 import com.picook.domain.recipe.dto.RecommendResponse.MissingIngredient;
 import com.picook.domain.recipe.entity.RecipeIngredient;
 import com.picook.domain.recipe.repository.RecipeIngredientRepository;
+import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.springframework.stereotype.Service;
@@ -19,14 +21,19 @@ public class RecommendService {
 
     private final EntityManager entityManager;
     private final RecipeIngredientRepository recipeIngredientRepository;
+    private final MeterRegistry meterRegistry;
 
     public RecommendService(EntityManager entityManager,
-                            RecipeIngredientRepository recipeIngredientRepository) {
+                            RecipeIngredientRepository recipeIngredientRepository,
+                            MeterRegistry meterRegistry) {
         this.entityManager = entityManager;
         this.recipeIngredientRepository = recipeIngredientRepository;
+        this.meterRegistry = meterRegistry;
     }
 
+    @Timed("picook.recommend.time")
     public List<RecommendResponse> recommend(RecommendRequest request) {
+        meterRegistry.counter("picook.recommend.requests").increment();
         List<Integer> ingredientIds = request.ingredientIds();
 
         StringBuilder sql = new StringBuilder();
@@ -111,6 +118,10 @@ public class RecommendService {
                     Math.round(matchingRate * 10.0) / 10.0,
                     missing
             ));
+        }
+
+        if (responses.isEmpty()) {
+            meterRegistry.counter("picook.recommend.empty_results").increment();
         }
 
         return responses;

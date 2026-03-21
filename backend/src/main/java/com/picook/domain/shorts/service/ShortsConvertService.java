@@ -7,6 +7,8 @@ import com.picook.domain.shorts.dto.ShortsConvertRequest;
 import com.picook.domain.shorts.dto.ShortsConvertResponse;
 import com.picook.domain.shorts.dto.ShortsRecipeResult;
 import com.picook.domain.shorts.dto.YtDlpResult;
+import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
 import com.picook.domain.shorts.entity.ShortsCache;
 import com.picook.domain.shorts.entity.ShortsConversionHistory;
 import com.picook.domain.shorts.entity.ShortsConversionLog;
@@ -51,6 +53,7 @@ public class ShortsConvertService {
     private final ObjectMapper objectMapper;
     private final ShortsRateLimiter rateLimiter;
     private final TransactionTemplate transactionTemplate;
+    private final MeterRegistry meterRegistry;
 
     public ShortsConvertService(ShortsCacheService shortsCacheService,
                                 ShortsConversionHistoryRepository historyRepository,
@@ -60,7 +63,8 @@ public class ShortsConvertService {
                                 RecipeStructurizer recipeStructurizer,
                                 ObjectMapper objectMapper,
                                 ShortsRateLimiter rateLimiter,
-                                PlatformTransactionManager txManager) {
+                                PlatformTransactionManager txManager,
+                                MeterRegistry meterRegistry) {
         this.shortsCacheService = shortsCacheService;
         this.historyRepository = historyRepository;
         this.conversionLogRepository = conversionLogRepository;
@@ -70,11 +74,13 @@ public class ShortsConvertService {
         this.objectMapper = objectMapper;
         this.rateLimiter = rateLimiter;
         this.transactionTemplate = new TransactionTemplate(txManager);
+        this.meterRegistry = meterRegistry;
     }
 
     /**
      * 쇼츠 변환 — 외부 API 호출은 TX 밖에서, DB 저장만 TX 안에서 수행
      */
+    @Timed("picook.shorts.convert.time")
     public ShortsConvertResponse convert(UUID userId, ShortsConvertRequest request) {
         long startTime = System.currentTimeMillis();
         String normalizedUrl = normalizeUrl(request.youtubeUrl());
@@ -124,12 +130,15 @@ public class ShortsConvertService {
                     recipe.title(), resultJson, ytResult, startTime,
                     extractMs, transcribeMs, structurizeMs);
 
+            meterRegistry.counter("picook.shorts.convert.success").increment();
             return ShortsConvertResponse.of(cache, recipe, false);
         } catch (BusinessException e) {
+            meterRegistry.counter("picook.shorts.convert.failure").increment();
             long totalMs = System.currentTimeMillis() - startTime;
             saveFailureLog(userId, normalizedUrl, e.getErrorCode(), e.getMessage(), totalMs);
             throw e;
         } catch (JacksonException e) {
+            meterRegistry.counter("picook.shorts.convert.failure").increment();
             long totalMs = System.currentTimeMillis() - startTime;
             saveFailureLog(userId, normalizedUrl, "AI_STRUCTURIZE_FAILED", e.getMessage(), totalMs);
             log.error("Failed to serialize recipe result", e);

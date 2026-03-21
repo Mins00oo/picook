@@ -16,6 +16,7 @@ import com.picook.domain.user.dto.RankInfo;
 import com.picook.domain.user.entity.User;
 import com.picook.domain.user.repository.UserRepository;
 import com.picook.global.exception.BusinessException;
+import io.micrometer.core.annotation.Timed;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +69,7 @@ public class CoachingService {
         this.entityManager = entityManager;
     }
 
+    @Timed("picook.coaching.start.time")
     @Transactional
     public CoachingLogResponse startCoaching(UUID userId, StartCoachingRequest request) {
         boolean hasRecipes = request.recipeIds() != null && !request.recipeIds().isEmpty();
