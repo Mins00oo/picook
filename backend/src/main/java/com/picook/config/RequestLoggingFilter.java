@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class RequestLoggingFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RequestLoggingFilter.class);
+    private static final Logger accessLog = LoggerFactory.getLogger("lighthouse_access");
 
     private static final Set<String> SKIP_PREFIXES = Set.of(
             "/actuator", "/swagger-ui", "/v3/api-docs", "/uploads"
@@ -42,11 +44,19 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 
         log.info("[REQUEST] {} {} - userId: {} ip: {}", method, uri, userId, clientIp);
 
+        // Lighthouse 수집용 MDC 설정 (chain.doFilter 전에 설정해야 컨트롤러 로그에도 포함)
+        MDC.put("http_method", method);
+        MDC.put("http_path", uri);
+        MDC.put("client_ip", clientIp);
+
         long startTime = System.nanoTime();
         ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
 
         try {
             filterChain.doFilter(request, wrappedResponse);
+        } catch (Exception e) {
+            MDC.put("exception_class", e.getClass().getName());
+            throw e;
         } finally {
             long elapsedMs = (System.nanoTime() - startTime) / 1_000_000;
             int status = wrappedResponse.getStatus();
@@ -57,6 +67,20 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             } else {
                 log.info("[RESPONSE] {} {} - {} - {}ms", method, uri, status, elapsedMs);
             }
+
+            // Lighthouse 수집용 JSON 로그 출력
+            MDC.put("http_status", String.valueOf(status));
+            MDC.put("response_time_ms", String.valueOf(elapsedMs));
+            accessLog.info("{} {} {} {}ms", method, uri, status, elapsedMs);
+
+            // MDC 정리
+            MDC.remove("http_method");
+            MDC.remove("http_path");
+            MDC.remove("http_status");
+            MDC.remove("response_time_ms");
+            MDC.remove("client_ip");
+            MDC.remove("exception_class");
+            MDC.remove("stack_trace");
 
             wrappedResponse.copyBodyToResponse();
         }
