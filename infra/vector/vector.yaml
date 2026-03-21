@@ -1,0 +1,57 @@
+sources:
+  picook_log:
+    type: file
+    include:
+      - /var/log/picook/lighthouse.log
+    read_from: beginning
+
+transforms:
+  enrich:
+    type: remap
+    inputs:
+      - picook_log
+    source: |-
+      raw = string!(.message)
+
+      parsed, err = parse_json(raw)
+      if err != null {
+        log("Failed to parse JSON, dropping event: " + raw, level: "warn")
+        abort
+      }
+
+      # LogstashEncoder 표준 필드 매핑
+      .timestamp = string(parsed."@timestamp") ?? ""
+      .level = upcase(string(parsed.level) ?? "UNKNOWN")
+      .logger = string(parsed.logger_name) ?? ""
+      .thread = string(parsed.thread_name) ?? ""
+      .message = string(parsed.message) ?? raw
+      .service = string(parsed.service) ?? "picook-backend"
+      .stack_trace = string(parsed.stack_trace) ?? ""
+
+      # MDC 필드 (문자열 → 타입 변환)
+      .http_method = upcase(string(parsed.http_method) ?? "")
+      .http_path = string(parsed.http_path) ?? ""
+      .http_status = to_int(parsed.http_status) ?? 0
+      .response_time_ms = to_int(parsed.response_time_ms) ?? 0
+      .exception_class = string(parsed.exception_class) ?? ""
+
+      # 인프라 메타데이터
+      .host = string(parsed.host) ?? ""
+      .env = get_env_var("ENV") ?? "prod"
+      .raw_event = raw
+
+      # Vector 내부 메타 필드 제거
+      del(.file)
+      del(.source_type)
+
+sinks:
+  kafka_app:
+    type: kafka
+    inputs:
+      - enrich
+    bootstrap_servers: ${LIGHTHOUSE_KAFKA_HOST:-lighthouse-kafka}:9094
+    topic: logs.app
+    encoding:
+      codec: json
+    acknowledgements:
+      enabled: true

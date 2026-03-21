@@ -32,7 +32,23 @@ services:
       - postgres
     restart: unless-stopped
 
+  # Lighthouse 로그 수집 에이전트
+  vector:
+    image: timberio/vector:0.38.0-alpine
+    container_name: picook-vector
+    command: ["-c", "/etc/vector/vector.yaml"]
+    restart: unless-stopped
+    volumes:
+      - ./vector/vector.yaml:/etc/vector/vector.yaml:ro
+      - picook_logs:/var/log/picook:ro
+      - vector_data:/var/lib/vector
+    environment:
+      - ENV=prod
+    depends_on:
+      - backend
+
 volumes:
   picook_pgdata:
   picook_uploads:
   picook_logs:
+  vector_data:
