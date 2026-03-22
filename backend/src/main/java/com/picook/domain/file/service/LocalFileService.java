@@ -26,6 +26,9 @@ public class LocalFileService implements FileStorageService {
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
             "image/jpeg", "image/png", "image/heic", "image/webp"
     );
+    private static final Set<String> ALLOWED_CATEGORIES = Set.of(
+            "recipes", "ingredients", "coaching", "profile"
+    );
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd");
 
@@ -47,6 +50,7 @@ public class LocalFileService implements FileStorageService {
      */
     @Override
     public String upload(MultipartFile file, String subDir) {
+        validateCategory(subDir);
         validateFile(file);
 
         String extension = getExtension(file.getOriginalFilename());
@@ -89,6 +93,13 @@ public class LocalFileService implements FileStorageService {
     public FileUploadResponse uploadWithResponse(MultipartFile file, String subDir) {
         String url = upload(file, subDir);
         return new FileUploadResponse(url, file.getOriginalFilename(), file.getSize());
+    }
+
+    private void validateCategory(String category) {
+        if (category == null || !ALLOWED_CATEGORIES.contains(category)) {
+            throw new BusinessException("INVALID_CATEGORY",
+                    "허용되지 않은 파일 카테고리입니다: " + category, HttpStatus.BAD_REQUEST);
+        }
     }
 
     private void validatePathWithinUploadDir(Path path) {

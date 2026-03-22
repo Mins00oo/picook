@@ -7,6 +7,8 @@ import com.picook.domain.recipe.dto.RecommendResponse;
 import com.picook.domain.recipe.entity.Recipe;
 import com.picook.domain.recipe.entity.RecipeIngredient;
 import com.picook.domain.recipe.repository.RecipeIngredientRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +43,7 @@ class RecommendServiceTest {
     @BeforeEach
     void setUp() {
         allRecipeIngredients.clear();
-        recommendService = new RecommendService(entityManager, recipeIngredientRepository);
+        recommendService = new RecommendService(entityManager, recipeIngredientRepository, new SimpleMeterRegistry());
     }
 
     @Test

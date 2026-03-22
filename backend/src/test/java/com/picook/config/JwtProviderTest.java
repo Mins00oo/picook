@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JwtProviderTest {
 
@@ -65,6 +66,19 @@ class JwtProviderTest {
         String token = shortLivedProvider.generateAccessToken("user-123", Map.of());
 
         assertThat(jwtProvider.validateToken(token)).isFalse();
+    }
+
+    @Test
+    void constructor_shouldThrowForShortSecret() {
+        assertThatThrownBy(() -> new JwtProvider("short", 3600000L, 2592000000L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("at least 32 bytes");
+    }
+
+    @Test
+    void constructor_shouldThrowForNullSecret() {
+        assertThatThrownBy(() -> new JwtProvider(null, 3600000L, 2592000000L))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

@@ -28,6 +28,12 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             "/actuator", "/swagger-ui", "/v3/api-docs", "/uploads"
     );
 
+    private final ClientIpResolver clientIpResolver;
+
+    public RequestLoggingFilter(ClientIpResolver clientIpResolver) {
+        this.clientIpResolver = clientIpResolver;
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -106,11 +112,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     }
 
     private String extractClientIp(HttpServletRequest request) {
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isBlank()) return xRealIp;
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) return xff.split(",")[0].strip();
-        return request.getRemoteAddr();
+        return clientIpResolver.resolve(request);
     }
 
     private String extractErrorMessage(ContentCachingResponseWrapper response) {

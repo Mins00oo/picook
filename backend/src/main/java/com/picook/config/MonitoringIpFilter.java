@@ -24,6 +24,12 @@ public class MonitoringIpFilter extends OncePerRequestFilter {
     @Value("${monitoring.allowed-ips}")
     private List<String> allowedIps;
 
+    private final ClientIpResolver clientIpResolver;
+
+    public MonitoringIpFilter(ClientIpResolver clientIpResolver) {
+        this.clientIpResolver = clientIpResolver;
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -51,10 +57,6 @@ public class MonitoringIpFilter extends OncePerRequestFilter {
     }
 
     private String resolveClientIp(HttpServletRequest request) {
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isBlank()) return xRealIp;
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) return xff.split(",")[0].strip();
-        return request.getRemoteAddr();
+        return clientIpResolver.resolve(request);
     }
 }

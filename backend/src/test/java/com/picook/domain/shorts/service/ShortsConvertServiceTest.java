@@ -16,6 +16,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 
@@ -55,7 +57,7 @@ class ShortsConvertServiceTest {
         shortsConvertService = new ShortsConvertService(
                 shortsCacheService, historyRepository, conversionLogRepository,
                 ytDlpService, whisperService, recipeStructurizer, objectMapper, rateLimiter,
-                txManager
+                txManager, new SimpleMeterRegistry()
         );
         userId = UUID.randomUUID();
         when(conversionLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

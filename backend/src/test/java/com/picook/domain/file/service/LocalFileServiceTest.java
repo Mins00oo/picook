@@ -42,9 +42,9 @@ class LocalFileServiceTest {
     void PNG_이미지_업로드_성공() throws IOException {
         MultipartFile file = mockFile("screenshot.png", "image/png", 2048);
 
-        String url = localFileService.upload(file, "cooking");
+        String url = localFileService.upload(file, "coaching");
 
-        assertThat(url).startsWith("/uploads/cooking/");
+        assertThat(url).startsWith("/uploads/coaching/");
         assertThat(url).endsWith(".png");
     }
 
@@ -75,6 +75,15 @@ class LocalFileServiceTest {
         assertThatThrownBy(() -> localFileService.upload(file, "recipes"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("10MB");
+    }
+
+    @Test
+    void 허용되지_않은_카테고리_거부() {
+        MultipartFile file = mockFile("photo.jpg", "image/jpeg", 1024);
+
+        assertThatThrownBy(() -> localFileService.upload(file, "../../admin"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("허용되지 않은 파일 카테고리");
     }
 
     @Test
