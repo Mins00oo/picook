@@ -11,7 +11,7 @@ spring:
   jpa:
     properties:
       hibernate:
-        show_sql: true
+        show_sql: false
 
 server:
   port: 8080
