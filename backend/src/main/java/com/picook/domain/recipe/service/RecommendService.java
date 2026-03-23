@@ -39,8 +39,8 @@ public class RecommendService {
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT r.id, r.title, r.category, r.difficulty, r.cooking_time_minutes, ");
         sql.append("r.servings, r.image_url, r.thumbnail_url, ");
-        sql.append("COUNT(ri_match.id) AS matched_count, ");
-        sql.append("COUNT(ri_req.id) AS total_required ");
+        sql.append("COUNT(DISTINCT ri_match.id) AS matched_count, ");
+        sql.append("COUNT(DISTINCT ri_req.id) AS total_required ");
         sql.append("FROM recipes r ");
         sql.append("JOIN recipe_ingredients ri_req ON ri_req.recipe_id = r.id AND ri_req.is_required = true ");
         sql.append("LEFT JOIN recipe_ingredients ri_match ON ri_match.recipe_id = r.id ");
@@ -60,8 +60,8 @@ public class RecommendService {
 
         sql.append("GROUP BY r.id, r.title, r.category, r.difficulty, r.cooking_time_minutes, ");
         sql.append("r.servings, r.image_url, r.thumbnail_url ");
-        sql.append("HAVING COUNT(ri_match.id)::float / NULLIF(COUNT(ri_req.id), 0) >= 0.3 ");
-        sql.append("ORDER BY COUNT(ri_match.id)::float / COUNT(ri_req.id) DESC ");
+        sql.append("HAVING COUNT(DISTINCT ri_match.id)::float / NULLIF(COUNT(DISTINCT ri_req.id), 0) >= 0.3 ");
+        sql.append("ORDER BY COUNT(DISTINCT ri_match.id)::float / COUNT(DISTINCT ri_req.id) DESC ");
         sql.append("LIMIT 10");
 
         Query query = entityManager.createNativeQuery(sql.toString());
