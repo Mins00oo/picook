@@ -15,7 +15,7 @@ public class CookingCompletion {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column(name = "recipe_id", nullable = false)
+    @Column(name = "recipe_id")
     private Integer recipeId;
 
     @Column(name = "coaching_log_id", nullable = false)
