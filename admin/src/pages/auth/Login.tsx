@@ -1,4 +1,4 @@
-import { Button, Card, Input, message, Typography } from 'antd';
+import { App, Button, Card, Input, Typography } from 'antd';
 import { LockOutlined, MailOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
@@ -12,10 +12,11 @@ import FormField from '@/components/common/FormField';
 export default function Login() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const { message } = App.useApp();
 
   const { control, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: 'admin@picook.com', password: '!@#admina' },
   });
 
   const mutation = useMutation({

@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ConfigProvider } from 'antd';
+import { App as AntApp, ConfigProvider } from 'antd';
 import koKR from 'antd/locale/ko_KR';
 import { useAuthStore } from '@/stores/authStore';
 import AppLayout from '@/components/layout/AppLayout';
@@ -48,6 +48,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ConfigProvider locale={koKR}>
+        <AntApp>
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -88,6 +89,7 @@ export default function App() {
             </Route>
           </Routes>
         </BrowserRouter>
+        </AntApp>
       </ConfigProvider>
     </QueryClientProvider>
   );
