@@ -14,6 +14,13 @@ public interface RecipeRepository extends JpaRepository<Recipe, Integer> {
 
     Optional<Recipe> findByIdAndIsDeletedFalse(Integer id);
 
+    @Query("SELECT DISTINCT r FROM Recipe r " +
+            "LEFT JOIN FETCH r.ingredients ri " +
+            "LEFT JOIN FETCH ri.ingredient " +
+            "LEFT JOIN FETCH r.steps " +
+            "WHERE r.id = :id AND r.isDeleted = false")
+    Optional<Recipe> findByIdWithDetails(@Param("id") Integer id);
+
     @Query(value = "SELECT r FROM Recipe r " +
             "WHERE r.isDeleted = false " +
             "AND (:status IS NULL OR r.status = :status) " +

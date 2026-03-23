@@ -3,7 +3,9 @@ package com.picook.domain.recipe.entity;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "recipes")
@@ -53,11 +55,11 @@ public class Recipe {
     private Boolean isDeleted = false;
 
     @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<RecipeIngredient> ingredients = new ArrayList<>();
+    private Set<RecipeIngredient> ingredients = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("stepNumber ASC")
-    private List<RecipeStep> steps = new ArrayList<>();
+    private Set<RecipeStep> steps = new LinkedHashSet<>();
 
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
@@ -153,9 +155,9 @@ public class Recipe {
 
     public Boolean getIsDeleted() { return isDeleted; }
 
-    public List<RecipeIngredient> getIngredients() { return ingredients; }
+    public Set<RecipeIngredient> getIngredients() { return ingredients; }
 
-    public List<RecipeStep> getSteps() { return steps; }
+    public Set<RecipeStep> getSteps() { return steps; }
 
     public Instant getCreatedAt() { return createdAt; }
 

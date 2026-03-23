@@ -20,7 +20,7 @@ public class RecipeService {
 
     @Transactional
     public RecipeDetailResponse getRecipeDetail(Integer id) {
-        Recipe recipe = recipeRepository.findByIdAndIsDeletedFalse(id)
+        Recipe recipe = recipeRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("RECIPE_NOT_FOUND", "레시피를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
 
         if (!"published".equals(recipe.getStatus())) {
