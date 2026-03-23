@@ -1,5 +1,4 @@
 import * as Speech from 'expo-speech';
-import { Audio } from 'expo-av';
 
 class TTSService {
   private speed: number = 1.0;
@@ -13,17 +12,19 @@ class TTSService {
   /**
    * iOS 무음 모드에서도 TTS가 나오도록 오디오 세션을 설정한다.
    * 첫 speak() 호출 시 자동으로 1회 실행된다.
+   * expo-audio는 네이티브 모듈이므로 lazy-load 처리.
    */
   private async ensureAudioMode() {
     if (this.audioModeReady) return;
     try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
+      const { AudioModule } = require('expo-audio');
+      AudioModule.setAudioModeAsync({
+        playsInSilentMode: true,
+        shouldRouteThroughEarpiece: false,
       });
       this.audioModeReady = true;
     } catch {
-      // 실패해도 TTS 시도는 계속
+      // 네이티브 모듈 미설치 또는 실패 — TTS 시도는 계속
     }
   }
 

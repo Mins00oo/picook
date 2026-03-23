@@ -1,27 +1,19 @@
-import { Audio } from 'expo-av';
-
 class AudioService {
-  private sound: Audio.Sound | null = null;
+  private player: any = null;
 
   async playNotification() {
     try {
-      // Simple beep via silence then system notification
-      // In production, replace with actual notification sound asset
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: '' },
-        { shouldPlay: false },
-      );
-      this.sound = sound;
+      const { createAudioPlayer } = require('expo-audio');
+      this.player = createAudioPlayer({ uri: '' });
     } catch {
-      // Asset might not exist yet — silently fail
+      // 네이티브 모듈 미설치 또는 asset 없음 — silently fail
     }
   }
 
   async stop() {
     try {
-      await this.sound?.stopAsync();
-      await this.sound?.unloadAsync();
-      this.sound = null;
+      this.player?.remove();
+      this.player = null;
     } catch {
       // ignore
     }
