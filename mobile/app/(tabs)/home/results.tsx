@@ -64,8 +64,23 @@ export default function ResultsScreen() {
 
   const recipes = data ?? [];
 
+  const getMatchStyle = (rate: number) => {
+    if (rate >= 100) return { bg: '#DCFCE7', text: '#16A34A' };
+    if (rate >= 70) return { bg: '#DCFCE7', text: '#16A34A' };
+    if (rate >= 50) return { bg: '#FEF3C7', text: '#D97706' };
+    return { bg: '#F3F4F6', text: '#6B7280' };
+  };
+
+  const formatMissing = (items: RecipeSummary['missingIngredients']) => {
+    if (!items || items.length === 0) return null;
+    if (items.length <= 3) return items.map((i) => i.name).join(', ');
+    return `${items[0].name}, ${items[1].name} 외 ${items.length - 2}개`;
+  };
+
   const renderRecipe = ({ item }: { item: RecipeSummary }) => {
     const isChecked = multiSelected.includes(item.id);
+    const matchStyle = getMatchStyle(item.matchingRate);
+    const missingText = formatMissing(item.missingIngredients);
     return (
       <TouchableOpacity
         style={[styles.card, isMultiMode && isChecked && styles.cardChecked]}
@@ -73,7 +88,12 @@ export default function ResultsScreen() {
           if (isMultiMode) {
             toggleMultiSelect(item.id);
           } else {
-            router.push(`/(tabs)/recipe/${item.id}`);
+            router.push({
+              pathname: `/(tabs)/recipe/${item.id}`,
+              params: item.missingIngredients?.length
+                ? { missingIds: item.missingIngredients.map((i) => i.id).join(',') }
+                : undefined,
+            });
           }
         }}
         activeOpacity={0.7}
@@ -102,18 +122,19 @@ export default function ResultsScreen() {
             <Text style={styles.metaText}>{item.servings}인분</Text>
           </View>
           {item.matchingRate != null && (
-            <View style={[
-              styles.matchBadge,
-              item.matchingRate >= 100 && styles.matchBadgePerfect,
-            ]}>
-              <Text style={[
-                styles.matchText,
-                item.matchingRate >= 100 && styles.matchTextPerfect,
-              ]}>
+            <View style={[styles.matchBadge, { backgroundColor: matchStyle.bg }]}>
+              <Text style={[styles.matchText, { color: matchStyle.text }]}>
                 {item.matchingRate >= 100 ? '재료 완벽!' : `매칭률 ${formatMatchRate(item.matchingRate)}`}
               </Text>
             </View>
           )}
+          {item.matchingRate >= 100 ? (
+            <Text style={styles.ingredientComplete}>✅ 재료 모두 보유</Text>
+          ) : missingText ? (
+            <Text style={styles.missingText} numberOfLines={1}>
+              🛒 부족: {missingText}
+            </Text>
+          ) : null}
         </View>
       </TouchableOpacity>
     );
@@ -136,9 +157,12 @@ export default function ResultsScreen() {
       {recipes.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>😅</Text>
-          <Text style={styles.emptyTitle}>추천 결과가 없어요</Text>
+          <Text style={styles.emptyTitle}>선택한 재료와 일치하는 레시피가 없어요</Text>
           <Text style={styles.emptyDesc}>
-            재료를 더 추가하거나 필터를 변경해보세요
+            재료를 더 추가하거나 다른 조합을 시도해보세요
+          </Text>
+          <Text style={styles.emptyHint}>
+            30% 이상 일치하는 레시피만 표시됩니다
           </Text>
         </View>
       ) : (
@@ -148,6 +172,14 @@ export default function ResultsScreen() {
           renderItem={renderRecipe}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <Text style={styles.resultCount}>{recipes.length}개의 레시피를 찾았어요</Text>
+          }
+          ListFooterComponent={
+            <Text style={styles.footerHint}>
+              선택한 재료와 30% 이상 일치하는 레시피만 표시돼요
+            </Text>
+          }
         />
       )}
 
@@ -277,21 +309,34 @@ const styles = StyleSheet.create({
   },
   matchBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FFF5F0',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
-  matchBadgePerfect: {
-    backgroundColor: '#ECFDF5',
-  },
   matchText: {
     fontSize: 13,
-    color: Colors.primary,
     fontWeight: '600',
   },
-  matchTextPerfect: {
-    color: Colors.success,
+  missingText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  ingredientComplete: {
+    fontSize: 12,
+    color: '#16A34A',
+  },
+  resultCount: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  footerHint: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
   },
   empty: {
     flex: 1,
@@ -311,6 +356,11 @@ const styles = StyleSheet.create({
   emptyDesc: {
     fontSize: 14,
     color: Colors.textSecondary,
+  },
+  emptyHint: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginTop: 4,
   },
   multiFooter: {
     paddingHorizontal: 20,

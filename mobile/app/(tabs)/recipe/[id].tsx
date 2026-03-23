@@ -28,8 +28,11 @@ function StepIcon({ type }: { type: string }) {
 }
 
 export default function RecipeDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, missingIds } = useLocalSearchParams<{ id: string; missingIds?: string }>();
   const router = useRouter();
+  const missingIdSet = new Set(
+    missingIds ? missingIds.split(',').map(Number) : [],
+  );
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['recipe', id],
@@ -97,17 +100,27 @@ export default function RecipeDetailScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>재료</Text>
-          {recipe.ingredients.map((ing) => (
-            <View key={ing.ingredientId} style={styles.ingredientRow}>
-              <Text style={styles.ingredientName}>
-                {ing.ingredientName}
-                {!ing.isRequired && ' (선택)'}
-              </Text>
-              <Text style={styles.ingredientAmount}>
-                {ing.amount}{ing.unit ? ` ${ing.unit}` : ''}
-              </Text>
-            </View>
-          ))}
+          {recipe.ingredients.map((ing) => {
+            const isMissing = missingIdSet.has(ing.ingredientId);
+            return (
+              <View key={ing.ingredientId} style={styles.ingredientRow}>
+                <View style={styles.ingredientNameRow}>
+                  <Text style={[styles.ingredientName, isMissing && styles.ingredientMissing]}>
+                    {ing.ingredientName}
+                    {!ing.isRequired && ' (선택)'}
+                  </Text>
+                  {isMissing && (
+                    <View style={styles.missingBadge}>
+                      <Text style={styles.missingBadgeText}>미보유</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.ingredientAmount}>
+                  {ing.amount}{ing.unit ? ` ${ing.unit}` : ''}
+                </Text>
+              </View>
+            );
+          })}
         </View>
 
         <View style={styles.section}>
@@ -222,13 +235,34 @@ const styles = StyleSheet.create({
   ingredientRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
   },
+  ingredientNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
   ingredientName: {
     fontSize: 15,
     color: Colors.text,
+  },
+  ingredientMissing: {
+    color: '#9CA3AF',
+  },
+  missingBadge: {
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  missingBadgeText: {
+    fontSize: 11,
+    color: '#EF4444',
+    fontWeight: '600',
   },
   ingredientAmount: {
     fontSize: 14,
