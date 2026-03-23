@@ -1,6 +1,5 @@
 package com.picook.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,13 +19,11 @@ class RateLimitFilterTest {
 
     private RateLimitFilter filter;
     private ClientIpResolver clientIpResolver;
-    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
         clientIpResolver = new ClientIpResolver(List.of("127.0.0.1"));
-        objectMapper = new ObjectMapper();
-        filter = new RateLimitFilter(clientIpResolver, objectMapper);
+        filter = new RateLimitFilter(clientIpResolver);
         SecurityContextHolder.clearContext();
     }
 

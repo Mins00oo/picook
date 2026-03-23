@@ -29,7 +29,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
 
     private final ClientIpResolver clientIpResolver;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final ConcurrentHashMap<String, ConcurrentLinkedDeque<Instant>> requestCounts = new ConcurrentHashMap<>();
 
     private record RateLimitRule(String method, String path, int maxRequests, boolean useUserId) {}
@@ -43,9 +43,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
             new RateLimitRule("POST", "/api/v1/files/upload", 5, true)
     );
 
-    public RateLimitFilter(ClientIpResolver clientIpResolver, ObjectMapper objectMapper) {
+    public RateLimitFilter(ClientIpResolver clientIpResolver) {
         this.clientIpResolver = clientIpResolver;
-        this.objectMapper = objectMapper;
     }
 
     @Override
