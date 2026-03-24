@@ -40,7 +40,8 @@ public class AdminRecipeService {
     }
 
     public AdminRecipeResponse getRecipe(Integer id) {
-        Recipe recipe = findRecipeOrThrow(id);
+        Recipe recipe = recipeRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new BusinessException("RECIPE_NOT_FOUND", "레시피를 찾을 수 없습니다", HttpStatus.NOT_FOUND));
         return AdminRecipeResponse.of(recipe);
     }
 

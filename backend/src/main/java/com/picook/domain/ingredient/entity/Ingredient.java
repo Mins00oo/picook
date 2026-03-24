@@ -1,6 +1,7 @@
 package com.picook.domain.ingredient.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +24,7 @@ public class Ingredient {
     @Column(name = "icon_url")
     private String iconUrl;
 
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "ingredient", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<IngredientSynonym> synonyms = new ArrayList<>();
 
