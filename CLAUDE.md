@@ -164,6 +164,7 @@ picook/                    ← 루트
 - Java: 도메인 패키지 구조, 각 도메인 아래 controller/service/repository/dto/entity
 - TypeScript: 컴포넌트 PascalCase, 훅 useXxx, 유틸 camelCase, 상수 UPPER_SNAKE
 - 커밋: feat/fix/refactor/style/docs/chore
+- 커밋 메시지에 Co-Authored-By 줄 넣지 않기
 
 ## 개발 순서
 1단계: 백엔드 기반 (인증, 재료 CRUD, 레시피 CRUD, 추천 API)
