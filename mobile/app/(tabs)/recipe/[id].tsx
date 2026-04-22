@@ -1,328 +1,550 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { Colors } from '../../../src/constants/colors';
-import { Button } from '../../../src/components/common/Button';
+import Svg, { Path } from 'react-native-svg';
+import { colors, typography, fontFamily, shadow, getIngredientEmoji } from '../../../src/constants/theme';
 import { Loading } from '../../../src/components/common/Loading';
 import { ErrorScreen } from '../../../src/components/common/ErrorScreen';
 import { recipeApi } from '../../../src/api/recipeApi';
-import { favoriteApi, FavoriteItem } from '../../../src/api/favoriteApi';
-import { formatCookTime, formatDifficulty } from '../../../src/utils/format';
-import type { RecipeStep } from '../../../src/types/recipe';
-
-function StepIcon({ type }: { type: string }) {
-  return (
-    <View style={[styles.stepIcon, type === 'WAIT' ? styles.stepIconWait : styles.stepIconActive]}>
-      <Text style={styles.stepIconText}>{type === 'WAIT' ? '⏱️' : '🔥'}</Text>
-    </View>
-  );
-}
+import { useFavorites } from '../../../src/hooks/useFavorites';
+import { formatCookTime, formatDifficulty, toAbsoluteImageUrl } from '../../../src/utils/format';
+import type { RecipeStep, RecipeIngredient } from '../../../src/types/recipe';
 
 export default function RecipeDetailScreen() {
   const { id, missingIds } = useLocalSearchParams<{ id: string; missingIds?: string }>();
   const router = useRouter();
-  const missingIdSet = new Set(
-    missingIds ? missingIds.split(',').map(Number) : [],
+  const insets = useSafeAreaInsets();
+  const recipeId = Number(id);
+
+  const missingSet = useMemo(
+    () => new Set(missingIds ? missingIds.split(',').map(Number) : []),
+    [missingIds],
   );
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['recipe', id],
-    queryFn: async () => {
-      const res = await recipeApi.getDetail(Number(id));
-      return res.data.data;
-    },
-    enabled: !!id,
+    queryKey: ['recipe', recipeId],
+    queryFn: async () => (await recipeApi.getDetail(recipeId)).data.data,
+    enabled: !!recipeId,
   });
 
-  const { data: favorites } = useQuery({
-    queryKey: ['favorites'],
-    queryFn: async () => {
-      const res = await favoriteApi.getList();
-      return res.data.data;
-    },
-  });
-
-  const isFavorited = favorites?.some((fav: FavoriteItem) => fav.recipeId === Number(id)) ?? false;
+  const { data: favorites, add, remove } = useFavorites();
+  const favorite = favorites?.find((f) => f.recipeId === recipeId);
+  const isFav = !!favorite;
 
   if (isLoading) return <Loading />;
   if (error || !data) return <ErrorScreen onRetry={() => refetch()} />;
 
   const recipe = data;
+  const required = recipe.ingredients.filter((i) => i.isRequired);
+  const optional = recipe.ingredients.filter((i) => !i.isRequired);
+  const heroImg = toAbsoluteImageUrl(recipe.imageUrl ?? recipe.thumbnailUrl);
+
+  const handleFavToggle = () => {
+    if (isFav && favorite) remove.mutate(favorite.id);
+    else add.mutate(recipeId);
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>← 뒤로</Text>
-        </TouchableOpacity>
-        <Text style={styles.heart}>{isFavorited ? '❤️' : '🤍'}</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {recipe.imageUrl ? (
-          <Image source={{ uri: recipe.imageUrl }} style={styles.image} />
+    <View style={styles.container}>
+      {/* Hero image */}
+      <View style={styles.heroWrap}>
+        {heroImg ? (
+          <Image source={{ uri: heroImg }} style={styles.hero} contentFit="cover" />
         ) : (
-          <View style={[styles.image, styles.imagePlaceholder]}>
-            <Text style={styles.imagePlaceholderText}>🍽️</Text>
+          <View style={[styles.hero, styles.heroPlaceholder]}>
+            <Text style={{ fontSize: 48 }}>🍽️</Text>
           </View>
         )}
+        {/* Top buttons (floating) */}
+        <View style={[styles.heroTop, { paddingTop: insets.top + (Platform.OS === 'android' ? 10 : 0) }]}>
+          <TouchableOpacity style={styles.heroBtn} onPress={() => router.back()} activeOpacity={0.85}>
+            <Svg width={20} height={20} viewBox="0 0 24 24">
+              <Path d="M15 18l-6-6 6-6" stroke={colors.textPrimary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </Svg>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.heroBtn} onPress={handleFavToggle} activeOpacity={0.85}>
+            <Svg width={18} height={18} viewBox="0 0 24 24">
+              <Path
+                d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
+                fill={isFav ? colors.primary : 'none'}
+                stroke={isFav ? colors.primary : colors.textPrimary}
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-        <View style={styles.info}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Body card */}
+        <View style={styles.body}>
+          {/* Category pills */}
+          <View style={styles.pillsRow}>
+            <View style={styles.categoryPill}>
+              <Text style={styles.pillText}>{recipe.category}</Text>
+            </View>
+            {recipe.coachingReady && (
+              <View style={[styles.categoryPill, styles.pillAccent]}>
+                <Text style={[styles.pillText, { color: colors.primary }]}>초보 추천</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Title */}
           <Text style={styles.title}>{recipe.title}</Text>
-          {recipe.tips && (
-            <Text style={styles.description}>{recipe.tips}</Text>
-          )}
 
+          {/* Meta row */}
           <View style={styles.metaRow}>
-            <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>조리시간</Text>
-              <Text style={styles.metaValue}>{formatCookTime(recipe.cookingTimeMinutes)}</Text>
+            <MetaItem emoji="⏱️" value={formatCookTime(recipe.cookingTimeMinutes)} />
+            <Dot />
+            <MetaItem emoji="🔥" value={formatDifficulty(recipe.difficulty)} />
+            <Dot />
+            <MetaItem emoji="👥" value={`${recipe.servings}인분`} />
+          </View>
+
+          {recipe.tips && (
+            <View style={styles.tipsBox}>
+              <Text style={styles.tipsLabel}>TIP</Text>
+              <Text style={styles.tipsText}>{recipe.tips}</Text>
             </View>
-            <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>난이도</Text>
-              <Text style={styles.metaValue}>{formatDifficulty(recipe.difficulty)}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>인분</Text>
-              <Text style={styles.metaValue}>{recipe.servings}인분</Text>
-            </View>
+          )}
+        </View>
+
+        {/* Ingredients */}
+        <View style={styles.section}>
+          <View style={styles.sectionHead}>
+            <Text style={styles.sectionIco}>🧺</Text>
+            <Text style={styles.sectionTitle}>재료</Text>
+            <Text style={styles.sectionSub}>{recipe.ingredients.length}가지</Text>
+          </View>
+
+          <View style={styles.ingredientsCard}>
+            {required.length > 0 && (
+              <>
+                <View style={styles.subHeadRow}>
+                  <View style={[styles.dotMarker, { backgroundColor: colors.primary }]} />
+                  <Text style={styles.subHead}>필수</Text>
+                  <Text style={styles.subHeadCount}>{required.length}</Text>
+                </View>
+                <View style={styles.chipWrap}>
+                  {required.map((ing) => (
+                    <IngredientChip key={ing.ingredientId} ing={ing} required missing={missingSet.has(ing.ingredientId)} />
+                  ))}
+                </View>
+              </>
+            )}
+
+            {optional.length > 0 && (
+              <>
+                {required.length > 0 && <View style={styles.divider} />}
+                <View style={styles.subHeadRow}>
+                  <View style={[styles.dotMarker, { backgroundColor: colors.textTertiary }]} />
+                  <Text style={styles.subHead}>선택</Text>
+                  <Text style={styles.subHeadCount}>{optional.length}</Text>
+                </View>
+                <View style={styles.chipWrap}>
+                  {optional.map((ing) => (
+                    <IngredientChip key={ing.ingredientId} ing={ing} required={false} missing={missingSet.has(ing.ingredientId)} />
+                  ))}
+                </View>
+              </>
+            )}
           </View>
         </View>
 
+        {/* Steps */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>재료</Text>
-          {recipe.ingredients.map((ing) => {
-            const isMissing = missingIdSet.has(ing.ingredientId);
-            return (
-              <View key={ing.ingredientId} style={styles.ingredientRow}>
-                <View style={styles.ingredientNameRow}>
-                  <Text style={[styles.ingredientName, isMissing && styles.ingredientMissing]}>
-                    {ing.ingredientName}
-                    {!ing.isRequired && ' (선택)'}
-                  </Text>
-                  {isMissing && (
-                    <View style={styles.missingBadge}>
-                      <Text style={styles.missingBadgeText}>미보유</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.ingredientAmount}>
-                  {ing.amount}{ing.unit ? ` ${ing.unit}` : ''}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
+          <View style={styles.sectionHead}>
+            <Text style={styles.sectionIco}>📖</Text>
+            <Text style={styles.sectionTitle}>조리 단계</Text>
+            <Text style={styles.sectionSub}>{recipe.steps.length}단계</Text>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>조리 순서</Text>
-          {recipe.steps.map((step: RecipeStep) => (
-            <View key={step.stepNumber} style={styles.stepCard}>
-              <View style={styles.stepHeader}>
-                <StepIcon type={step.stepType} />
-                <Text style={styles.stepNumber}>
-                  Step {step.stepNumber}
-                </Text>
-                {step.durationSeconds && (
-                  <Text style={styles.stepDuration}>
-                    {Math.ceil(step.durationSeconds / 60)}분
-                  </Text>
-                )}
-              </View>
-              <Text style={styles.stepDesc}>{step.description}</Text>
-            </View>
-          ))}
+          <View style={styles.steps}>
+            {recipe.steps.map((step, idx) => (
+              <StepCard key={step.stepNumber} step={step} last={idx === recipe.steps.length - 1} />
+            ))}
+          </View>
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
-        <Button
-          title="코칭 시작"
-          onPress={() => router.push(`/cooking/single/${id}`)}
-          size="large"
-          style={styles.coachButton}
-        />
+      {/* Bottom CTA */}
+      <View style={[styles.bottom, { paddingBottom: Math.max(insets.bottom + 8, 20) }]}>
+        <TouchableOpacity
+          style={styles.cta}
+          onPress={() => router.push({ pathname: '/cooking/complete', params: { recipeId: String(recipe.id) } })}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.ctaText}>요리 완료</Text>
+          <Svg width={14} height={14} viewBox="0 0 24 24">
+            <Path d="M5 12h14M13 5l7 7-7 7" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" fill="none" />
+          </Svg>
+        </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
+  );
+}
+
+function MetaItem({ emoji, value }: { emoji: string; value: string }) {
+  return (
+    <View style={styles.metaItem}>
+      <Text style={{ fontSize: 12 }}>{emoji}</Text>
+      <Text style={styles.metaValue}>{value}</Text>
+    </View>
+  );
+}
+
+function Dot() {
+  return <Text style={styles.metaDotChar}>·</Text>;
+}
+
+function IngredientChip({
+  ing, required, missing,
+}: { ing: RecipeIngredient; required: boolean; missing: boolean }) {
+  return (
+    <View style={[
+      styles.ingChip,
+      required ? styles.ingChipReq : styles.ingChipOpt,
+      missing && styles.ingChipMissing,
+    ]}>
+      <Text style={{ fontSize: 13 }}>{getIngredientEmoji(ing.ingredientName)}</Text>
+      <Text style={[
+        styles.ingChipText,
+        required ? styles.ingChipTextReq : styles.ingChipTextOpt,
+        missing && { color: colors.textTertiary },
+      ]}>
+        {ing.ingredientName}
+      </Text>
+      {ing.amount > 0 && (
+        <Text style={[styles.ingChipAmount, missing && { color: colors.textTertiary }]}>
+          {ing.amount}{ing.unit ?? ''}
+        </Text>
+      )}
+      {missing && (
+        <View style={styles.missTag}>
+          <Text style={styles.missTagText}>없음</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function StepCard({ step, last }: { step: RecipeStep; last: boolean }) {
+  const isWait = step.stepType === 'WAIT';
+  const stepImg = toAbsoluteImageUrl(step.imageUrl);
+  const durationMin = step.durationSeconds ? Math.ceil(step.durationSeconds / 60) : 0;
+
+  return (
+    <View style={styles.stepRow}>
+      <View style={styles.stepNumCol}>
+        <View style={styles.stepNumCircle}>
+          <Text style={styles.stepNumText}>{step.stepNumber}</Text>
+        </View>
+        {!last && <View style={styles.stepConnector} />}
+      </View>
+
+      <View style={styles.stepCard}>
+        {stepImg && (
+          <View style={styles.stepThumbWrap}>
+            <Image source={{ uri: stepImg }} style={styles.stepThumb} contentFit="cover" />
+          </View>
+        )}
+        <View style={styles.stepBody}>
+          <Text style={styles.stepDesc}>{step.description}</Text>
+          {durationMin > 0 && (
+            <View style={[styles.timeTag, isWait && styles.timeTagWait]}>
+              <Text style={{ fontSize: 10 }}>{isWait ? '⏱️' : '🔥'}</Text>
+              <Text style={[styles.timeTagText, isWait && { color: colors.warning }]}>
+                {durationMin}분 {isWait ? '대기' : '조리'}
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
+  container: { flex: 1, backgroundColor: colors.background },
+
+  heroWrap: { position: 'relative' },
+  hero: {
+    width: '100%',
+    aspectRatio: 1.15,
+    backgroundColor: colors.lineSoft,
   },
-  header: {
+  heroPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  heroTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
-  back: {
-    fontSize: 16,
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-  heart: {
-    fontSize: 24,
-  },
-  scroll: {
-    paddingBottom: 100,
-  },
-  image: {
-    width: '100%',
-    height: 250,
-  },
-  imagePlaceholder: {
-    backgroundColor: Colors.surface,
+  heroBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadow.sm,
   },
-  imagePlaceholderText: {
-    fontSize: 48,
+
+  scroll: { flex: 1, marginTop: -28 },
+  scrollContent: {},
+
+  body: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    gap: 10,
   },
-  info: {
-    padding: 20,
-    gap: 12,
+  pillsRow: { flexDirection: 'row', gap: 6 },
+  categoryPill: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+  },
+  pillAccent: { backgroundColor: colors.accentSoft, borderColor: colors.accent2 },
+  pillText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 10.5,
+    color: colors.textSecondary,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.text,
+    fontFamily: fontFamily.extrabold,
+    fontSize: 26,
+    color: colors.textPrimary,
+    letterSpacing: -0.8,
+    lineHeight: 34,
   },
-  description: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    lineHeight: 22,
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaValue: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 12,
+    color: colors.textSecondary,
   },
-  metaRow: {
+  metaDotChar: { color: colors.textTertiary, fontSize: 12 },
+
+  tipsBox: {
     flexDirection: 'row',
-    gap: 16,
-    paddingTop: 8,
+    gap: 8,
+    padding: 12,
+    backgroundColor: colors.accentSoft,
+    borderRadius: 12,
+    marginTop: 6,
   },
-  metaItem: {
+  tipsLabel: {
+    fontFamily: fontFamily.extrabold,
+    fontSize: 10,
+    color: colors.primary,
+    letterSpacing: 0.8,
+  },
+  tipsText: {
+    flex: 1,
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
+    color: colors.textPrimary,
+    lineHeight: 18,
+  },
+
+  section: { paddingHorizontal: 20, paddingTop: 24, gap: 12 },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sectionIco: { fontSize: 14 },
+  sectionTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: 14,
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
+  },
+  sectionSub: {
+    fontFamily: fontFamily.medium,
+    fontSize: 11,
+    color: colors.textTertiary,
+  },
+
+  ingredientsCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 14,
+    gap: 10,
+  },
+  subHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dotMarker: { width: 6, height: 6, borderRadius: 3 },
+  subHead: {
+    fontFamily: fontFamily.bold,
+    fontSize: 12,
+    color: colors.textPrimary,
+  },
+  subHeadCount: {
+    fontFamily: fontFamily.medium,
+    fontSize: 11,
+    color: colors.textTertiary,
+  },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  divider: { height: 1, backgroundColor: colors.line, marginVertical: 4 },
+  ingChip: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 100,
+    borderWidth: 1,
   },
-  metaLabel: {
-    fontSize: 12,
-    color: Colors.textTertiary,
+  ingChipReq: {
+    backgroundColor: colors.inkDark,
+    borderColor: colors.inkDark,
   },
-  metaValue: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.text,
+  ingChipOpt: {
+    backgroundColor: colors.lineSoft,
+    borderColor: colors.line,
   },
-  section: {
-    padding: 20,
-    gap: 12,
+  ingChipMissing: {
+    opacity: 0.55,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
+  ingChipText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 11.5,
   },
-  ingredientRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  ingredientNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1,
-  },
-  ingredientName: {
-    fontSize: 15,
-    color: Colors.text,
-  },
-  ingredientMissing: {
-    color: '#9CA3AF',
-  },
-  missingBadge: {
-    backgroundColor: '#FEF2F2',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  missingBadgeText: {
+  ingChipTextReq: { color: '#fff' },
+  ingChipTextOpt: { color: colors.textPrimary },
+  ingChipAmount: {
+    fontFamily: fontFamily.medium,
     fontSize: 11,
-    color: '#EF4444',
-    fontWeight: '600',
+    color: 'rgba(255,255,255,0.7)',
+    marginLeft: 2,
   },
-  ingredientAmount: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+  missTag: {
+    backgroundColor: 'rgba(239,68,68,0.12)',
+    paddingVertical: 1,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    marginLeft: 4,
   },
-  stepCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
+  missTagText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 9,
+    color: colors.error,
   },
-  stepHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+
+  // Steps
+  steps: { gap: 0 },
+  stepRow: { flexDirection: 'row', gap: 10 },
+  stepNumCol: { alignItems: 'center' },
+  stepNumCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepIconActive: {
-    backgroundColor: '#FFF0E8',
-  },
-  stepIconWait: {
-    backgroundColor: '#E8F8F6',
-  },
-  stepIconText: {
-    fontSize: 14,
-  },
-  stepNumber: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.text,
-    flex: 1,
-  },
-  stepDuration: {
+  stepNumText: {
+    fontFamily: fontFamily.extrabold,
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: colors.primary,
   },
+  stepConnector: {
+    flex: 1,
+    width: 2,
+    backgroundColor: colors.line,
+    marginVertical: 2,
+  },
+  stepCard: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginBottom: 10,
+    alignItems: 'flex-start',
+  },
+  stepThumbWrap: { borderRadius: 10, overflow: 'hidden' },
+  stepThumb: { width: 72, height: 72 },
+  stepBody: { flex: 1, gap: 6 },
   stepDesc: {
-    fontSize: 15,
-    color: Colors.text,
-    lineHeight: 22,
+    fontFamily: fontFamily.medium,
+    fontSize: 13,
+    color: colors.textPrimary,
+    lineHeight: 19,
+    letterSpacing: -0.2,
   },
-  footer: {
+  timeTag: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+    borderRadius: 6,
+    backgroundColor: colors.accentSoft,
+  },
+  timeTagWait: { backgroundColor: '#FEF3C7' },
+  timeTagText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 10,
+    color: colors.primary,
+    letterSpacing: -0.1,
+  },
+
+  bottom: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    paddingBottom: 32,
-    backgroundColor: Colors.background,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    backgroundColor: colors.background,
     borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
+    borderTopColor: colors.line,
   },
-  coachButton: {
-    width: '100%',
+  cta: {
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    ...shadow.cta,
+  },
+  ctaText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 14,
+    color: '#fff',
+    letterSpacing: -0.3,
   },
 });

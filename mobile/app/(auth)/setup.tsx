@@ -1,68 +1,57 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Switch,
+  TextInput,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
-import { Colors } from '../../src/constants/colors';
-import { Button } from '../../src/components/common/Button';
+import Svg, { Path } from 'react-native-svg';
+import { colors, typography, spacing, borderRadius, shadow, fontFamily } from '../../src/constants/theme';
 import { useAuthStore } from '../../src/stores/authStore';
 import { userApi } from '../../src/api/userApi';
 import { Config } from '../../src/constants/config';
-import type { CookingLevel } from '../../src/types/user';
-
-const LEVELS: { value: CookingLevel; label: string; desc: string; emoji: string }[] = [
-  { value: 'BEGINNER', label: '입문', desc: '요리 경험이 거의 없어요', emoji: '🐣' },
-  { value: 'EASY', label: '초급', desc: '간단한 요리는 할 수 있어요', emoji: '🍳' },
-  { value: 'INTERMEDIATE', label: '중급', desc: '다양한 요리를 즐겨요', emoji: '👨‍🍳' },
-  { value: 'ADVANCED', label: '고급', desc: '전문 수준의 요리 실력이에요', emoji: '⭐' },
-];
-
-const SPEEDS = [
-  { value: 0.8, label: '느리게' },
-  { value: 1.0, label: '보통' },
-  { value: 1.2, label: '빠르게' },
-];
+import { Character } from '../../src/components/brand/Character';
+import { CHARACTERS, getCharacterName } from '../../src/constants/characters';
+import type { CharacterType } from '../../src/types/user';
 
 export default function SetupScreen() {
   const router = useRouter();
-  const { setUser } = useAuthStore();
-  const [step, setStep] = useState<1 | 2>(1);
-  const [cookingLevel, setCookingLevel] = useState<CookingLevel | null>(null);
-  const [coachingEnabled, setCoachingEnabled] = useState(true);
-  const [coachingSpeed, setCoachingSpeed] = useState(1.0);
+  const { user, setUser } = useAuthStore();
+  const insets = useSafeAreaInsets();
+  const [selectedChar, setSelectedChar] = useState<CharacterType>(user?.characterType ?? 'EGG');
+  const [nickname, setNickname] = useState(user?.displayName ?? '');
+  const [focused, setFocused] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const handleNext = () => {
-    if (!cookingLevel) {
-      Alert.alert('알림', '요리 실력을 선택해주세요.');
-      return;
-    }
-    // 입문/초급이면 코칭 기본 ON
-    if (cookingLevel === 'BEGINNER' || cookingLevel === 'EASY') {
-      setCoachingEnabled(true);
-    }
-    setStep(2);
-  };
+  const nicknameValid = nickname.trim().length >= 2 && nickname.trim().length <= 10;
+  const canSubmit = !!selectedChar && nicknameValid && !saving;
+
+  const helperText = useMemo(() => {
+    if (!nickname) return '2~10자로 입력해주세요';
+    if (nickname.trim().length < 2) return '2자 이상 입력해주세요';
+    if (nickname.trim().length > 10) return '10자 이내로 입력해주세요';
+    return '사용할 수 있는 닉네임이에요';
+  }, [nickname]);
 
   const handleComplete = async () => {
-    if (!cookingLevel) return;
+    if (!canSubmit) return;
     setSaving(true);
     try {
       const { data } = await userApi.updateMe({
-        cookingLevel,
-        coachingEnabled,
-        coachingVoiceSpeed: coachingSpeed,
+        displayName: nickname.trim(),
+        characterType: selectedChar,
       });
-      const user = data.data;
-      setUser(user);
-      await SecureStore.setItemAsync(Config.USER_KEY, JSON.stringify(user));
+      const updatedUser = data.data;
+      await SecureStore.setItemAsync(Config.USER_KEY, JSON.stringify(updatedUser));
+      setUser(updatedUser);
       router.replace('/(tabs)/home');
     } catch {
       Alert.alert('오류', '설정 저장에 실패했습니다. 다시 시도해주세요.');
@@ -71,118 +60,147 @@ export default function SetupScreen() {
     }
   };
 
-  if (step === 1) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.stepText}>1 / 2</Text>
-          <Text style={styles.title}>요리 실력을 알려주세요</Text>
-          <Text style={styles.subtitle}>맞춤 추천을 위해 필요해요</Text>
-        </View>
-
-        <View style={styles.cards}>
-          {LEVELS.map((level) => (
-            <TouchableOpacity
-              key={level.value}
-              style={[
-                styles.card,
-                cookingLevel === level.value && styles.cardSelected,
-              ]}
-              onPress={() => setCookingLevel(level.value)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.cardEmoji}>{level.emoji}</Text>
-              <View style={styles.cardContent}>
-                <Text
-                  style={[
-                    styles.cardLabel,
-                    cookingLevel === level.value && styles.cardLabelSelected,
-                  ]}
-                >
-                  {level.label}
-                </Text>
-                <Text style={styles.cardDesc}>{level.desc}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.footer}>
-          <Button
-            title="다음"
-            onPress={handleNext}
-            disabled={!cookingLevel}
-            size="large"
-            style={styles.fullButton}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.stepText}>2 / 2</Text>
-        <Text style={styles.title}>음성 코칭 설정</Text>
-        <Text style={styles.subtitle}>
-          요리할 때 음성으로 안내받을 수 있어요
-        </Text>
-      </View>
-
-      <View style={styles.settingsSection}>
-        <View style={styles.settingRow}>
-          <View>
-            <Text style={styles.settingLabel}>음성 코칭</Text>
-            <Text style={styles.settingDesc}>
-              단계별로 음성으로 안내해드려요
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Progress bar 2/2 */}
+          <View style={styles.progressNav}>
+            <Text style={styles.stepText}>
+              <Text style={styles.stepAccent}>2</Text>
+              <Text> / 2</Text>
             </Text>
-          </View>
-          <Switch
-            value={coachingEnabled}
-            onValueChange={setCoachingEnabled}
-            trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-            thumbColor={coachingEnabled ? Colors.primary : Colors.textTertiary}
-          />
-        </View>
-
-        {coachingEnabled && (
-          <View style={styles.speedSection}>
-            <Text style={styles.settingLabel}>음성 속도</Text>
-            <View style={styles.speedButtons}>
-              {SPEEDS.map((speed) => (
-                <TouchableOpacity
-                  key={speed.value}
-                  style={[
-                    styles.speedButton,
-                    coachingSpeed === speed.value && styles.speedButtonSelected,
-                  ]}
-                  onPress={() => setCoachingSpeed(speed.value)}
-                >
-                  <Text
-                    style={[
-                      styles.speedText,
-                      coachingSpeed === speed.value && styles.speedTextSelected,
-                    ]}
-                  >
-                    {speed.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.progressTrack}>
+              <View style={styles.progressFill} />
             </View>
           </View>
-        )}
-      </View>
 
-      <View style={styles.footer}>
-        <Button
-          title="시작하기"
-          onPress={handleComplete}
-          loading={saving}
-          size="large"
-          style={styles.fullButton}
-        />
-      </View>
+          {/* 헤더 */}
+          <View style={styles.head}>
+            <Text style={styles.headTitle}>
+              시작해볼까요?{'\n'}나만의 <Text style={styles.headAccent}>친구</Text>를 골라주세요.
+            </Text>
+            <Text style={styles.headDesc}>언제든 마이페이지에서 바꿀 수 있어요.</Text>
+          </View>
+
+          {/* 캐릭터 셀렉터 */}
+          <View style={styles.selector}>
+            <View style={styles.selectorLabelRow}>
+              <Text style={styles.fieldLabel}>캐릭터</Text>
+              <Text style={styles.selName}>{getCharacterName(selectedChar)} 선택됨</Text>
+            </View>
+            <View style={styles.charGrid}>
+              {CHARACTERS.map((c) => {
+                const isSel = selectedChar === c.type;
+                return (
+                  <TouchableOpacity
+                    key={c.type}
+                    style={[styles.charCard, isSel && styles.charCardSelected]}
+                    onPress={() => setSelectedChar(c.type)}
+                    activeOpacity={0.8}
+                  >
+                    {isSel && (
+                      <View style={styles.check}>
+                        <Svg width={11} height={11} viewBox="0 0 24 24">
+                          <Path
+                            d="M5 12l5 5L20 7"
+                            stroke="#fff"
+                            strokeWidth={3.5}
+                            strokeLinecap="round"
+                            fill="none"
+                          />
+                        </Svg>
+                      </View>
+                    )}
+                    <View style={styles.charArt}>
+                      <Character type={c.type} size={72} />
+                    </View>
+                    <Text style={styles.charName}>{c.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* 닉네임 */}
+          <View style={styles.nickArea}>
+            <View style={styles.selectorLabelRow}>
+              <Text style={styles.fieldLabel}>닉네임</Text>
+              {nicknameValid && (
+                <Text style={[styles.selName, { color: colors.success }]}>사용 가능</Text>
+              )}
+            </View>
+            <View style={[styles.nickField, focused && styles.nickFieldFocus]}>
+              <TextInput
+                value={nickname}
+                onChangeText={setNickname}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                placeholder="닉네임을 입력해주세요"
+                placeholderTextColor={colors.textTertiary}
+                maxLength={10}
+                style={styles.nickInput}
+                autoCorrect={false}
+                autoCapitalize="none"
+              />
+              <Text style={styles.counter}>{nickname.length}/10</Text>
+              {nicknameValid && (
+                <View style={styles.nickCheck}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24">
+                    <Path
+                      d="M5 12l5 5L20 7"
+                      stroke={colors.success}
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      fill="none"
+                    />
+                  </Svg>
+                </View>
+              )}
+            </View>
+            <View style={styles.helperRow}>
+              {nicknameValid && (
+                <Svg width={11} height={11} viewBox="0 0 24 24" style={{ marginRight: 4 }}>
+                  <Path
+                    d="M5 12l5 5L20 7"
+                    stroke={colors.success}
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                </Svg>
+              )}
+              <Text
+                style={[
+                  styles.helper,
+                  nicknameValid && { color: colors.success, fontFamily: fontFamily.semibold },
+                ]}
+              >
+                {helperText}
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* 하단 고정 CTA */}
+        <View style={[styles.bottom, { paddingBottom: Math.max(insets.bottom + 8, 28) }]}>
+          <TouchableOpacity
+            style={[styles.cta, !canSubmit && styles.ctaDisabled]}
+            onPress={handleComplete}
+            disabled={!canSubmit}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.ctaText}>{saving ? '저장 중...' : '시작하기'}</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -190,124 +208,205 @@ export default function SetupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 32,
+  scrollContent: {
+    paddingBottom: 120,
   },
-  stepText: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-  },
-  cards: {
-    flex: 1,
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  card: {
+  // Progress
+  progressNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
-    gap: 16,
-  },
-  cardSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: '#FFF5F0',
-  },
-  cardEmoji: {
-    fontSize: 36,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  cardLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  cardLabelSelected: {
-    color: Colors.primary,
-  },
-  cardDesc: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  settingsSection: {
-    flex: 1,
+    gap: 10,
     paddingHorizontal: 20,
-    gap: 24,
+    paddingTop: 14,
+    paddingBottom: 8,
   },
-  settingRow: {
+  stepText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontFamily: fontFamily.semibold,
+  },
+  stepAccent: {
+    color: colors.primary,
+  },
+  progressTrack: {
+    flex: 1,
+    height: 4,
+    backgroundColor: colors.line,
+    borderRadius: 100,
+    overflow: 'hidden',
+    marginLeft: 8,
+  },
+  progressFill: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 100,
+  },
+  // Head
+  head: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 8,
+  },
+  headTitle: {
+    ...typography.h1,
+    fontSize: 26,
+    lineHeight: 34,
+    color: colors.textPrimary,
+    marginBottom: 6,
+  },
+  headAccent: {
+    color: colors.primary,
+  },
+  headDesc: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  // Selector
+  selector: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  selectorLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    marginBottom: 10,
   },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
+  fieldLabel: {
+    ...typography.captionBold,
+    fontSize: 12,
+    color: colors.textPrimary,
+    fontFamily: fontFamily.bold,
+  },
+  selName: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.primary,
+    fontFamily: fontFamily.semibold,
+  },
+  charGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  charCard: {
+    flex: 1,
+    aspectRatio: 1 / 1.1,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    overflow: 'hidden',
+  },
+  charCardSelected: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+    backgroundColor: colors.accentSoft,
+  },
+  check: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  charArt: {
+    width: 72,
+    height: 72,
     marginBottom: 4,
   },
-  settingDesc: {
-    fontSize: 13,
-    color: Colors.textSecondary,
+  charName: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.textPrimary,
+    fontFamily: fontFamily.bold,
   },
-  speedSection: {
-    gap: 12,
+  // Nickname
+  nickArea: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
   },
-  speedButtons: {
+  nickField: {
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.line,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 52,
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
   },
-  speedButton: {
+  nickFieldFocus: {
+    borderColor: colors.primary,
+  },
+  nickInput: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    alignItems: 'center',
-  },
-  speedButtonSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: '#FFF5F0',
-  },
-  speedText: {
+    fontFamily: fontFamily.semibold,
     fontSize: 15,
-    fontWeight: '500',
-    color: Colors.textSecondary,
+    color: colors.textPrimary,
+    letterSpacing: -0.2,
+    padding: 0,
   },
-  speedTextSelected: {
-    color: Colors.primary,
-    fontWeight: '600',
+  counter: {
+    ...typography.meta,
+    color: colors.textTertiary,
+    fontFamily: fontFamily.medium,
   },
-  footer: {
+  nickCheck: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  helperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingLeft: 4,
+  },
+  helper: {
+    ...typography.meta,
+    fontSize: 11.5,
+    color: colors.textTertiary,
+  },
+  // Bottom CTA
+  bottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    paddingTop: 12,
+    paddingTop: 16,
+    backgroundColor: colors.background,
   },
-  fullButton: {
-    width: '100%',
+  cta: {
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.cta,
+  },
+  ctaDisabled: {
+    backgroundColor: '#D4C6BC',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  ctaText: {
+    ...typography.h3,
+    color: '#FFFFFF',
+    fontFamily: fontFamily.bold,
+    letterSpacing: -0.3,
   },
 });

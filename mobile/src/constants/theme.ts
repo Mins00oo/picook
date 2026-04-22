@@ -1,59 +1,167 @@
-// Design System — Picook Mobile
-// PIC-20: 앱스토어 출시 품질 디자인 시스템
+// Design System — Picook Mobile v1.0
+// 프로토타입 (docs/ui-prototype/) CSS 변수와 1:1 매칭
+// 폰트: Pretendard 단일 (400/500/600/700/800 웨이트 계층)
 
 export const colors = {
-  // Primary (따뜻한 오렌지 계열)
-  primary: '#FF6B35',
-  primaryLight: '#FFF3ED',
-  primaryDark: '#E85D2C',
+  // Background / Surface (warm cream)
+  background: '#FFF8F1',
+  surface: '#FFFFFF',
+  card: '#FFFFFF',
 
-  // Secondary (민트/그린 — 포인트 + 성공 상태)
+  // Ink (warm dark)
+  textPrimary: '#1F1612',
+  textSecondary: '#6B5D56',
+  textTertiary: '#A89B93',
+  textInverse: '#FFFFFF',
+
+  // Lines
+  border: '#F0E6DC',
+  line: '#F0E6DC',
+  lineSoft: '#FAF3EB',
+  divider: '#F0E6DC',
+
+  // Primary (warm orange)
+  primary: '#FF6B4A',
+  primaryLight: '#FFEDE4', // accent-soft
+  primaryDark: '#C44A1C',
+  primaryGradientStart: '#FF7A5A',
+  primaryGradientEnd: '#FF5A2E',
+
+  // Accent tones
+  accent: '#FF6B4A',
+  accent2: '#FFD4C2',
+  accentSoft: '#FFEDE4',
+
+  // Category tone pills
+  mint: '#D5E9D4',
+  sun: '#FFE9A8',
+  blue: '#DDE5F0',
+  peach: '#FFDDC7',
+  lilac: '#E7DCF0',
+
+  // Legacy secondary (mint/green) — 다른 화면에서 임시로 사용 중
   secondary: '#2EC4B6',
   secondaryLight: '#E8F8F5',
 
-  // Neutral
-  background: '#FAFAFA',
-  surface: '#FFFFFF',
-  card: '#FFFFFF',
-  border: '#E8E8E8',
-  divider: '#F0F0F0',
-
-  // Text
-  textPrimary: '#1A1A1A',
-  textSecondary: '#6B7280',
-  textTertiary: '#9CA3AF',
-  textInverse: '#FFFFFF',
-
   // Status
-  success: '#22C55E',
+  success: '#3F9F63',
   warning: '#F59E0B',
   error: '#EF4444',
   info: '#3B82F6',
 
-  // Coaching
+  // Coaching (deprecated in v1.0 but kept for compat)
   active: '#3B82F6',
   wait: '#F59E0B',
 
-  // Multi coaching
+  // Multi coaching (deprecated)
   recipeA: '#3B82F6',
   recipeB: '#F97316',
 
-  // Legacy compat
+  // Legacy / auth
   kakaoYellow: '#FEE500',
-  kakaoBrown: '#3C1E1E',
+  kakaoBrown: '#1A1A1A',
   appleBg: '#000000',
-  overlay: 'rgba(0, 0, 0, 0.5)',
+  overlay: 'rgba(31,22,18,0.35)',
   timerBg: '#1A1A2E',
+
+  // Dark bottom sheet (ingredient select 플로팅 카트)
+  inkDark: '#1F1612',
 } as const;
 
+// 폰트 family 상수 — expo-font로 로드됨
+export const fontFamily = {
+  regular: 'Pretendard-Regular',
+  medium: 'Pretendard-Medium',
+  semibold: 'Pretendard-SemiBold',
+  bold: 'Pretendard-Bold',
+  extrabold: 'Pretendard-ExtraBold',
+} as const;
+
+// 웨이트 계층 기반 typography — italic·serif 절대 금지
 export const typography = {
-  h1: { fontSize: 28, fontWeight: '700' as const, lineHeight: 36 },
-  h2: { fontSize: 22, fontWeight: '700' as const, lineHeight: 30 },
-  h3: { fontSize: 18, fontWeight: '600' as const, lineHeight: 26 },
-  body: { fontSize: 16, fontWeight: '400' as const, lineHeight: 24 },
-  bodyBold: { fontSize: 16, fontWeight: '600' as const, lineHeight: 24 },
-  caption: { fontSize: 14, fontWeight: '400' as const, lineHeight: 20 },
-  small: { fontSize: 12, fontWeight: '400' as const, lineHeight: 16 },
+  // 히어로 (오늘 뭐 먹지? 등)
+  heroTitle: {
+    fontFamily: fontFamily.extrabold,
+    fontSize: 32,
+    lineHeight: 40,
+    letterSpacing: -1,
+  },
+  heroTitleLg: {
+    fontFamily: fontFamily.extrabold,
+    fontSize: 36,
+    lineHeight: 44,
+    letterSpacing: -1.2,
+  },
+  // 섹션/카드 타이틀
+  h1: {
+    fontFamily: fontFamily.bold,
+    fontSize: 24,
+    lineHeight: 32,
+    letterSpacing: -0.5,
+  },
+  h2: {
+    fontFamily: fontFamily.bold,
+    fontSize: 18,
+    lineHeight: 26,
+    letterSpacing: -0.4,
+  },
+  h3: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    lineHeight: 24,
+    letterSpacing: -0.3,
+  },
+  // 본문
+  bodyBold: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 15,
+    lineHeight: 22,
+    letterSpacing: -0.2,
+  },
+  body: {
+    fontFamily: fontFamily.medium,
+    fontSize: 15,
+    lineHeight: 22,
+    letterSpacing: -0.2,
+  },
+  bodyProse: {
+    fontFamily: fontFamily.regular,
+    fontSize: 14,
+    lineHeight: 22,
+    letterSpacing: -0.1,
+  },
+  // 캡션/메타
+  caption: {
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: -0.1,
+  },
+  captionBold: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: -0.1,
+  },
+  meta: {
+    fontFamily: fontFamily.regular,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: -0.1,
+  },
+  // 작은 강조 (kicker, 배지)
+  kicker: {
+    fontFamily: fontFamily.bold,
+    fontSize: 10,
+    lineHeight: 12,
+    letterSpacing: 0.8,
+  },
+  // legacy 호환
+  small: {
+    fontFamily: fontFamily.regular,
+    fontSize: 12,
+    lineHeight: 16,
+  },
 } as const;
 
 export const spacing = {
@@ -70,23 +178,38 @@ export const borderRadius = {
   md: 12,
   lg: 16,
   xl: 24,
+  xxl: 28,
   full: 9999,
 } as const;
 
 export const shadow = {
   sm: {
-    shadowColor: '#000',
+    shadowColor: '#643C28',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
   md: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowColor: '#643C28',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
+  },
+  lg: {
+    shadowColor: '#643C28',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 6,
+  },
+  cta: {
+    shadowColor: '#FF5A2E',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 6,
   },
 } as const;
 
@@ -97,9 +220,12 @@ export const CATEGORY_EMOJI: Record<string, string> = {
   '과일': '🍎',
   '육류': '🥩',
   '해산물': '🐟',
-  '유제품/계란': '🥚',
-  '유제품': '🥚',
+  '수산물': '🐟',
+  '유제품/계란': '🧀',
+  '유제품': '🧀',
+  '계란': '🥚',
   '곡류': '🍚',
+  '곡물': '🍚',
   '곡류/면류': '🍚',
   '양념': '🧂',
   '양념/소스': '🧂',
@@ -109,13 +235,14 @@ export const CATEGORY_EMOJI: Record<string, string> = {
 // 재료 이모지 매핑
 export const INGREDIENT_EMOJI: Record<string, string> = {
   '양파': '🧅',
-  '대파': '🌿',
+  '대파': '🧅',
   '감자': '🥔',
   '당근': '🥕',
   '시금치': '🥬',
   '김치': '🌶️',
   '돼지고기': '🥩',
   '닭가슴살': '🍗',
+  '닭고기': '🍗',
   '소고기': '🥩',
   '새우': '🦐',
   '오징어': '🦑',
@@ -171,7 +298,6 @@ export function getIngredientEmoji(name: string): string {
 }
 
 export function getCategoryEmoji(name: string): string {
-  // 부분 매칭도 지원 (e.g. "유제품/계란" → "유제품")
   if (CATEGORY_EMOJI[name]) return CATEGORY_EMOJI[name];
   for (const key of Object.keys(CATEGORY_EMOJI)) {
     if (name.includes(key) || key.includes(name)) return CATEGORY_EMOJI[key];

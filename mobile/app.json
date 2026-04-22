@@ -43,7 +43,8 @@
           "nativeAppKey": "6acd28308e258039a2cb24c7b4b6a0a7"
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "expo-font"
     ],
     "extra": {
       "router": {},

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Alert, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
@@ -8,21 +8,17 @@ import { Button } from '../../../src/components/common/Button';
 import { useAuthStore } from '../../../src/stores/authStore';
 import { userApi } from '../../../src/api/userApi';
 import { Config } from '../../../src/constants/config';
-import type { CookingLevel } from '../../../src/types/user';
-import { TouchableOpacity } from 'react-native';
-
-const LEVEL_OPTIONS: { value: CookingLevel; label: string }[] = [
-  { value: 'BEGINNER', label: '입문' },
-  { value: 'EASY', label: '초급' },
-  { value: 'INTERMEDIATE', label: '중급' },
-  { value: 'ADVANCED', label: '고급' },
-];
+import { Character } from '../../../src/components/brand/Character';
+import { CHARACTERS, getCharacterName } from '../../../src/constants/characters';
+import type { CharacterType } from '../../../src/types/user';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, setUser } = useAuthStore();
   const [nickname, setNickname] = useState(user?.displayName ?? '');
-  const [cookingLevel, setCookingLevel] = useState<CookingLevel>(user?.cookingLevel ?? 'BEGINNER');
+  const [characterType, setCharacterType] = useState<CharacterType>(
+    (user?.characterType ?? 'EGG') as CharacterType,
+  );
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -32,7 +28,10 @@ export default function ProfileScreen() {
     }
     setSaving(true);
     try {
-      const { data } = await userApi.updateMe({ displayName: nickname.trim(), cookingLevel });
+      const { data } = await userApi.updateMe({
+        displayName: nickname.trim(),
+        characterType,
+      });
       setUser(data.data);
       await SecureStore.setItemAsync(Config.USER_KEY, JSON.stringify(data.data));
       Alert.alert('완료', '프로필이 수정되었습니다.');
@@ -61,34 +60,31 @@ export default function ProfileScreen() {
             style={styles.input}
             value={nickname}
             onChangeText={setNickname}
-            maxLength={20}
-            placeholder="닉네임을 입력하세요"
+            maxLength={10}
+            placeholder="2~10자로 입력하세요"
             placeholderTextColor={Colors.textTertiary}
           />
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>요리 실력</Text>
-          <View style={styles.levelRow}>
-            {LEVEL_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt.value}
-                style={[
-                  styles.levelBtn,
-                  cookingLevel === opt.value && styles.levelBtnActive,
-                ]}
-                onPress={() => setCookingLevel(opt.value)}
-              >
-                <Text
-                  style={[
-                    styles.levelText,
-                    cookingLevel === opt.value && styles.levelTextActive,
-                  ]}
+          <Text style={styles.label}>
+            캐릭터 <Text style={{ fontSize: 12, color: Colors.textSecondary }}>· {getCharacterName(characterType)}</Text>
+          </Text>
+          <View style={styles.charRow}>
+            {CHARACTERS.map((c) => {
+              const isSel = characterType === c.type;
+              return (
+                <TouchableOpacity
+                  key={c.type}
+                  style={[styles.charCard, isSel && styles.charCardActive]}
+                  onPress={() => setCharacterType(c.type)}
+                  activeOpacity={0.8}
                 >
-                  {opt.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Character type={c.type} size={52} />
+                  <Text style={[styles.charName, isSel && styles.charNameActive]}>{c.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
       </View>
@@ -107,10 +103,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -118,29 +111,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
-  back: {
-    fontSize: 16,
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    gap: 24,
-  },
-  field: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.text,
-  },
+  back: { fontSize: 16, color: Colors.primary, fontWeight: '600' },
+  title: { fontSize: 18, fontWeight: '700', color: Colors.text },
+  content: { flex: 1, padding: 20, gap: 24 },
+  field: { gap: 10 },
+  label: { fontSize: 15, fontWeight: '600', color: Colors.text },
   input: {
     backgroundColor: Colors.surface,
     borderRadius: 12,
@@ -148,37 +123,27 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: Colors.text,
-  },
-  levelRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  levelBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
     borderWidth: 1.5,
     borderColor: Colors.border,
+  },
+  charRow: { flexDirection: 'row', gap: 8 },
+  charCard: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
+    gap: 4,
   },
-  levelBtnActive: {
+  charCardActive: {
     borderColor: Colors.primary,
-    backgroundColor: '#FFF5F0',
+    backgroundColor: '#FFEDE4',
+    borderWidth: 2,
   },
-  levelText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-  },
-  levelTextActive: {
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-  footer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  saveBtn: {
-    width: '100%',
-  },
+  charName: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
+  charNameActive: { color: Colors.primary, fontWeight: '700' },
+  footer: { paddingHorizontal: 20, paddingBottom: 20 },
+  saveBtn: { width: '100%' },
 });
