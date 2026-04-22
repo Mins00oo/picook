@@ -15,9 +15,9 @@ public record AuthResponse(
             String displayName,
             String profileImageUrl,
             String loginType,
-            String cookingLevel,
+            String characterType,
             int completedCookingCount,
-            boolean isOnboarded
+            int pointBalance
     ) {}
 
     public static AuthResponse of(String accessToken, String refreshToken, User user) {
@@ -30,9 +30,9 @@ public record AuthResponse(
                         user.getDisplayName(),
                         user.getProfileImageUrl(),
                         user.getLoginType().name(),
-                        user.getCookingLevel().name(),
-                        user.getCompletedCookingCount(),
-                        Boolean.TRUE.equals(user.getIsOnboarded())
+                        user.getCharacterType(),
+                        user.getCompletedCookingCount() == null ? 0 : user.getCompletedCookingCount(),
+                        user.getPointBalance() == null ? 0 : user.getPointBalance()
                 )
         );
     }

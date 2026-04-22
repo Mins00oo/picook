@@ -4,9 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record DashboardChartsResponse(
-        List<DailyCount> userSignups,
-        List<DailyCount> coachingSessions,
-        List<DailyCount> shortsConversions
+        List<DailyCount> userSignups
 ) {
     public record DailyCount(LocalDate date, long count) {}
 }

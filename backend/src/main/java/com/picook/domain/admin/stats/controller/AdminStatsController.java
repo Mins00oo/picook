@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "[관리자] 상세 통계", description = "사용자/레시피/재료/코칭/쇼츠/등급 통계")
+@Tag(name = "[관리자] 상세 통계", description = "사용자/레시피/재료 통계")
 @RestController
 @RequestMapping("/api/admin/stats")
 public class AdminStatsController {
@@ -22,37 +22,16 @@ public class AdminStatsController {
 
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<UserStatsResponse>> getUserStats() {
-        UserStatsResponse response = adminStatsService.getUserStats();
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(ApiResponse.success(adminStatsService.getUserStats()));
     }
 
     @GetMapping("/recipes")
     public ResponseEntity<ApiResponse<RecipeStatsResponse>> getRecipeStats() {
-        RecipeStatsResponse response = adminStatsService.getRecipeStats();
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(ApiResponse.success(adminStatsService.getRecipeStats()));
     }
 
     @GetMapping("/ingredients")
     public ResponseEntity<ApiResponse<IngredientStatsResponse>> getIngredientStats() {
-        IngredientStatsResponse response = adminStatsService.getIngredientStats();
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    @GetMapping("/coaching")
-    public ResponseEntity<ApiResponse<CoachingStatsResponse>> getCoachingStats() {
-        CoachingStatsResponse response = adminStatsService.getCoachingStats();
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    @GetMapping("/shorts")
-    public ResponseEntity<ApiResponse<ShortsStatsResponse>> getShortsStats() {
-        ShortsStatsResponse response = adminStatsService.getShortsStats();
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    @GetMapping("/ranking")
-    public ResponseEntity<ApiResponse<RankingStatsResponse>> getRankingStats() {
-        RankingStatsResponse response = adminStatsService.getRankingStats();
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(ApiResponse.success(adminStatsService.getIngredientStats()));
     }
 }

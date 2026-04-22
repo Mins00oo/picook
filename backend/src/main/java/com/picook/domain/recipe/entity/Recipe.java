@@ -45,9 +45,6 @@ public class Recipe {
     @Column(name = "view_count")
     private Integer viewCount = 0;
 
-    @Column(name = "coaching_ready")
-    private Boolean coachingReady = false;
-
     @Column(name = "status", length = 20)
     private String status = "draft";
 
@@ -147,8 +144,6 @@ public class Recipe {
     public Integer getTotalIngredients() { return totalIngredients; }
 
     public Integer getViewCount() { return viewCount; }
-
-    public Boolean getCoachingReady() { return coachingReady; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

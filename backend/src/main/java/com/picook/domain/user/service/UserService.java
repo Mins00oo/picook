@@ -2,7 +2,6 @@ package com.picook.domain.user.service;
 
 import com.picook.domain.user.dto.UpdateProfileRequest;
 import com.picook.domain.user.dto.UserProfileResponse;
-import com.picook.domain.user.entity.CookingLevel;
 import com.picook.domain.user.entity.User;
 import com.picook.domain.user.entity.UserStatus;
 import com.picook.domain.user.repository.UserRepository;
@@ -34,26 +33,11 @@ public class UserService {
         User user = findActiveUser(userId);
 
         if (request.displayName() != null) {
-            user.setDisplayName(request.displayName());
+            user.setDisplayName(request.displayName().trim());
         }
-        if (request.cookingLevel() != null) {
-            try {
-                user.setCookingLevel(CookingLevel.valueOf(request.cookingLevel()));
-            } catch (IllegalArgumentException e) {
-                throw new BusinessException("INVALID_COOKING_LEVEL",
-                        "유효하지 않은 요리 수준입니다: " + request.cookingLevel(), HttpStatus.BAD_REQUEST);
-            }
+        if (request.characterType() != null) {
+            user.setCharacterType(request.characterType());
         }
-        if (request.coachingEnabled() != null) {
-            user.setCoachingEnabled(request.coachingEnabled());
-        }
-        if (request.coachingVoiceSpeed() != null) {
-            user.setCoachingVoiceSpeed(request.coachingVoiceSpeed());
-        }
-        if (request.isOnboarded() != null) {
-            user.setIsOnboarded(request.isOnboarded());
-        }
-
         return UserProfileResponse.of(user);
     }
 

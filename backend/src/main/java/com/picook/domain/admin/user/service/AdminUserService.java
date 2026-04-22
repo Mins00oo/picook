@@ -1,8 +1,6 @@
 package com.picook.domain.admin.user.service;
 
 import com.picook.domain.admin.user.dto.*;
-import com.picook.domain.coaching.repository.CoachingLogRepository;
-import com.picook.domain.coaching.repository.CookingCompletionRepository;
 import com.picook.domain.favorite.repository.FavoriteRepository;
 import com.picook.domain.searchhistory.repository.SearchHistoryRepository;
 import com.picook.domain.user.entity.LoginType;
@@ -24,19 +22,13 @@ import java.util.UUID;
 public class AdminUserService {
 
     private final UserRepository userRepository;
-    private final CoachingLogRepository coachingLogRepository;
-    private final CookingCompletionRepository cookingCompletionRepository;
     private final FavoriteRepository favoriteRepository;
     private final SearchHistoryRepository searchHistoryRepository;
 
     public AdminUserService(UserRepository userRepository,
-                            CoachingLogRepository coachingLogRepository,
-                            CookingCompletionRepository cookingCompletionRepository,
                             FavoriteRepository favoriteRepository,
                             SearchHistoryRepository searchHistoryRepository) {
         this.userRepository = userRepository;
-        this.coachingLogRepository = coachingLogRepository;
-        this.cookingCompletionRepository = cookingCompletionRepository;
         this.favoriteRepository = favoriteRepository;
         this.searchHistoryRepository = searchHistoryRepository;
     }
@@ -83,10 +75,8 @@ public class AdminUserService {
 
     public AdminUserDetailResponse getUser(UUID id) {
         User user = findOrThrow(id);
-        long coachingCount = coachingLogRepository.countByUserIdAndCompleted(id, true);
-        long completionCount = cookingCompletionRepository.countByUserId(id);
         int favoriteCount = favoriteRepository.countByUserId(id);
-        return AdminUserDetailResponse.of(user, coachingCount, completionCount, favoriteCount);
+        return AdminUserDetailResponse.of(user, favoriteCount);
     }
 
     @Transactional
@@ -101,22 +91,6 @@ public class AdminUserService {
         User user = findOrThrow(id);
         user.setStatus(UserStatus.ACTIVE);
         user.setSuspendedReason(null);
-    }
-
-    public PageResponse<AdminUserCoachingLogResponse> getCoachingLogs(UUID userId, int page, int size) {
-        findOrThrow(userId);
-        var pageRequest = PageRequest.of(page, size, Sort.by("startedAt").descending());
-        var logPage = coachingLogRepository.findByUserId(userId, pageRequest);
-        var responsePage = logPage.map(AdminUserCoachingLogResponse::of);
-        return PageResponse.from(responsePage);
-    }
-
-    public PageResponse<AdminUserCompletionResponse> getCompletions(UUID userId, int page, int size) {
-        findOrThrow(userId);
-        var pageRequest = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        var completionPage = cookingCompletionRepository.findByUserId(userId, pageRequest);
-        var responsePage = completionPage.map(AdminUserCompletionResponse::of);
-        return PageResponse.from(responsePage);
     }
 
     public PageResponse<AdminUserFavoriteResponse> getFavorites(UUID userId, int page, int size) {

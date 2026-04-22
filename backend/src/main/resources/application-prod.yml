@@ -24,6 +24,3 @@ jwt:
 
 file:
   upload-dir: D:/work/project/workspace/Prj/picook/shared/uploads
-
-# shorts 경로 설정은 .env 파일에서 관리 (개발자별 경로 상이)
-# YTDLP_PATH, FFMPEG_PATH 환경변수 미설정 시 시스템 PATH에서 탐색

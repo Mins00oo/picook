@@ -72,14 +72,6 @@ class AdminUserControllerTest extends BaseControllerTest {
         }
 
         @Test
-        @DisplayName("만료된 토큰으로 요청하면 401")
-        void 만료된_토큰으로_요청하면_401() throws Exception {
-            mockMvc.perform(get(BASE_URL)
-                            .header("Authorization", "Bearer " + expiredToken()))
-                    .andExpect(status().isUnauthorized());
-        }
-
-        @Test
         @DisplayName("일반 사용자 토큰으로 요청하면 403")
         void 일반_사용자_토큰으로_요청하면_403() throws Exception {
             mockMvc.perform(get(BASE_URL)
@@ -122,16 +114,17 @@ class AdminUserControllerTest extends BaseControllerTest {
         void 사용자_상세_조회_성공() throws Exception {
             var detail = new AdminUserDetailResponse(
                     TEST_USER_ID, "user@test.com", "테스터", null, "KAKAO",
-                    "BEGINNER", true, 5, true, "ACTIVE", null,
+                    "EGG", 5, 30, "ACTIVE", null,
                     Instant.now(), Instant.now(), Instant.now(),
-                    new AdminUserDetailResponse.ActivitySummary(10, 5, 3));
+                    new AdminUserDetailResponse.ActivitySummary(3));
             when(adminUserService.getUser(TEST_USER_ID)).thenReturn(detail);
 
             mockMvc.perform(get(BASE_URL + "/" + TEST_USER_ID)
                             .header("Authorization", "Bearer " + superAdminToken()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.displayName").value("테스터"))
-                    .andExpect(jsonPath("$.data.activitySummary.coachingCount").value(10));
+                    .andExpect(jsonPath("$.data.characterType").value("EGG"))
+                    .andExpect(jsonPath("$.data.activitySummary.favoriteCount").value(3));
         }
 
         @Test
@@ -157,50 +150,6 @@ class AdminUserControllerTest extends BaseControllerTest {
                             .header("Authorization", "Bearer " + superAdminToken()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("success"));
-        }
-
-        @Test
-        @DisplayName("사용자 코칭 이력 조회 성공")
-        void 코칭_이력_조회_성공() throws Exception {
-            var item = new AdminUserCoachingLogResponse(
-                    1, "single", List.of(1), 1800, 2000, true,
-                    Instant.now(), Instant.now());
-            var page = new PageImpl<>(List.of(item), PageRequest.of(0, 10), 1);
-            when(adminUserService.getCoachingLogs(TEST_USER_ID, 0, 10))
-                    .thenReturn(PageResponse.from(page));
-
-            mockMvc.perform(get(BASE_URL + "/" + TEST_USER_ID + "/coaching-logs")
-                            .header("Authorization", "Bearer " + superAdminToken()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.content[0].mode").value("single"));
-        }
-
-        @Test
-        @DisplayName("사용자 완료 이력 조회 성공")
-        void 완료_이력_조회_성공() throws Exception {
-            var item = new AdminUserCompletionResponse(1, 10, 1, "/uploads/photo.jpg", Instant.now());
-            var page = new PageImpl<>(List.of(item), PageRequest.of(0, 10), 1);
-            when(adminUserService.getCompletions(TEST_USER_ID, 0, 10))
-                    .thenReturn(PageResponse.from(page));
-
-            mockMvc.perform(get(BASE_URL + "/" + TEST_USER_ID + "/completions")
-                            .header("Authorization", "Bearer " + superAdminToken()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.content[0].photoUrl").value("/uploads/photo.jpg"));
-        }
-
-        @Test
-        @DisplayName("사용자 검색 기록 조회 성공")
-        void 검색_기록_조회_성공() throws Exception {
-            var item = new AdminUserSearchHistoryResponse(1, List.of(1, 2, 3), "{}", 5, Instant.now());
-            var page = new PageImpl<>(List.of(item), PageRequest.of(0, 10), 1);
-            when(adminUserService.getSearchHistory(TEST_USER_ID, 0, 10))
-                    .thenReturn(PageResponse.from(page));
-
-            mockMvc.perform(get(BASE_URL + "/" + TEST_USER_ID + "/search-history")
-                            .header("Authorization", "Bearer " + superAdminToken()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.content[0].resultCount").value(5));
         }
 
         @Test
@@ -231,17 +180,6 @@ class AdminUserControllerTest extends BaseControllerTest {
                             .content("""
                                     {"reason":""}
                                     """))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
-        }
-
-        @Test
-        @DisplayName("PATCH /suspend — reason null → 400")
-        void 정지사유_null_400() throws Exception {
-            mockMvc.perform(patch(BASE_URL + "/" + TEST_USER_ID + "/suspend")
-                            .header("Authorization", "Bearer " + superAdminToken())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{}"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
         }

@@ -1,7 +1,7 @@
 package com.picook.domain.user.dto;
 
 import com.picook.domain.user.entity.User;
-import java.math.BigDecimal;
+
 import java.util.UUID;
 
 public record UserProfileResponse(
@@ -10,26 +10,24 @@ public record UserProfileResponse(
         String displayName,
         String profileImageUrl,
         String loginType,
-        String cookingLevel,
-        boolean coachingEnabled,
-        BigDecimal coachingVoiceSpeed,
+        String characterType,
         int completedCookingCount,
-        boolean isOnboarded,
+        int pointBalance,
         RankInfo rank
 ) {
     public static UserProfileResponse of(User user) {
+        int count = user.getCompletedCookingCount() == null ? 0 : user.getCompletedCookingCount();
+        int points = user.getPointBalance() == null ? 0 : user.getPointBalance();
         return new UserProfileResponse(
                 user.getId(),
                 user.getEmail(),
                 user.getDisplayName(),
                 user.getProfileImageUrl(),
                 user.getLoginType().name(),
-                user.getCookingLevel().name(),
-                Boolean.TRUE.equals(user.getCoachingEnabled()),
-                user.getCoachingVoiceSpeed(),
-                user.getCompletedCookingCount(),
-                Boolean.TRUE.equals(user.getIsOnboarded()),
-                RankInfo.of(user.getCompletedCookingCount())
+                user.getCharacterType(),
+                count,
+                points,
+                RankInfo.of(count)
         );
     }
 }

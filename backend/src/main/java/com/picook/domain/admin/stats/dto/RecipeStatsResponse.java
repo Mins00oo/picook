@@ -7,8 +7,7 @@ public record RecipeStatsResponse(
         long totalRecipes,
         Map<String, Long> categoryDistribution,
         Map<String, Long> difficultyDistribution,
-        List<RecipeItem> top20,
-        double coachingReadyPct
+        List<RecipeItem> top20
 ) {
     public record RecipeItem(Integer id, String title, Integer viewCount) {}
 }

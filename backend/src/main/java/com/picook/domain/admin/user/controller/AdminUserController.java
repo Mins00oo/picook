@@ -37,8 +37,7 @@ public class AdminUserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<AdminUserDetailResponse>> getUser(@PathVariable UUID id) {
-        AdminUserDetailResponse response = adminUserService.getUser(id);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(ApiResponse.success(adminUserService.getUser(id)));
     }
 
     @PatchMapping("/{id}/suspend")
@@ -55,31 +54,12 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success());
     }
 
-    @GetMapping("/{id}/coaching-logs")
-    public ResponseEntity<ApiResponse<PageResponse<AdminUserCoachingLogResponse>>> getCoachingLogs(
-            @PathVariable UUID id,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        PageResponse<AdminUserCoachingLogResponse> response = adminUserService.getCoachingLogs(id, page, size);
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    @GetMapping("/{id}/completions")
-    public ResponseEntity<ApiResponse<PageResponse<AdminUserCompletionResponse>>> getCompletions(
-            @PathVariable UUID id,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        PageResponse<AdminUserCompletionResponse> response = adminUserService.getCompletions(id, page, size);
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
     @GetMapping("/{id}/search-history")
     public ResponseEntity<ApiResponse<PageResponse<AdminUserSearchHistoryResponse>>> getSearchHistory(
             @PathVariable UUID id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        PageResponse<AdminUserSearchHistoryResponse> response = adminUserService.getSearchHistory(id, page, size);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(ApiResponse.success(adminUserService.getSearchHistory(id, page, size)));
     }
 
     @GetMapping("/{id}/favorites")
@@ -87,7 +67,6 @@ public class AdminUserController {
             @PathVariable UUID id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        PageResponse<AdminUserFavoriteResponse> response = adminUserService.getFavorites(id, page, size);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(ApiResponse.success(adminUserService.getFavorites(id, page, size)));
     }
 }

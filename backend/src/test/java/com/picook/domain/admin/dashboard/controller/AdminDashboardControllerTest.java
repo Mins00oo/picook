@@ -89,7 +89,7 @@ class AdminDashboardControllerTest extends BaseControllerTest {
         @DisplayName("대시보드 요약 조회 성공")
         void 요약_조회_성공() throws Exception {
             var response = new DashboardSummaryResponse(
-                    100, 80, 50, 200, 150, 30,
+                    100, 80, 50,
                     Map.of("LV1", 40L, "LV2", 30L, "LV3", 10L));
             when(adminDashboardService.getSummary()).thenReturn(response);
 
@@ -105,9 +105,7 @@ class AdminDashboardControllerTest extends BaseControllerTest {
         @DisplayName("차트 데이터 조회 성공")
         void 차트_조회_성공() throws Exception {
             var response = new DashboardChartsResponse(
-                    List.of(new DashboardChartsResponse.DailyCount(LocalDate.of(2026, 3, 31), 5)),
-                    List.of(new DashboardChartsResponse.DailyCount(LocalDate.of(2026, 3, 31), 10)),
-                    List.of(new DashboardChartsResponse.DailyCount(LocalDate.of(2026, 3, 31), 3)));
+                    List.of(new DashboardChartsResponse.DailyCount(LocalDate.of(2026, 3, 31), 5)));
             when(adminDashboardService.getCharts("7d")).thenReturn(response);
 
             mockMvc.perform(get(BASE_URL + "/charts?period=7d")

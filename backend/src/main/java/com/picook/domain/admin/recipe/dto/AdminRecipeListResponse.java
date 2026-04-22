@@ -14,7 +14,6 @@ public record AdminRecipeListResponse(
         String thumbnailUrl,
         int totalIngredients,
         int viewCount,
-        boolean coachingReady,
         String status,
         Instant createdAt,
         Instant updatedAt
@@ -30,7 +29,6 @@ public record AdminRecipeListResponse(
                 recipe.getThumbnailUrl(),
                 recipe.getTotalIngredients(),
                 recipe.getViewCount(),
-                recipe.getCoachingReady(),
                 recipe.getStatus(),
                 recipe.getCreatedAt(),
                 recipe.getUpdatedAt()

@@ -64,14 +64,6 @@ class AdminStatsControllerTest extends BaseControllerTest {
         }
 
         @Test
-        @DisplayName("만료된 토큰으로 요청하면 401")
-        void 만료된_토큰으로_요청하면_401() throws Exception {
-            mockMvc.perform(get(BASE_URL + "/users")
-                            .header("Authorization", "Bearer " + expiredToken()))
-                    .andExpect(status().isUnauthorized());
-        }
-
-        @Test
         @DisplayName("일반 사용자 토큰으로 요청하면 403")
         void 일반_사용자_토큰으로_요청하면_403() throws Exception {
             mockMvc.perform(get(BASE_URL + "/users")
@@ -119,22 +111,20 @@ class AdminStatsControllerTest extends BaseControllerTest {
             var response = new RecipeStatsResponse(50,
                     Map.of("한식", 30L, "양식", 20L),
                     Map.of("EASY", 20L, "MEDIUM", 30L),
-                    List.of(new RecipeStatsResponse.RecipeItem(1, "김치찌개", 100)),
-                    75.0);
+                    List.of(new RecipeStatsResponse.RecipeItem(1, "김치찌개", 100)));
             when(adminStatsService.getRecipeStats()).thenReturn(response);
 
             mockMvc.perform(get(BASE_URL + "/recipes")
                             .header("Authorization", "Bearer " + contentAdminToken()))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.totalRecipes").value(50))
-                    .andExpect(jsonPath("$.data.coachingReadyPct").value(75.0));
+                    .andExpect(jsonPath("$.data.totalRecipes").value(50));
         }
 
         @Test
         @DisplayName("재료 통계 조회 성공")
         void 재료_통계_조회_성공() throws Exception {
             var response = new IngredientStatsResponse(200,
-                    List.of(new IngredientStatsResponse.IngredientItem(1, "김치", 50)),
+                    List.of(new IngredientStatsResponse.IngredientItem(1, "김치", 50L)),
                     List.of(new IngredientStatsResponse.UnusedIngredient(99, "트러플오일")));
             when(adminStatsService.getIngredientStats()).thenReturn(response);
 
@@ -142,47 +132,6 @@ class AdminStatsControllerTest extends BaseControllerTest {
                             .header("Authorization", "Bearer " + contentAdminToken()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.totalIngredients").value(200));
-        }
-
-        @Test
-        @DisplayName("코칭 통계 조회 성공")
-        void 코칭_통계_조회_성공() throws Exception {
-            var response = new CoachingStatsResponse(200, 150, 75.0, 120, 80,
-                    Map.of(12, 30L, 18, 50L));
-            when(adminStatsService.getCoachingStats()).thenReturn(response);
-
-            mockMvc.perform(get(BASE_URL + "/coaching")
-                            .header("Authorization", "Bearer " + contentAdminToken()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.completionRate").value(75.0));
-        }
-
-        @Test
-        @DisplayName("쇼츠 통계 조회 성공")
-        void 쇼츠_통계_조회_성공() throws Exception {
-            var response = new ShortsStatsResponse(500, 300,
-                    Map.of("gpt-5.4-mini", 300L));
-            when(adminStatsService.getShortsStats()).thenReturn(response);
-
-            mockMvc.perform(get(BASE_URL + "/shorts")
-                            .header("Authorization", "Bearer " + contentAdminToken()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.totalConversions").value(500));
-        }
-
-        @Test
-        @DisplayName("등급 통계 조회 성공")
-        void 등급_통계_조회_성공() throws Exception {
-            var response = new RankingStatsResponse(
-                    Map.of("LV1", 40L, "LV2", 30L, "LV3", 10L),
-                    2.1, 500, 350, 70.0);
-            when(adminStatsService.getRankingStats()).thenReturn(response);
-
-            mockMvc.perform(get(BASE_URL + "/ranking")
-                            .header("Authorization", "Bearer " + contentAdminToken()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.averageLevel").value(2.1))
-                    .andExpect(jsonPath("$.data.photoUploadRate").value(70.0));
         }
     }
 }

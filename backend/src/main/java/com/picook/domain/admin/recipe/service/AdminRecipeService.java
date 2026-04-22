@@ -30,11 +30,11 @@ public class AdminRecipeService {
     }
 
     public PageResponse<AdminRecipeListResponse> getRecipes(String status, String category, String difficulty,
-                                                             Boolean coachingReady, String keyword,
+                                                             String keyword,
                                                              int page, int size, String sort) {
         Sort sorting = parseSort(sort);
         PageRequest pageRequest = PageRequest.of(page, size, sorting);
-        Page<Recipe> recipePage = recipeRepository.searchRecipes(status, category, difficulty, coachingReady, keyword, pageRequest);
+        Page<Recipe> recipePage = recipeRepository.searchRecipes(status, category, difficulty, keyword, pageRequest);
         Page<AdminRecipeListResponse> responsePage = recipePage.map(AdminRecipeListResponse::of);
         return PageResponse.from(responsePage);
     }

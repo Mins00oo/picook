@@ -5,13 +5,9 @@ import com.picook.domain.admin.dashboard.dto.DashboardChartsResponse.DailyCount;
 import com.picook.domain.admin.dashboard.dto.DashboardRankingsResponse;
 import com.picook.domain.admin.dashboard.dto.DashboardRankingsResponse.*;
 import com.picook.domain.admin.dashboard.dto.DashboardSummaryResponse;
-import com.picook.domain.coaching.repository.CoachingLogRepository;
-import com.picook.domain.feedback.entity.Feedback;
 import com.picook.domain.feedback.repository.FeedbackRepository;
-import com.picook.domain.recipe.entity.Recipe;
 import com.picook.domain.recipe.repository.RecipeIngredientRepository;
 import com.picook.domain.recipe.repository.RecipeRepository;
-import com.picook.domain.shorts.repository.ShortsConversionHistoryRepository;
 import com.picook.domain.user.entity.UserRank;
 import com.picook.domain.user.entity.UserStatus;
 import com.picook.domain.user.repository.UserRepository;
@@ -23,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.Date;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,21 +30,15 @@ public class AdminDashboardService {
 
     private final UserRepository userRepository;
     private final RecipeRepository recipeRepository;
-    private final CoachingLogRepository coachingLogRepository;
-    private final ShortsConversionHistoryRepository shortsConversionHistoryRepository;
     private final RecipeIngredientRepository recipeIngredientRepository;
     private final FeedbackRepository feedbackRepository;
 
     public AdminDashboardService(UserRepository userRepository,
                                   RecipeRepository recipeRepository,
-                                  CoachingLogRepository coachingLogRepository,
-                                  ShortsConversionHistoryRepository shortsConversionHistoryRepository,
                                   RecipeIngredientRepository recipeIngredientRepository,
                                   FeedbackRepository feedbackRepository) {
         this.userRepository = userRepository;
         this.recipeRepository = recipeRepository;
-        this.coachingLogRepository = coachingLogRepository;
-        this.shortsConversionHistoryRepository = shortsConversionHistoryRepository;
         this.recipeIngredientRepository = recipeIngredientRepository;
         this.feedbackRepository = feedbackRepository;
     }
@@ -58,29 +47,16 @@ public class AdminDashboardService {
         long totalUsers = userRepository.count();
         long activeUsers = userRepository.countByStatus(UserStatus.ACTIVE);
         long totalRecipes = recipeRepository.countByIsDeletedFalse();
-        long totalCoachingSessions = coachingLogRepository.count();
-        long completedCoachingSessions = coachingLogRepository.countByCompleted(true);
-        long totalShortsConversions = shortsConversionHistoryRepository.count();
-
         Map<String, Long> rankDistribution = buildRankDistribution();
-
-        return new DashboardSummaryResponse(
-                totalUsers, activeUsers, totalRecipes,
-                totalCoachingSessions, completedCoachingSessions,
-                totalShortsConversions, rankDistribution
-        );
+        return new DashboardSummaryResponse(totalUsers, activeUsers, totalRecipes, rankDistribution);
     }
 
     public DashboardChartsResponse getCharts(String period) {
         int days = parsePeriodDays(period);
         Instant end = Instant.now();
         Instant start = end.minus(days, ChronoUnit.DAYS);
-
         List<DailyCount> userSignups = toDailyCounts(userRepository.countDailySignups(start, end));
-        List<DailyCount> coachingSessions = toDailyCounts(coachingLogRepository.countDailySessions(start, end));
-        List<DailyCount> shortsConversions = toDailyCounts(shortsConversionHistoryRepository.countDailyConversions(start, end));
-
-        return new DashboardChartsResponse(userSignups, coachingSessions, shortsConversions);
+        return new DashboardChartsResponse(userSignups);
     }
 
     public DashboardRankingsResponse getRankings() {

@@ -32,13 +32,12 @@ public class AdminRecipeController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String difficulty,
-            @RequestParam(required = false) Boolean coachingReady,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String sort) {
         PageResponse<AdminRecipeListResponse> response = adminRecipeService.getRecipes(
-                status, category, difficulty, coachingReady, keyword, page, size, sort);
+                status, category, difficulty, keyword, page, size, sort);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

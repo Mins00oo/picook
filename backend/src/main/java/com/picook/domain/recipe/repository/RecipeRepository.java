@@ -26,19 +26,16 @@ public interface RecipeRepository extends JpaRepository<Recipe, Integer> {
             "AND (:status IS NULL OR r.status = :status) " +
             "AND (:category IS NULL OR r.category = :category) " +
             "AND (:difficulty IS NULL OR r.difficulty = :difficulty) " +
-            "AND (:coachingReady IS NULL OR r.coachingReady = :coachingReady) " +
             "AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')))",
             countQuery = "SELECT COUNT(r) FROM Recipe r " +
                     "WHERE r.isDeleted = false " +
                     "AND (:status IS NULL OR r.status = :status) " +
                     "AND (:category IS NULL OR r.category = :category) " +
                     "AND (:difficulty IS NULL OR r.difficulty = :difficulty) " +
-                    "AND (:coachingReady IS NULL OR r.coachingReady = :coachingReady) " +
                     "AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')))")
     Page<Recipe> searchRecipes(@Param("status") String status,
                                @Param("category") String category,
                                @Param("difficulty") String difficulty,
-                               @Param("coachingReady") Boolean coachingReady,
                                @Param("keyword") String keyword,
                                Pageable pageable);
 
@@ -52,7 +49,4 @@ public interface RecipeRepository extends JpaRepository<Recipe, Integer> {
 
     @Query("SELECT r FROM Recipe r WHERE r.isDeleted = false ORDER BY r.viewCount DESC")
     List<Recipe> findTopByViewCount(Pageable pageable);
-
-    @Query("SELECT COUNT(r) FROM Recipe r WHERE r.isDeleted = false AND r.coachingReady = true")
-    long countCoachingReady();
 }

@@ -20,7 +20,6 @@ public record RecipeDetailResponse(
         String tips,
         int totalIngredients,
         int viewCount,
-        boolean coachingReady,
         List<IngredientItem> ingredients,
         List<StepItem> steps,
         Instant createdAt
@@ -82,7 +81,6 @@ public record RecipeDetailResponse(
                 recipe.getTips(),
                 recipe.getTotalIngredients(),
                 recipe.getViewCount(),
-                recipe.getCoachingReady(),
                 ingredientItems,
                 stepItems,
                 recipe.getCreatedAt()

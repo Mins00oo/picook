@@ -2,7 +2,6 @@ package com.picook.domain.user.service;
 
 import com.picook.domain.user.dto.UpdateProfileRequest;
 import com.picook.domain.user.dto.UserProfileResponse;
-import com.picook.domain.user.entity.CookingLevel;
 import com.picook.domain.user.entity.LoginType;
 import com.picook.domain.user.entity.User;
 import com.picook.domain.user.entity.UserStatus;
@@ -15,7 +14,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
-import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -49,9 +47,7 @@ class UserServiceTest {
         assertThat(response.id()).isEqualTo(userId);
         assertThat(response.email()).isEqualTo("test@test.com");
         assertThat(response.rank()).isNotNull();
-        assertThat(response.rank().level()).isEqualTo(3); // count 10 -> LV3
-        assertThat(response.rank().title()).isEqualTo("집밥 요리사");
-        assertThat(response.rank().nextLevelAt()).isEqualTo(11);
+        assertThat(response.rank().level()).isEqualTo(3);
     }
 
     @Test
@@ -68,46 +64,26 @@ class UserServiceTest {
         User user = createUser(0);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
-        UpdateProfileRequest request = new UpdateProfileRequest(
-                "새이름", "INTERMEDIATE", true, new BigDecimal("1.5"), true
-        );
+        UpdateProfileRequest request = new UpdateProfileRequest("새이름", "EGG");
 
         UserProfileResponse response = userService.updateProfile(userId, request);
 
         assertThat(response.displayName()).isEqualTo("새이름");
-        assertThat(response.cookingLevel()).isEqualTo("INTERMEDIATE");
-        assertThat(response.coachingEnabled()).isTrue();
-        assertThat(response.coachingVoiceSpeed()).isEqualByComparingTo(new BigDecimal("1.5"));
-        assertThat(response.isOnboarded()).isTrue();
+        assertThat(response.characterType()).isEqualTo("EGG");
     }
 
     @Test
     void 프로필_수정_일부_필드만() throws Exception {
         User user = createUser(0);
+        user.setCharacterType("POTATO");
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
-        UpdateProfileRequest request = new UpdateProfileRequest(
-                "새이름만", null, null, null, null
-        );
+        UpdateProfileRequest request = new UpdateProfileRequest("새이름만", null);
 
         UserProfileResponse response = userService.updateProfile(userId, request);
 
         assertThat(response.displayName()).isEqualTo("새이름만");
-        assertThat(response.cookingLevel()).isEqualTo("BEGINNER"); // 변경 안됨
-    }
-
-    @Test
-    void 프로필_수정_잘못된_CookingLevel() throws Exception {
-        User user = createUser(0);
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-
-        UpdateProfileRequest request = new UpdateProfileRequest(
-                null, "INVALID_LEVEL", null, null, null
-        );
-
-        assertThatThrownBy(() -> userService.updateProfile(userId, request))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("유효하지 않은 요리 수준");
+        assertThat(response.characterType()).isEqualTo("POTATO");
     }
 
     @Test

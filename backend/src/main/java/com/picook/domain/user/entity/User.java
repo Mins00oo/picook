@@ -1,7 +1,6 @@
 package com.picook.domain.user.entity;
 
 import jakarta.persistence.*;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -32,21 +31,15 @@ public class User {
     @Column(name = "apple_id", length = 100)
     private String appleId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "cooking_level", length = 20)
-    private CookingLevel cookingLevel = CookingLevel.BEGINNER;
-
-    @Column(name = "coaching_enabled")
-    private Boolean coachingEnabled = true;
-
-    @Column(name = "coaching_voice_speed", precision = 2, scale = 1)
-    private BigDecimal coachingVoiceSpeed = new BigDecimal("1.0");
+    /** v1.0 캐릭터 타입 — EGG / POTATO / CARROT */
+    @Column(name = "character_type", length = 20)
+    private String characterType;
 
     @Column(name = "completed_cooking_count")
     private Integer completedCookingCount = 0;
 
-    @Column(name = "is_onboarded")
-    private Boolean isOnboarded = false;
+    @Column(name = "point_balance", nullable = false)
+    private Integer pointBalance = 0;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
@@ -85,8 +78,6 @@ public class User {
         this.updatedAt = Instant.now();
     }
 
-    // Getters & Setters
-
     public UUID getId() { return id; }
 
     public String getEmail() { return email; }
@@ -106,20 +97,14 @@ public class User {
     public String getAppleId() { return appleId; }
     public void setAppleId(String appleId) { this.appleId = appleId; }
 
-    public CookingLevel getCookingLevel() { return cookingLevel; }
-    public void setCookingLevel(CookingLevel cookingLevel) { this.cookingLevel = cookingLevel; }
-
-    public Boolean getCoachingEnabled() { return coachingEnabled; }
-    public void setCoachingEnabled(Boolean coachingEnabled) { this.coachingEnabled = coachingEnabled; }
-
-    public BigDecimal getCoachingVoiceSpeed() { return coachingVoiceSpeed; }
-    public void setCoachingVoiceSpeed(BigDecimal coachingVoiceSpeed) { this.coachingVoiceSpeed = coachingVoiceSpeed; }
+    public String getCharacterType() { return characterType; }
+    public void setCharacterType(String characterType) { this.characterType = characterType; }
 
     public Integer getCompletedCookingCount() { return completedCookingCount; }
     public void setCompletedCookingCount(Integer completedCookingCount) { this.completedCookingCount = completedCookingCount; }
 
-    public Boolean getIsOnboarded() { return isOnboarded; }
-    public void setIsOnboarded(Boolean onboarded) { this.isOnboarded = onboarded; }
+    public Integer getPointBalance() { return pointBalance; }
+    public void setPointBalance(Integer pointBalance) { this.pointBalance = pointBalance; }
 
     public UserStatus getStatus() { return status; }
     public void setStatus(UserStatus status) { this.status = status; }

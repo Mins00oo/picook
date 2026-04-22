@@ -1,17 +1,10 @@
 package com.picook.domain.admin.stats.service;
 
 import com.picook.domain.admin.stats.dto.*;
-import com.picook.domain.coaching.repository.CoachingLogRepository;
-import com.picook.domain.coaching.repository.CookingCompletionRepository;
-import com.picook.domain.ingredient.entity.Ingredient;
 import com.picook.domain.ingredient.repository.IngredientRepository;
-import com.picook.domain.recipe.entity.Recipe;
 import com.picook.domain.recipe.repository.RecipeIngredientRepository;
 import com.picook.domain.recipe.repository.RecipeRepository;
-import com.picook.domain.shorts.repository.ShortsCacheRepository;
-import com.picook.domain.shorts.repository.ShortsConversionHistoryRepository;
 import com.picook.domain.user.entity.LoginType;
-import com.picook.domain.user.entity.UserRank;
 import com.picook.domain.user.entity.UserStatus;
 import com.picook.domain.user.repository.UserRepository;
 import org.springframework.data.domain.PageRequest;
@@ -34,27 +27,15 @@ public class AdminStatsService {
     private final RecipeRepository recipeRepository;
     private final RecipeIngredientRepository recipeIngredientRepository;
     private final IngredientRepository ingredientRepository;
-    private final CoachingLogRepository coachingLogRepository;
-    private final CookingCompletionRepository cookingCompletionRepository;
-    private final ShortsCacheRepository shortsCacheRepository;
-    private final ShortsConversionHistoryRepository shortsConversionHistoryRepository;
 
     public AdminStatsService(UserRepository userRepository,
                               RecipeRepository recipeRepository,
                               RecipeIngredientRepository recipeIngredientRepository,
-                              IngredientRepository ingredientRepository,
-                              CoachingLogRepository coachingLogRepository,
-                              CookingCompletionRepository cookingCompletionRepository,
-                              ShortsCacheRepository shortsCacheRepository,
-                              ShortsConversionHistoryRepository shortsConversionHistoryRepository) {
+                              IngredientRepository ingredientRepository) {
         this.userRepository = userRepository;
         this.recipeRepository = recipeRepository;
         this.recipeIngredientRepository = recipeIngredientRepository;
         this.ingredientRepository = ingredientRepository;
-        this.coachingLogRepository = coachingLogRepository;
-        this.cookingCompletionRepository = cookingCompletionRepository;
-        this.shortsCacheRepository = shortsCacheRepository;
-        this.shortsConversionHistoryRepository = shortsConversionHistoryRepository;
     }
 
     public UserStatsResponse getUserStats() {
@@ -100,10 +81,7 @@ public class AdminStatsService {
                 .map(r -> new RecipeStatsResponse.RecipeItem(r.getId(), r.getTitle(), r.getViewCount()))
                 .toList();
 
-        long coachingReady = recipeRepository.countCoachingReady();
-        double coachingReadyPct = totalRecipes > 0 ? (double) coachingReady / totalRecipes * 100 : 0;
-
-        return new RecipeStatsResponse(totalRecipes, categoryDistribution, difficultyDistribution, top20, coachingReadyPct);
+        return new RecipeStatsResponse(totalRecipes, categoryDistribution, difficultyDistribution, top20);
     }
 
     public IngredientStatsResponse getIngredientStats() {
@@ -120,67 +98,5 @@ public class AdminStatsService {
                 .toList();
 
         return new IngredientStatsResponse(totalIngredients, top20, unused);
-    }
-
-    public CoachingStatsResponse getCoachingStats() {
-        long totalSessions = coachingLogRepository.count();
-        long completedSessions = coachingLogRepository.countByCompleted(true);
-        double completionRate = totalSessions > 0 ? (double) completedSessions / totalSessions * 100 : 0;
-
-        long singleModeSessions = coachingLogRepository.countByMode("single");
-        long multiModeSessions = coachingLogRepository.countByMode("multi");
-
-        Map<Integer, Long> hourlyDistribution = new LinkedHashMap<>();
-        for (int i = 0; i < 24; i++) {
-            hourlyDistribution.put(i, 0L);
-        }
-        for (Object[] row : coachingLogRepository.findHourlyDistribution()) {
-            int hour = ((Number) row[0]).intValue();
-            long count = ((Number) row[1]).longValue();
-            hourlyDistribution.put(hour, count);
-        }
-
-        return new CoachingStatsResponse(totalSessions, completedSessions, completionRate,
-                singleModeSessions, multiModeSessions, hourlyDistribution);
-    }
-
-    public ShortsStatsResponse getShortsStats() {
-        long totalConversions = shortsConversionHistoryRepository.count();
-        long totalCacheEntries = shortsCacheRepository.count();
-
-        Map<String, Long> modelVersionDistribution = new LinkedHashMap<>();
-        for (Object[] row : shortsCacheRepository.countByModelVersion()) {
-            modelVersionDistribution.put((String) row[0], (Long) row[1]);
-        }
-
-        return new ShortsStatsResponse(totalConversions, totalCacheEntries, modelVersionDistribution);
-    }
-
-    public RankingStatsResponse getRankingStats() {
-        Map<String, Long> levelDistribution = new LinkedHashMap<>();
-        for (UserRank rank : UserRank.values()) {
-            levelDistribution.put(rank.name(), 0L);
-        }
-
-        List<Object[]> distribution = userRepository.findCookingCountDistribution();
-        long totalWeighted = 0;
-        long totalUsers = 0;
-
-        for (Object[] row : distribution) {
-            int count = row[0] == null ? 0 : ((Number) row[0]).intValue();
-            long users = ((Number) row[1]).longValue();
-            UserRank rank = UserRank.fromCount(count);
-            levelDistribution.merge(rank.name(), users, Long::sum);
-            totalWeighted += (long) rank.getLevel() * users;
-            totalUsers += users;
-        }
-
-        double averageLevel = totalUsers > 0 ? (double) totalWeighted / totalUsers : 0;
-
-        long totalCompletions = cookingCompletionRepository.count();
-        long photoUploads = cookingCompletionRepository.countByPhotoUrlIsNotNull();
-        double photoUploadRate = totalCompletions > 0 ? (double) photoUploads / totalCompletions * 100 : 0;
-
-        return new RankingStatsResponse(levelDistribution, averageLevel, totalCompletions, photoUploads, photoUploadRate);
     }
 }
