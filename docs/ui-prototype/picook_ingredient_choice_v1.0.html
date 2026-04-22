@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>picook — Ingredient Selection (Spec-aligned)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+
+  body {
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    background: #E8E5DE;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(255,107,74,0.05), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(0,0,0,0.03), transparent 50%);
+    min-height: 100vh;
+    padding: 56px 40px;
+    color: #0A0A0A;
+  }
+
+  .board-header {
+    max-width: 1000px;
+    margin: 0 auto 40px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 40px;
+  }
+  .board-header h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 44px;
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+  }
+  .board-header h1 em {
+    font-style: italic;
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+  }
+  .board-header p {
+    font-size: 13px;
+    color: #555;
+    max-width: 380px;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+  }
+  .board-meta {
+    display: flex;
+    gap: 20px;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #8A8A8A;
+    margin-top: 16px;
+  }
+  .board-meta span::before { content: "●"; margin-right: 6px; color: #FF6B4A; font-size: 7px; vertical-align: middle; }
+
+  .artboard {
+    max-width: 1000px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 60px;
+    align-items: start;
+    justify-items: center;
+  }
+  .concept { display: flex; flex-direction: column; align-items: center; }
+  .concept-label { margin-bottom: 20px; text-align: center; }
+  .concept-num {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 12px;
+    color: #8A8A8A;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .concept-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 20px;
+    letter-spacing: -0.02em;
+  }
+  .concept-desc {
+    font-size: 11px;
+    color: #6B5D56;
+    margin-top: 6px;
+    line-height: 1.45;
+    max-width: 320px;
+    letter-spacing: -0.01em;
+  }
+
+  :root {
+    --bg: #FFF8F1;
+    --surface: #FFFFFF;
+    --ink: #1F1612;
+    --ink-2: #6B5D56;
+    --ink-3: #A89B93;
+    --line: #F0E6DC;
+    --line-soft: #FAF3EB;
+    --accent: #FF6B4A;
+    --accent-2: #FFD4C2;
+    --accent-soft: #FFEDE4;
+    --mint: #D5E9D4;
+  }
+
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 52px;
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.06),
+      0 0 0 10px #1A1A1A,
+      0 30px 60px -20px rgba(0,0,0,0.35),
+      0 50px 100px -30px rgba(0,0,0,0.2);
+    overflow: hidden;
+    position: relative;
+  }
+  .notch {
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    width: 120px; height: 32px;
+    background: #000;
+    border-radius: 100px;
+    z-index: 100;
+  }
+  .statusbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 54px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 34px 0;
+    font-size: 15px;
+    font-weight: 600;
+    z-index: 50;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .statusbar .icons { display: flex; gap: 6px; align-items: center; }
+  .statusbar svg { width: 16px; height: 11px; }
+
+  .screen {
+    padding-top: 54px;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    position: relative;
+  }
+
+  /* ---------- Navbar ---------- */
+  .navbar {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px 12px;
+    gap: 10px;
+  }
+  .navbar .back-btn {
+    width: 36px; height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: -8px;
+  }
+  .navbar .nav-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+
+  /* ---------- Search ---------- */
+  .search-bar {
+    margin: 0 16px 4px;
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 1px 3px rgba(100,60,40,0.05);
+  }
+  .search-bar input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ink-2);
+    background: transparent;
+  }
+  .search-bar input::placeholder { color: var(--ink-3); }
+
+  /* ---------- Split (rail + panel) ---------- */
+  .split {
+    display: flex;
+    /* 54 status + 60 nav+search + 195 bottom (cart+CTA+tabbar) */
+    height: calc(100% - 54px - 60px - 246px);
+  }
+  .rail {
+    width: 84px;
+    flex-shrink: 0;
+    padding: 4px 8px 20px 10px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    border-right: 1px solid var(--line);
+  }
+  .rail::-webkit-scrollbar { display: none; }
+  .rail-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 4px;
+    border-radius: 12px;
+    position: relative;
+    margin-bottom: 2px;
+  }
+  .rail-item .r-emo {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    background: var(--line-soft);
+  }
+  .rail-item.active { background: var(--accent-soft); }
+  .rail-item.active .r-emo { background: var(--accent); }
+  .rail-item .r-name {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--ink-2);
+    letter-spacing: -0.02em;
+  }
+  .rail-item.active .r-name {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .rail-item .badge {
+    position: absolute;
+    top: 6px; right: 10px;
+    min-width: 16px; height: 16px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid var(--bg);
+  }
+
+  .panel {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: none;
+    padding: 10px 14px 20px;
+  }
+  .panel::-webkit-scrollbar { display: none; }
+  .panel-head {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    margin: 4px 4px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-head .sub {
+    font-size: 10.5px;
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+  .ing-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 10px;
+    background: var(--surface);
+    border-radius: 12px;
+    margin-bottom: 6px;
+    border: 1.5px solid transparent;
+  }
+  .ing-row.selected {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .ing-row .ir-emo {
+    width: 28px; height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    flex-shrink: 0;
+  }
+  .ing-row .ir-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .ing-row .cb {
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    border: 1.5px solid var(--line);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ing-row.selected .cb {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  /* ---------- Floating cart + CTA (above tabbar) ---------- */
+  .floating-cart {
+    position: absolute;
+    bottom: 84px; /* tabbar 위 */
+    left: 0; right: 0;
+    background: var(--ink);
+    color: #fff;
+    border-radius: 24px 24px 0 0;
+    padding: 14px 18px 16px;
+    box-shadow: 0 -10px 30px -8px rgba(31,22,18,0.3);
+    z-index: 20;
+  }
+  .floating-cart .cart-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .floating-cart .cart-head .label {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.65);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .floating-cart .cart-head .label b {
+    color: var(--accent);
+    font-size: 13px;
+    margin-left: 4px;
+    font-weight: 800;
+  }
+  .floating-cart .cart-head .expand {
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .floating-cart .cart-chips {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-bottom: 10px;
+  }
+  .floating-cart .cart-chips::-webkit-scrollbar { display: none; }
+  .cart-chip {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 100px;
+    padding: 5px 10px 5px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #fff;
+    letter-spacing: -0.01em;
+  }
+  .cart-chip .e { font-size: 12px; }
+  .cart-chip .x { color: rgba(255,255,255,0.45); font-weight: 700; margin-left: 2px; }
+  .floating-cart .cart-cta {
+    background: var(--accent);
+    border-radius: 12px;
+    padding: 13px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #fff;
+  }
+  .floating-cart .cart-cta.disabled {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.45);
+  }
+
+  /* ---------- Tabbar ---------- */
+  .tabbar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 84px;
+    background: rgba(255,248,241,0.92);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    padding: 16px 24px 0;
+    z-index: 10;
+  }
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--ink-3);
+    position: relative;
+  }
+  .tab.active { color: var(--ink); }
+  .tab.active::before {
+    content: "";
+    position: absolute;
+    top: -16px;
+    width: 24px;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 0 0 3px 3px;
+  }
+  .tab .tab-icon-wrap {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ---------- Expanded cart sheet (C1-M) ---------- */
+  .scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(31,22,18,0.35);
+    backdrop-filter: blur(2px);
+    z-index: 40;
+  }
+  .expanded-cart {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: var(--ink);
+    color: #fff;
+    border-radius: 28px 28px 0 0;
+    z-index: 50;
+    padding: 10px 0 0;
+    box-shadow: 0 -20px 40px -8px rgba(31,22,18,0.4);
+    max-height: 78%;
+    display: flex;
+    flex-direction: column;
+  }
+  .expanded-cart .handle {
+    width: 40px; height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+    margin: 0 auto 14px;
+  }
+  .expanded-cart .ex-head {
+    padding: 0 22px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .expanded-cart .ex-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: #fff;
+  }
+  .expanded-cart .ex-title b {
+    color: var(--accent);
+    font-weight: 700;
+    margin-left: 2px;
+  }
+  .expanded-cart .ex-close {
+    width: 32px; height: 32px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+  .expanded-cart .ex-clear-row {
+    padding: 14px 22px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .expanded-cart .ex-clear-row .sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: -0.01em;
+  }
+  .expanded-cart .ex-clear-row .clear {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.75);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .expanded-cart .ex-groups {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 22px 8px;
+    scrollbar-width: none;
+  }
+  .expanded-cart .ex-groups::-webkit-scrollbar { display: none; }
+  .ex-group {
+    margin-bottom: 18px;
+  }
+  .ex-group .g-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .ex-group .g-emo {
+    width: 22px; height: 22px;
+    border-radius: 7px;
+    background: rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+  .ex-group .g-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.9);
+    letter-spacing: -0.02em;
+  }
+  .ex-group .g-count {
+    font-size: 10.5px;
+    color: rgba(255,255,255,0.4);
+    margin-left: 2px;
+  }
+  .ex-group .g-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .ex-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 100px;
+    padding: 6px 11px 6px 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: -0.02em;
+  }
+  .ex-chip .x {
+    width: 14px; height: 14px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.7);
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 2px;
+  }
+  .expanded-cart .ex-bottom {
+    padding: 12px 22px 24px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    background: var(--ink);
+  }
+  .expanded-cart .summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .expanded-cart .summary .num {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: -0.01em;
+  }
+  .expanded-cart .summary .num b {
+    color: #fff;
+    font-weight: 700;
+  }
+  .expanded-cart .summary .sum-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .expanded-cart .summary .sum-label b {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .expanded-cart .cart-cta {
+    background: var(--accent);
+    border-radius: 12px;
+    padding: 13px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #fff;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="board-header">
+  <div>
+    <h1>picook <em>/ ingredient — spec aligned</em></h1>
+    <div class="board-meta">
+      <span>C1 재료 선택 + C1-M 바텀시트</span>
+      <span>Tab bar 노출 (NAV-02)</span>
+    </div>
+  </div>
+  <p>스펙 문서 기준 완전 정리. 탭바 노출, 하단 카트 + CTA + 탭바 3층 구조. 우측은 '모두 보기' 탭한 C1-M 바텀시트.</p>
+</div>
+
+<div class="artboard">
+
+<!-- ============ SCREEN 1: C1 ============ -->
+<div class="concept">
+  <div class="concept-label">
+    <span class="concept-num">screen C1.</span>
+    <span class="concept-name">Ingredient Selection</span>
+    <p class="concept-desc">좌측 카테고리 레일 + 우측 리스트 + 하단 카트/CTA + 탭바.</p>
+  </div>
+
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="statusbar">
+      <span>9:41</span>
+      <div class="icons">
+        <svg viewBox="0 0 18 12" fill="currentColor"><path d="M1 6l2-2 2 2V9H1zM6 4l2-2 2 2V9H6zM11 2l2-2 2 2V9H11z"/></svg>
+        <svg viewBox="0 0 16 11" fill="currentColor"><path d="M8 2a7 7 0 0 1 4.95 2.05l-.99.99A5.6 5.6 0 0 0 8 3.4 5.6 5.6 0 0 0 4.04 5.04L3.05 4.05A7 7 0 0 1 8 2zm0 3a4 4 0 0 1 2.83 1.17L9.83 7.17A2.6 2.6 0 0 0 8 6.4c-.71 0-1.35.29-1.83.77L5.17 6.17A4 4 0 0 1 8 5zm0 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+        <svg viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="19" height="10" rx="2.5" stroke="currentColor" stroke-opacity="0.5"/><rect x="3" y="3" width="15" height="6" rx="1" fill="currentColor"/><rect x="21" y="4" width="1.5" height="4" rx="0.5" fill="currentColor" fill-opacity="0.5"/></svg>
+      </div>
+    </div>
+
+    <div class="screen">
+      <div class="navbar">
+        <div class="back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1612" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </div>
+        <div class="nav-title">재료 선택</div>
+      </div>
+
+      <div class="search-bar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A89B93" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" placeholder="재료를 검색해보세요" disabled/>
+      </div>
+
+      <div class="split">
+        <div class="rail">
+          <div class="rail-item">
+            <div class="r-emo">🥩</div>
+            <div class="r-name">육류</div>
+            <span class="badge">2</span>
+          </div>
+          <div class="rail-item active">
+            <div class="r-emo">🥬</div>
+            <div class="r-name">채소</div>
+            <span class="badge">4</span>
+          </div>
+          <div class="rail-item">
+            <div class="r-emo">🐟</div>
+            <div class="r-name">수산물</div>
+          </div>
+          <div class="rail-item">
+            <div class="r-emo">🧀</div>
+            <div class="r-name">유제품</div>
+            <span class="badge">2</span>
+          </div>
+          <div class="rail-item">
+            <div class="r-emo">🍚</div>
+            <div class="r-name">곡물</div>
+          </div>
+          <div class="rail-item">
+            <div class="r-emo">🧂</div>
+            <div class="r-name">양념</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            채소
+            <span class="sub">4 / 12 선택</span>
+          </div>
+          <div class="ing-row selected">
+            <div class="ir-emo">🧅</div>
+            <div class="ir-name">양파</div>
+            <div class="cb">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
+            </div>
+          </div>
+          <div class="ing-row selected">
+            <div class="ir-emo">🧄</div>
+            <div class="ir-name">마늘</div>
+            <div class="cb">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
+            </div>
+          </div>
+          <div class="ing-row selected">
+            <div class="ir-emo">🥔</div>
+            <div class="ir-name">감자</div>
+            <div class="cb">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
+            </div>
+          </div>
+          <div class="ing-row">
+            <div class="ir-emo">🥕</div>
+            <div class="ir-name">당근</div>
+            <div class="cb"></div>
+          </div>
+          <div class="ing-row">
+            <div class="ir-emo">🍅</div>
+            <div class="ir-name">토마토</div>
+            <div class="cb"></div>
+          </div>
+          <div class="ing-row selected">
+            <div class="ir-emo">🧅</div>
+            <div class="ir-name">대파</div>
+            <div class="cb">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
+            </div>
+          </div>
+          <div class="ing-row">
+            <div class="ir-emo">🌶️</div>
+            <div class="ir-name">고추</div>
+            <div class="cb"></div>
+          </div>
+          <div class="ing-row">
+            <div class="ir-emo">🥒</div>
+            <div class="ir-name">오이</div>
+            <div class="cb"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating cart above tabbar -->
+      <div class="floating-cart">
+        <div class="cart-head">
+          <div class="label">선택한 재료 <b>8</b></div>
+          <div class="expand">
+            모두 보기
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 15l6-6 6 6"/></svg>
+          </div>
+        </div>
+        <div class="cart-chips">
+          <div class="cart-chip"><span class="e">🥚</span>계란 <span class="x">×</span></div>
+          <div class="cart-chip"><span class="e">🧅</span>양파 <span class="x">×</span></div>
+          <div class="cart-chip"><span class="e">🧄</span>마늘 <span class="x">×</span></div>
+          <div class="cart-chip"><span class="e">🥔</span>감자 <span class="x">×</span></div>
+          <div class="cart-chip"><span class="e">🍗</span>닭 <span class="x">×</span></div>
+        </div>
+        <div class="cart-cta">
+          이 재료로 요리 추천받기
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- Tab bar (spec NAV-02) -->
+      <div class="tabbar">
+        <div class="tab">
+          <div class="tab-icon-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12l9-8 9 8v9a2 2 0 0 1-2 2h-4v-6h-6v6H5a2 2 0 0 1-2-2z"/></svg>
+          </div>
+        </div>
+        <div class="tab">
+          <div class="tab-icon-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M5 11h14"/><path d="M8.5 7v1.5M8.5 14.5v2"/></svg>
+          </div>
+        </div>
+        <div class="tab">
+          <div class="tab-icon-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 3h11a2 2 0 0 1 2 2v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+              <path d="M19 18H6a2 2 0 0 0-2 2"/>
+              <path d="M12 7v5l2-1.3L16 12V7"/>
+            </svg>
+          </div>
+        </div>
+        <div class="tab">
+          <div class="tab-icon-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============ SCREEN 2: C1-M ============ -->
+<div class="concept">
+  <div class="concept-label">
+    <span class="concept-num">screen C1-M.</span>
+    <span class="concept-name">Selected Ingredients Sheet</span>
+    <p class="concept-desc">'모두 보기' 탭 → 카테고리별 그룹화된 바텀시트.</p>
+  </div>
+
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="statusbar">
+      <span>9:41</span>
+      <div class="icons">
+        <svg viewBox="0 0 18 12" fill="currentColor"><path d="M1 6l2-2 2 2V9H1zM6 4l2-2 2 2V9H6zM11 2l2-2 2 2V9H11z"/></svg>
+        <svg viewBox="0 0 16 11" fill="currentColor"><path d="M8 2a7 7 0 0 1 4.95 2.05l-.99.99A5.6 5.6 0 0 0 8 3.4 5.6 5.6 0 0 0 4.04 5.04L3.05 4.05A7 7 0 0 1 8 2zm0 3a4 4 0 0 1 2.83 1.17L9.83 7.17A2.6 2.6 0 0 0 8 6.4c-.71 0-1.35.29-1.83.77L5.17 6.17A4 4 0 0 1 8 5zm0 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+        <svg viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="19" height="10" rx="2.5" stroke="currentColor" stroke-opacity="0.5"/><rect x="3" y="3" width="15" height="6" rx="1" fill="currentColor"/><rect x="21" y="4" width="1.5" height="4" rx="0.5" fill="currentColor" fill-opacity="0.5"/></svg>
+      </div>
+    </div>
+
+    <div class="screen">
+      <!-- Background C1 (faded) -->
+      <div class="navbar">
+        <div class="back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1612" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </div>
+        <div class="nav-title">재료 선택</div>
+      </div>
+      <div class="search-bar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A89B93" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" placeholder="재료를 검색해보세요" disabled/>
+      </div>
+      <div class="split">
+        <div class="rail">
+          <div class="rail-item"><div class="r-emo">🥩</div><div class="r-name">육류</div><span class="badge">2</span></div>
+          <div class="rail-item active"><div class="r-emo">🥬</div><div class="r-name">채소</div><span class="badge">4</span></div>
+          <div class="rail-item"><div class="r-emo">🐟</div><div class="r-name">수산물</div></div>
+          <div class="rail-item"><div class="r-emo">🧀</div><div class="r-name">유제품</div><span class="badge">2</span></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">채소 <span class="sub">4 / 12 선택</span></div>
+          <div class="ing-row selected"><div class="ir-emo">🧅</div><div class="ir-name">양파</div><div class="cb"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg></div></div>
+          <div class="ing-row selected"><div class="ir-emo">🧄</div><div class="ir-name">마늘</div><div class="cb"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg></div></div>
+        </div>
+      </div>
+
+      <!-- Scrim + Expanded cart -->
+      <div class="scrim"></div>
+      <div class="expanded-cart">
+        <div class="handle"></div>
+        <div class="ex-head">
+          <div class="ex-title">선택한 재료 <b>8</b></div>
+          <div class="ex-close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+
+        <div class="ex-clear-row">
+          <span class="sub">카테고리별로 묶어서 보여드려요</span>
+          <span class="clear">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+            전체 해제
+          </span>
+        </div>
+
+        <div class="ex-groups">
+          <div class="ex-group">
+            <div class="g-head">
+              <div class="g-emo">🥩</div>
+              <div class="g-name">육류</div>
+              <div class="g-count">2</div>
+            </div>
+            <div class="g-chips">
+              <div class="ex-chip">🥚 계란 <span class="x">×</span></div>
+              <div class="ex-chip">🍗 닭가슴살 <span class="x">×</span></div>
+            </div>
+          </div>
+
+          <div class="ex-group">
+            <div class="g-head">
+              <div class="g-emo">🥬</div>
+              <div class="g-name">채소</div>
+              <div class="g-count">4</div>
+            </div>
+            <div class="g-chips">
+              <div class="ex-chip">🧅 양파 <span class="x">×</span></div>
+              <div class="ex-chip">🧄 마늘 <span class="x">×</span></div>
+              <div class="ex-chip">🥔 감자 <span class="x">×</span></div>
+              <div class="ex-chip">🧅 대파 <span class="x">×</span></div>
+            </div>
+          </div>
+
+          <div class="ex-group">
+            <div class="g-head">
+              <div class="g-emo">🧀</div>
+              <div class="g-name">유제품</div>
+              <div class="g-count">2</div>
+            </div>
+            <div class="g-chips">
+              <div class="ex-chip">🧀 치즈 <span class="x">×</span></div>
+              <div class="ex-chip">🥛 우유 <span class="x">×</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ex-bottom">
+          <div class="summary">
+            <div class="num"><b>8개</b> 선택</div>
+            <div class="sum-label">추천 가능한 요리 <b>약 12개</b></div>
+          </div>
+          <div class="cart-cta">
+            이 재료로 요리 추천받기
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+</body>
+</html>

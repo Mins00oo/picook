@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>picook — My Fridge (E1) final</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+
+  body {
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    background: #E8E5DE;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(255,107,74,0.05), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(0,0,0,0.03), transparent 50%);
+    min-height: 100vh;
+    padding: 56px 40px;
+    color: #0A0A0A;
+  }
+
+  .board-header {
+    max-width: 1000px;
+    margin: 0 auto 40px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 40px;
+  }
+  .board-header h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 44px;
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+  }
+  .board-header h1 em {
+    font-style: italic;
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+  }
+  .board-header p {
+    font-size: 13px;
+    color: #555;
+    max-width: 420px;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+  }
+  .board-meta {
+    display: flex;
+    gap: 20px;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #8A8A8A;
+    margin-top: 16px;
+  }
+  .board-meta span::before { content: "●"; margin-right: 6px; color: #FF6B4A; font-size: 7px; vertical-align: middle; }
+
+  .artboard {
+    max-width: 1000px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 60px;
+    align-items: start;
+    justify-items: center;
+  }
+  .concept { display: flex; flex-direction: column; align-items: center; }
+  .concept-label { margin-bottom: 20px; text-align: center; }
+  .concept-num {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 12px;
+    color: #8A8A8A;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .concept-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 20px;
+    letter-spacing: -0.02em;
+  }
+  .concept-desc {
+    font-size: 11px;
+    color: #6B5D56;
+    margin-top: 6px;
+    line-height: 1.45;
+    max-width: 320px;
+    letter-spacing: -0.01em;
+  }
+
+  :root {
+    --bg: #FFF8F1;
+    --surface: #FFFFFF;
+    --ink: #1F1612;
+    --ink-2: #6B5D56;
+    --ink-3: #A89B93;
+    --line: #F0E6DC;
+    --line-soft: #FAF3EB;
+    --accent: #FF6B4A;
+    --accent-2: #FFD4C2;
+    --accent-soft: #FFEDE4;
+    --mint: #D5E9D4;
+  }
+
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 52px;
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.06),
+      0 0 0 10px #1A1A1A,
+      0 30px 60px -20px rgba(0,0,0,0.35),
+      0 50px 100px -30px rgba(0,0,0,0.2);
+    overflow: hidden;
+    position: relative;
+  }
+  .notch {
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    width: 120px; height: 32px;
+    background: #000;
+    border-radius: 100px;
+    z-index: 100;
+  }
+  .statusbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 54px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 34px 0;
+    font-size: 15px;
+    font-weight: 600;
+    z-index: 50;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .statusbar .icons { display: flex; gap: 6px; align-items: center; }
+  .statusbar svg { width: 16px; height: 11px; }
+
+  .screen {
+    padding-top: 54px;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    position: relative;
+  }
+
+  .navbar {
+    padding: 12px 20px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .navbar .nav-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+
+  .save-indicator {
+    position: absolute;
+    top: 70px; right: 16px;
+    background: rgba(31,22,18,0.85);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 11px 5px 8px;
+    border-radius: 100px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    z-index: 30;
+    letter-spacing: -0.01em;
+    backdrop-filter: blur(8px);
+    opacity: 0.85;
+  }
+  .save-indicator .dot {
+    width: 6px; height: 6px;
+    background: #7BC47F;
+    border-radius: 50%;
+  }
+
+  .search-bar {
+    margin: 0 16px 12px;
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 1px 3px rgba(100,60,40,0.05);
+  }
+  .search-bar input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ink-2);
+    background: transparent;
+    letter-spacing: -0.01em;
+  }
+  .search-bar input::placeholder { color: var(--ink-3); }
+
+  /* Preview card (Option B - tappable whole card + "모두 보기" link) */
+  .preview-card {
+    margin: 0 16px 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+  .preview-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .preview-top .count {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .preview-top .count b {
+    color: var(--accent);
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .preview-top .see-all {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    letter-spacing: -0.01em;
+  }
+
+  /* Single-row chip lane */
+  .chip-lane {
+    display: flex;
+    gap: 6px;
+    overflow: hidden;
+    white-space: nowrap;
+    mask-image: linear-gradient(90deg, black 0%, black calc(100% - 40px), transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, black 0%, black calc(100% - 40px), transparent 100%);
+  }
+  .ing-chip {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 11px 6px 9px;
+    background: var(--line-soft);
+    border-radius: 100px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .ing-chip .emo { font-size: 13px; }
+
+  /* Split: rail + panel */
+  .split {
+    display: flex;
+    overflow: hidden;
+    height: calc(100% - 54px - 54px - 58px - 76px - 84px);
+  }
+  .rail {
+    width: 84px;
+    flex-shrink: 0;
+    padding: 4px 8px 20px 10px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    border-right: 1px solid var(--line);
+  }
+  .rail::-webkit-scrollbar { display: none; }
+  .rail-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 4px;
+    border-radius: 12px;
+    position: relative;
+    margin-bottom: 2px;
+  }
+  .rail-item .r-emo {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    background: var(--line-soft);
+  }
+  .rail-item.active { background: var(--accent-soft); }
+  .rail-item.active .r-emo { background: var(--accent); }
+  .rail-item .r-name {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--ink-2);
+    letter-spacing: -0.02em;
+  }
+  .rail-item.active .r-name {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .rail-item .badge {
+    position: absolute;
+    top: 6px; right: 10px;
+    min-width: 16px; height: 16px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid var(--bg);
+  }
+
+  .panel {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: none;
+    padding: 10px 14px 20px;
+  }
+  .panel::-webkit-scrollbar { display: none; }
+  .panel-head {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    margin: 4px 4px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-head .sub {
+    font-size: 10.5px;
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+  .ing-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--surface);
+    border-radius: 12px;
+    margin-bottom: 6px;
+    border: 1.5px solid transparent;
+  }
+  .ing-row.selected {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .ing-row .ir-emo {
+    width: 28px; height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    flex-shrink: 0;
+  }
+  .ing-row .ir-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .ing-row .cb {
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    border: 1.5px solid var(--line);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ing-row.selected .cb {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .tabbar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 84px;
+    background: rgba(255,248,241,0.92);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    padding: 16px 24px 0;
+    z-index: 10;
+  }
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--ink-3);
+    position: relative;
+  }
+  .tab.active { color: var(--ink); }
+  .tab.active::before {
+    content: "";
+    position: absolute;
+    top: -16px;
+    width: 24px;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 0 0 3px 3px;
+  }
+  .tab .tab-icon-wrap {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Scrim + View sheet */
+  .scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(31,22,18,0.35);
+    backdrop-filter: blur(2px);
+    z-index: 40;
+  }
+  .view-sheet {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 28px 28px 0 0;
+    z-index: 50;
+    padding: 10px 0 0;
+    box-shadow: 0 -20px 40px -8px rgba(31,22,18,0.3);
+    max-height: 72%;
+    display: flex;
+    flex-direction: column;
+  }
+  .view-sheet .handle {
+    width: 40px; height: 4px;
+    background: var(--line);
+    border-radius: 3px;
+    margin: 0 auto 14px;
+  }
+  .vs-head {
+    padding: 0 22px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .vs-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+  .vs-title b {
+    color: var(--accent);
+    font-weight: 800;
+    margin-left: 2px;
+  }
+  .vs-close {
+    width: 32px; height: 32px;
+    background: var(--line-soft);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-2);
+  }
+  .vs-sub {
+    padding: 12px 22px 10px;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: -0.01em;
+  }
+  .vs-groups {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 22px 24px;
+    scrollbar-width: none;
+  }
+  .vs-groups::-webkit-scrollbar { display: none; }
+  .vs-group {
+    margin-bottom: 20px;
+  }
+  .vg-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .vg-emo {
+    width: 22px; height: 22px;
+    border-radius: 7px;
+    background: var(--line-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+  .vg-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .vg-count {
+    font-size: 10.5px;
+    color: var(--ink-3);
+    margin-left: 2px;
+  }
+  .vg-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="board-header">
+  <div>
+    <h1>picook <em>/ my fridge — final</em></h1>
+    <div class="board-meta">
+      <span>E1 내 냉장고</span>
+      <span>Option B 확정</span>
+      <span>닫힌 / 펼친 상태</span>
+    </div>
+  </div>
+  <p>카드에 '모두 보기 ›' 링크. 카드 전체가 탭 영역 → 하단에서 시트 올라옴. 펼친 상태는 카테고리별로 전체 재료 표시.</p>
+</div>
+
+<div class="artboard">
+
+<!-- ============ 기본 상태 ============ -->
+<div class="concept">
+  <div class="concept-label">
+    <span class="concept-num">state 01.</span>
+    <span class="concept-name">Default</span>
+    <p class="concept-desc">카드 한 줄 프리뷰 + 모두 보기 링크. 탭 → 시트 열림.</p>
+  </div>
+
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="statusbar">
+      <span>9:41</span>
+      <div class="icons">
+        <svg viewBox="0 0 18 12" fill="currentColor"><path d="M1 6l2-2 2 2V9H1zM6 4l2-2 2 2V9H6zM11 2l2-2 2 2V9H11z"/></svg>
+        <svg viewBox="0 0 16 11" fill="currentColor"><path d="M8 2a7 7 0 0 1 4.95 2.05l-.99.99A5.6 5.6 0 0 0 8 3.4 5.6 5.6 0 0 0 4.04 5.04L3.05 4.05A7 7 0 0 1 8 2zm0 3a4 4 0 0 1 2.83 1.17L9.83 7.17A2.6 2.6 0 0 0 8 6.4c-.71 0-1.35.29-1.83.77L5.17 6.17A4 4 0 0 1 8 5zm0 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+        <svg viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="19" height="10" rx="2.5" stroke="currentColor" stroke-opacity="0.5"/><rect x="3" y="3" width="15" height="6" rx="1" fill="currentColor"/><rect x="21" y="4" width="1.5" height="4" rx="0.5" fill="currentColor" fill-opacity="0.5"/></svg>
+      </div>
+    </div>
+
+    <div class="screen">
+      <div class="navbar">
+        <div class="nav-title">내 냉장고</div>
+      </div>
+      <div class="save-indicator"><div class="dot"></div>저장됨</div>
+
+      <div class="search-bar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A89B93" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" placeholder="재료를 검색해보세요" disabled/>
+      </div>
+
+      <div class="preview-card">
+        <div class="preview-top">
+          <span class="count"><b>14</b>개 재료</span>
+          <span class="see-all">
+            모두 보기
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+          </span>
+        </div>
+        <div class="chip-lane">
+          <div class="ing-chip"><span class="emo">🥚</span>계란</div>
+          <div class="ing-chip"><span class="emo">🍗</span>닭가슴살</div>
+          <div class="ing-chip"><span class="emo">🧅</span>양파</div>
+          <div class="ing-chip"><span class="emo">🧄</span>마늘</div>
+          <div class="ing-chip"><span class="emo">🥔</span>감자</div>
+          <div class="ing-chip"><span class="emo">🥕</span>당근</div>
+          <div class="ing-chip"><span class="emo">🧀</span>치즈</div>
+          <div class="ing-chip"><span class="emo">🥛</span>우유</div>
+        </div>
+      </div>
+
+      <div class="split">
+        <div class="rail">
+          <div class="rail-item"><div class="r-emo">🥩</div><div class="r-name">육류</div><span class="badge">2</span></div>
+          <div class="rail-item active"><div class="r-emo">🥬</div><div class="r-name">채소</div><span class="badge">5</span></div>
+          <div class="rail-item"><div class="r-emo">🐟</div><div class="r-name">수산물</div></div>
+          <div class="rail-item"><div class="r-emo">🧀</div><div class="r-name">유제품</div><span class="badge">2</span></div>
+          <div class="rail-item"><div class="r-emo">🍚</div><div class="r-name">곡물</div><span class="badge">3</span></div>
+          <div class="rail-item"><div class="r-emo">🧂</div><div class="r-name">양념</div><span class="badge">2</span></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">채소 <span class="sub">5 / 12 보유</span></div>
+          <div class="ing-row selected"><div class="ir-emo">🧅</div><div class="ir-name">양파</div><div class="cb"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg></div></div>
+          <div class="ing-row selected"><div class="ir-emo">🧄</div><div class="ir-name">마늘</div><div class="cb"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg></div></div>
+          <div class="ing-row selected"><div class="ir-emo">🥔</div><div class="ir-name">감자</div><div class="cb"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg></div></div>
+          <div class="ing-row selected"><div class="ir-emo">🥕</div><div class="ir-name">당근</div><div class="cb"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg></div></div>
+          <div class="ing-row"><div class="ir-emo">🍅</div><div class="ir-name">토마토</div><div class="cb"></div></div>
+          <div class="ing-row selected"><div class="ir-emo">🧅</div><div class="ir-name">대파</div><div class="cb"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg></div></div>
+          <div class="ing-row"><div class="ir-emo">🌶️</div><div class="ir-name">고추</div><div class="cb"></div></div>
+          <div class="ing-row"><div class="ir-emo">🥒</div><div class="ir-name">오이</div><div class="cb"></div></div>
+        </div>
+      </div>
+
+      <div class="tabbar">
+        <div class="tab"><div class="tab-icon-wrap"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-8 9 8v9a2 2 0 0 1-2 2h-4v-6h-6v6H5a2 2 0 0 1-2-2z"/></svg></div></div>
+        <div class="tab active"><div class="tab-icon-wrap"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M5 11h14" stroke="#FFF8F1" stroke-width="1.5"/><path d="M8.5 7v1.5M8.5 14.5v2" stroke="#FFF8F1" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+        <div class="tab"><div class="tab-icon-wrap"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h11a2 2 0 0 1 2 2v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M19 18H6a2 2 0 0 0-2 2"/><path d="M12 7v5l2-1.3L16 12V7"/></svg></div></div>
+        <div class="tab"><div class="tab-icon-wrap"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============ 펼친 상태 ============ -->
+<div class="concept">
+  <div class="concept-label">
+    <span class="concept-num">state 02.</span>
+    <span class="concept-name">Expanded Sheet</span>
+    <p class="concept-desc">하단 시트에 카테고리별 그룹화. 읽기 전용.</p>
+  </div>
+
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="statusbar">
+      <span>9:41</span>
+      <div class="icons">
+        <svg viewBox="0 0 18 12" fill="currentColor"><path d="M1 6l2-2 2 2V9H1zM6 4l2-2 2 2V9H6zM11 2l2-2 2 2V9H11z"/></svg>
+        <svg viewBox="0 0 16 11" fill="currentColor"><path d="M8 2a7 7 0 0 1 4.95 2.05l-.99.99A5.6 5.6 0 0 0 8 3.4 5.6 5.6 0 0 0 4.04 5.04L3.05 4.05A7 7 0 0 1 8 2zm0 3a4 4 0 0 1 2.83 1.17L9.83 7.17A2.6 2.6 0 0 0 8 6.4c-.71 0-1.35.29-1.83.77L5.17 6.17A4 4 0 0 1 8 5zm0 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+        <svg viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="19" height="10" rx="2.5" stroke="currentColor" stroke-opacity="0.5"/><rect x="3" y="3" width="15" height="6" rx="1" fill="currentColor"/><rect x="21" y="4" width="1.5" height="4" rx="0.5" fill="currentColor" fill-opacity="0.5"/></svg>
+      </div>
+    </div>
+
+    <div class="screen">
+      <div class="navbar">
+        <div class="nav-title">내 냉장고</div>
+      </div>
+      <div class="search-bar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A89B93" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" placeholder="재료를 검색해보세요" disabled/>
+      </div>
+
+      <div class="preview-card">
+        <div class="preview-top">
+          <span class="count"><b>14</b>개 재료</span>
+          <span class="see-all">
+            모두 보기
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+          </span>
+        </div>
+        <div class="chip-lane">
+          <div class="ing-chip"><span class="emo">🥚</span>계란</div>
+          <div class="ing-chip"><span class="emo">🍗</span>닭가슴살</div>
+          <div class="ing-chip"><span class="emo">🧅</span>양파</div>
+          <div class="ing-chip"><span class="emo">🧄</span>마늘</div>
+          <div class="ing-chip"><span class="emo">🥔</span>감자</div>
+          <div class="ing-chip"><span class="emo">🥕</span>당근</div>
+        </div>
+      </div>
+
+      <!-- Scrim + Sheet -->
+      <div class="scrim"></div>
+      <div class="view-sheet">
+        <div class="handle"></div>
+        <div class="vs-head">
+          <div class="vs-title">내 냉장고 재료 <b>14</b></div>
+          <div class="vs-close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+        <div class="vs-sub">카테고리별로 묶어서 보여드려요</div>
+
+        <div class="vs-groups">
+          <div class="vs-group">
+            <div class="vg-head">
+              <div class="vg-emo">🥩</div>
+              <div class="vg-name">육류</div>
+              <div class="vg-count">2</div>
+            </div>
+            <div class="vg-chips">
+              <div class="ing-chip"><span class="emo">🥚</span>계란</div>
+              <div class="ing-chip"><span class="emo">🍗</span>닭가슴살</div>
+            </div>
+          </div>
+
+          <div class="vs-group">
+            <div class="vg-head">
+              <div class="vg-emo">🥬</div>
+              <div class="vg-name">채소</div>
+              <div class="vg-count">5</div>
+            </div>
+            <div class="vg-chips">
+              <div class="ing-chip"><span class="emo">🧅</span>양파</div>
+              <div class="ing-chip"><span class="emo">🧄</span>마늘</div>
+              <div class="ing-chip"><span class="emo">🥔</span>감자</div>
+              <div class="ing-chip"><span class="emo">🥕</span>당근</div>
+              <div class="ing-chip"><span class="emo">🧅</span>대파</div>
+            </div>
+          </div>
+
+          <div class="vs-group">
+            <div class="vg-head">
+              <div class="vg-emo">🧀</div>
+              <div class="vg-name">유제품</div>
+              <div class="vg-count">2</div>
+            </div>
+            <div class="vg-chips">
+              <div class="ing-chip"><span class="emo">🧀</span>치즈</div>
+              <div class="ing-chip"><span class="emo">🥛</span>우유</div>
+            </div>
+          </div>
+
+          <div class="vs-group">
+            <div class="vg-head">
+              <div class="vg-emo">🍚</div>
+              <div class="vg-name">곡물</div>
+              <div class="vg-count">3</div>
+            </div>
+            <div class="vg-chips">
+              <div class="ing-chip"><span class="emo">🍚</span>쌀</div>
+              <div class="ing-chip"><span class="emo">🍞</span>식빵</div>
+              <div class="ing-chip"><span class="emo">🍜</span>라면</div>
+            </div>
+          </div>
+
+          <div class="vs-group">
+            <div class="vg-head">
+              <div class="vg-emo">🧂</div>
+              <div class="vg-name">양념</div>
+              <div class="vg-count">2</div>
+            </div>
+            <div class="vg-chips">
+              <div class="ing-chip"><span class="emo">🧂</span>소금</div>
+              <div class="ing-chip"><span class="emo">🫒</span>올리브유</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+</body>
+</html>
