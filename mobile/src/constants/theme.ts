@@ -49,6 +49,9 @@ export const colors = {
   error: '#EF4444',
   info: '#3B82F6',
 
+  // Rating / star (cook completion)
+  star: '#FFB43B',
+
   // Coaching (deprecated in v1.0 but kept for compat)
   active: '#3B82F6',
   wait: '#F59E0B',
@@ -109,6 +112,13 @@ export const typography = {
     fontFamily: fontFamily.bold,
     fontSize: 16,
     lineHeight: 24,
+    letterSpacing: -0.3,
+  },
+  // 리스트 페이지 상단 타이틀 (마이페이지, 요리북, 찜 등) — 프로토타입 G1 기준 16px
+  pageTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    lineHeight: 22,
     letterSpacing: -0.3,
   },
   // 본문
