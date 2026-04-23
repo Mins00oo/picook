@@ -59,7 +59,7 @@ export default function FavoritesScreen() {
               <View style={styles.card}>
                 <TouchableOpacity
                   style={styles.cardMain}
-                  onPress={() => router.push({ pathname: `/(tabs)/recipe/${item.recipeId}` as any })}
+                  onPress={() => router.push({ pathname: `/recipe/${item.recipeId}` as any })}
                   activeOpacity={0.85}
                 >
                   {thumb ? (

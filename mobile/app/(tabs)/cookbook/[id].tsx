@@ -95,7 +95,7 @@ export default function CookbookDetailScreen() {
 
         <TouchableOpacity
           style={styles.linkBtn}
-          onPress={() => router.push({ pathname: `/(tabs)/recipe/${data.recipeId}` as any })}
+          onPress={() => router.push({ pathname: `/recipe/${data.recipeId}` as any })}
           activeOpacity={0.8}
         >
           <Text style={styles.linkText}>원본 레시피 보기</Text>

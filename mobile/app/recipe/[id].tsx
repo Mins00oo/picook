@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -11,14 +11,17 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
-import { colors, typography, fontFamily, shadow, getIngredientEmoji } from '../../../src/constants/theme';
-import { Loading } from '../../../src/components/common/Loading';
-import { ErrorScreen } from '../../../src/components/common/ErrorScreen';
-import { recipeApi } from '../../../src/api/recipeApi';
-import { useFavorites } from '../../../src/hooks/useFavorites';
-import { formatCookTime, formatDifficulty, toAbsoluteImageUrl } from '../../../src/utils/format';
-import type { RecipeStep, RecipeIngredient } from '../../../src/types/recipe';
+import { colors, fontFamily, shadow, getIngredientEmoji } from '../../src/constants/theme';
+import { Loading } from '../../src/components/common/Loading';
+import { ErrorScreen } from '../../src/components/common/ErrorScreen';
+import { ImageLightbox } from '../../src/components/common/ImageLightbox';
+import { CheckmarkIcon } from '../../src/components/brand/CheckmarkIcon';
+import { recipeApi } from '../../src/api/recipeApi';
+import { useFavorites } from '../../src/hooks/useFavorites';
+import { formatCookTime, formatDifficulty, toAbsoluteImageUrl } from '../../src/utils/format';
+import type { RecipeStep, RecipeIngredient } from '../../src/types/recipe';
 
 export default function RecipeDetailScreen() {
   const { id, missingIds } = useLocalSearchParams<{ id: string; missingIds?: string }>();
@@ -40,6 +43,8 @@ export default function RecipeDetailScreen() {
   const { data: favorites, add, remove } = useFavorites();
   const favorite = favorites?.find((f) => f.recipeId === recipeId);
   const isFav = !!favorite;
+
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   if (isLoading) return <Loading />;
   if (error || !data) return <ErrorScreen onRetry={() => refetch()} />;
@@ -65,7 +70,6 @@ export default function RecipeDetailScreen() {
             <Text style={{ fontSize: 48 }}>🍽️</Text>
           </View>
         )}
-        {/* Top buttons (floating) */}
         <View style={[styles.heroTop, { paddingTop: insets.top + (Platform.OS === 'android' ? 10 : 0) }]}>
           <TouchableOpacity style={styles.heroBtn} onPress={() => router.back()} activeOpacity={0.85}>
             <Svg width={20} height={20} viewBox="0 0 24 24">
@@ -89,12 +93,11 @@ export default function RecipeDetailScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Body card */}
         <View style={styles.body}>
-          {/* Category pills */}
           <View style={styles.pillsRow}>
             <View style={styles.categoryPill}>
               <Text style={styles.pillText}>{recipe.category}</Text>
@@ -106,16 +109,21 @@ export default function RecipeDetailScreen() {
             )}
           </View>
 
-          {/* Title */}
           <Text style={styles.title}>{recipe.title}</Text>
 
-          {/* Meta row */}
+          {/* Meta row — 시간 · 난이도 · 인분 · 칼로리 */}
           <View style={styles.metaRow}>
             <MetaItem emoji="⏱️" value={formatCookTime(recipe.cookingTimeMinutes)} />
             <Dot />
             <MetaItem emoji="🔥" value={formatDifficulty(recipe.difficulty)} />
             <Dot />
             <MetaItem emoji="👥" value={`${recipe.servings}인분`} />
+            {recipe.calories != null && (
+              <>
+                <Dot />
+                <MetaItem emoji="🔋" value={`${recipe.calories}kcal`} />
+              </>
+            )}
           </View>
 
           {recipe.tips && (
@@ -126,11 +134,11 @@ export default function RecipeDetailScreen() {
           )}
         </View>
 
-        {/* Ingredients */}
+        {/* 준비물 */}
         <View style={styles.section}>
           <View style={styles.sectionHead}>
             <Text style={styles.sectionIco}>🧺</Text>
-            <Text style={styles.sectionTitle}>재료</Text>
+            <Text style={styles.sectionTitle}>준비물</Text>
             <Text style={styles.sectionSub}>{recipe.ingredients.length}가지</Text>
           </View>
 
@@ -168,35 +176,49 @@ export default function RecipeDetailScreen() {
           </View>
         </View>
 
-        {/* Steps */}
+        {/* 만드는 법 */}
         <View style={styles.section}>
           <View style={styles.sectionHead}>
             <Text style={styles.sectionIco}>📖</Text>
-            <Text style={styles.sectionTitle}>조리 단계</Text>
-            <Text style={styles.sectionSub}>{recipe.steps.length}단계</Text>
+            <Text style={styles.sectionTitle}>만드는 법</Text>
+            <Text style={styles.sectionSub}>{recipe.steps.length}단계 · 사진 탭해서 크게 보기</Text>
           </View>
 
           <View style={styles.steps}>
             {recipe.steps.map((step, idx) => (
-              <StepCard key={step.stepNumber} step={step} last={idx === recipe.steps.length - 1} />
+              <StepCard
+                key={step.stepNumber}
+                step={step}
+                last={idx === recipe.steps.length - 1}
+                onThumbPress={(uri) => setLightbox(uri)}
+              />
             ))}
           </View>
         </View>
       </ScrollView>
 
-      {/* Bottom CTA */}
-      <View style={[styles.bottom, { paddingBottom: Math.max(insets.bottom + 8, 20) }]}>
+      {/* Bottom CTA — gradient fade */}
+      <LinearGradient
+        colors={['rgba(255,248,241,0)', 'rgba(255,248,241,0.95)', colors.background]}
+        locations={[0, 0.3, 0.6]}
+        pointerEvents="box-none"
+        style={[styles.bottom, { paddingBottom: Math.max(insets.bottom + 8, 20) }]}
+      >
         <TouchableOpacity
           style={styles.cta}
           onPress={() => router.push({ pathname: '/cooking/complete', params: { recipeId: String(recipe.id) } })}
           activeOpacity={0.85}
         >
+          <CheckmarkIcon size={16} color="#fff" />
           <Text style={styles.ctaText}>요리 완료</Text>
-          <Svg width={14} height={14} viewBox="0 0 24 24">
-            <Path d="M5 12h14M13 5l7 7-7 7" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" fill="none" />
-          </Svg>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
+
+      <ImageLightbox
+        visible={lightbox !== null}
+        uri={lightbox}
+        onClose={() => setLightbox(null)}
+      />
     </View>
   );
 }
@@ -232,7 +254,10 @@ function IngredientChip({
         {ing.ingredientName}
       </Text>
       {ing.amount > 0 && (
-        <Text style={[styles.ingChipAmount, missing && { color: colors.textTertiary }]}>
+        <Text style={[
+          required ? styles.ingChipAmountReq : styles.ingChipAmountOpt,
+          missing && { color: colors.textTertiary },
+        ]}>
           {ing.amount}{ing.unit ?? ''}
         </Text>
       )}
@@ -245,10 +270,38 @@ function IngredientChip({
   );
 }
 
-function StepCard({ step, last }: { step: RecipeStep; last: boolean }) {
+/**
+ * description 첫 줄(또는 첫 "." 전)을 step title로 추출.
+ * 백엔드에 별도 title 필드 없어서 클라에서 파싱 (변경 유예).
+ */
+function splitStepText(description: string): { title: string | null; body: string } {
+  if (!description) return { title: null, body: '' };
+  const trimmed = description.trim();
+  // 1) 줄바꿈 기준
+  const nlIdx = trimmed.indexOf('\n');
+  if (nlIdx > 0 && nlIdx <= 20) {
+    const head = trimmed.slice(0, nlIdx).trim();
+    const rest = trimmed.slice(nlIdx + 1).trim();
+    if (head && rest) return { title: head, body: rest };
+  }
+  // 2) 마침표+공백 기준 (첫 문장 길이가 ≤18자여야 타이틀 취급)
+  const dotMatch = trimmed.match(/^([^.!?\n]{2,18})[.!?]\s+(.+)$/s);
+  if (dotMatch) return { title: dotMatch[1], body: dotMatch[2] };
+  // 3) 실패 → 본문만
+  return { title: null, body: trimmed };
+}
+
+function StepCard({
+  step, last, onThumbPress,
+}: {
+  step: RecipeStep;
+  last: boolean;
+  onThumbPress: (uri: string) => void;
+}) {
   const isWait = step.stepType === 'WAIT';
   const stepImg = toAbsoluteImageUrl(step.imageUrl);
   const durationMin = step.durationSeconds ? Math.ceil(step.durationSeconds / 60) : 0;
+  const { title, body } = splitStepText(step.description);
 
   return (
     <View style={styles.stepRow}>
@@ -261,12 +314,28 @@ function StepCard({ step, last }: { step: RecipeStep; last: boolean }) {
 
       <View style={styles.stepCard}>
         {stepImg && (
-          <View style={styles.stepThumbWrap}>
+          <TouchableOpacity
+            style={styles.stepThumbWrap}
+            onPress={() => onThumbPress(stepImg)}
+            activeOpacity={0.85}
+          >
             <Image source={{ uri: stepImg }} style={styles.stepThumb} contentFit="cover" />
-          </View>
+            <View style={styles.zoomHint}>
+              <Svg width={10} height={10} viewBox="0 0 24 24">
+                <Path
+                  d="M15 3h6v6M14 10l7-7M9 21H3v-6M10 14l-7 7"
+                  stroke="#fff"
+                  strokeWidth={2.2}
+                  strokeLinecap="round"
+                  fill="none"
+                />
+              </Svg>
+            </View>
+          </TouchableOpacity>
         )}
         <View style={styles.stepBody}>
-          <Text style={styles.stepDesc}>{step.description}</Text>
+          {title && <Text style={styles.stepTitle}>{title}</Text>}
+          <Text style={styles.stepDesc}>{body}</Text>
           {durationMin > 0 && (
             <View style={[styles.timeTag, isWait && styles.timeTagWait]}>
               <Text style={{ fontSize: 10 }}>{isWait ? '⏱️' : '🔥'}</Text>
@@ -344,7 +413,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
     lineHeight: 34,
   },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaValue: {
     fontFamily: fontFamily.semibold,
@@ -438,10 +507,16 @@ const styles = StyleSheet.create({
   },
   ingChipTextReq: { color: '#fff' },
   ingChipTextOpt: { color: colors.textPrimary },
-  ingChipAmount: {
+  ingChipAmountReq: {
     fontFamily: fontFamily.medium,
     fontSize: 11,
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.75)',
+    marginLeft: 2,
+  },
+  ingChipAmountOpt: {
+    fontFamily: fontFamily.medium,
+    fontSize: 11,
+    color: colors.textTertiary,
     marginLeft: 2,
   },
   missTag: {
@@ -457,7 +532,6 @@ const styles = StyleSheet.create({
     color: colors.error,
   },
 
-  // Steps
   steps: { gap: 0 },
   stepRow: { flexDirection: 'row', gap: 10 },
   stepNumCol: { alignItems: 'center' },
@@ -492,14 +566,37 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     alignItems: 'flex-start',
   },
-  stepThumbWrap: { borderRadius: 10, overflow: 'hidden' },
-  stepThumb: { width: 72, height: 72 },
-  stepBody: { flex: 1, gap: 6 },
-  stepDesc: {
-    fontFamily: fontFamily.medium,
+  stepThumbWrap: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+    width: 80,
+    height: 80,
+  },
+  stepThumb: { width: 80, height: 80 },
+  zoomHint: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(31,22,18,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepBody: { flex: 1, gap: 5 },
+  stepTitle: {
+    fontFamily: fontFamily.bold,
     fontSize: 13,
     color: colors.textPrimary,
-    lineHeight: 19,
+    letterSpacing: -0.3,
+  },
+  stepDesc: {
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 18,
     letterSpacing: -0.2,
   },
   timeTag: {
@@ -509,8 +606,9 @@ const styles = StyleSheet.create({
     gap: 3,
     paddingVertical: 2,
     paddingHorizontal: 7,
-    borderRadius: 6,
+    borderRadius: 100,
     backgroundColor: colors.accentSoft,
+    marginTop: 2,
   },
   timeTagWait: { backgroundColor: '#FEF3C7' },
   timeTagText: {
@@ -526,14 +624,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 16,
-    paddingTop: 14,
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
+    paddingTop: 28,
   },
   cta: {
     height: 52,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
