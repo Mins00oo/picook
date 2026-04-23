@@ -26,20 +26,32 @@ export default function SetupScreen() {
   const router = useRouter();
   const { user, setUser } = useAuthStore();
   const insets = useSafeAreaInsets();
-  const [selectedChar, setSelectedChar] = useState<CharacterType>(user?.characterType ?? 'EGG');
+  const [selectedChar, setSelectedChar] = useState<CharacterType>(user?.characterType ?? 'MIN');
   const [nickname, setNickname] = useState(user?.displayName ?? '');
   const [focused, setFocused] = useState(false);
   const [saving, setSaving] = useState(false);
+  // 백엔드가 이미 사용 중이라고 거절한 닉네임. 그 이름 그대로일 때만 에러 표시.
+  const [takenName, setTakenName] = useState<string | null>(null);
 
-  const nicknameValid = nickname.trim().length >= 2 && nickname.trim().length <= 10;
-  const canSubmit = !!selectedChar && nicknameValid && !saving;
+  const trimmed = nickname.trim();
+  // 한글(완성형·자모)·영문·숫자·밑줄만 2~10자. 공백/이모지/특수문자 차단.
+  const NICK_REGEX = /^[가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9_]{2,10}$/;
+  const lengthValid = trimmed.length >= 2 && trimmed.length <= 10;
+  const formatValid = NICK_REGEX.test(trimmed);
+  const isCurrent = !!user?.displayName && trimmed === user.displayName.trim();
+  const isTaken = takenName != null && trimmed === takenName;
+  const canSubmit = !!selectedChar && formatValid && !saving && !isTaken;
+  const hasFormatError = lengthValid && !formatValid;
 
   const helperText = useMemo(() => {
     if (!nickname) return '2~10자로 입력해주세요';
-    if (nickname.trim().length < 2) return '2자 이상 입력해주세요';
-    if (nickname.trim().length > 10) return '10자 이내로 입력해주세요';
-    return '사용할 수 있는 닉네임이에요';
-  }, [nickname]);
+    if (trimmed.length < 2) return '2자 이상 입력해주세요';
+    if (trimmed.length > 10) return '10자 이내로 입력해주세요';
+    if (hasFormatError) return '한글·영문·숫자·밑줄(_)만 사용할 수 있어요';
+    if (isTaken) return '이미 사용 중인 닉네임이에요';
+    if (isCurrent) return '현재 사용 중인 닉네임이에요';
+    return '이 이름으로 시작해볼까요?';
+  }, [nickname, trimmed, hasFormatError, isTaken, isCurrent]);
 
   const handleComplete = async () => {
     if (!canSubmit) return;
@@ -53,8 +65,15 @@ export default function SetupScreen() {
       await SecureStore.setItemAsync(Config.USER_KEY, JSON.stringify(updatedUser));
       setUser(updatedUser);
       router.replace('/(tabs)/home');
-    } catch {
-      Alert.alert('오류', '설정 저장에 실패했습니다. 다시 시도해주세요.');
+    } catch (e: any) {
+      const code = e?.response?.data?.error?.code;
+      if (code === 'DISPLAY_NAME_TAKEN') {
+        // 백엔드 uq_users_display_name 제약 충돌 → 이 이름 안 됨
+        setTakenName(trimmed);
+        // helperText가 '이미 사용 중인 닉네임이에요'로 바뀌고 CTA 비활성화됨
+      } else {
+        Alert.alert('오류', '설정 저장에 실패했습니다. 다시 시도해주세요.');
+      }
     } finally {
       setSaving(false);
     }
@@ -87,7 +106,9 @@ export default function SetupScreen() {
             <Text style={styles.headTitle}>
               시작해볼까요?{'\n'}나만의 <Text style={styles.headAccent}>친구</Text>를 골라주세요.
             </Text>
-            <Text style={styles.headDesc}>언제든 마이페이지에서 바꿀 수 있어요.</Text>
+            <Text style={styles.headDesc}>
+              캐릭터와 닉네임 모두 언제든 마이페이지에서 바꿀 수 있어요.
+            </Text>
           </View>
 
           {/* 캐릭터 셀렉터 */}
@@ -133,14 +154,27 @@ export default function SetupScreen() {
           <View style={styles.nickArea}>
             <View style={styles.selectorLabelRow}>
               <Text style={styles.fieldLabel}>닉네임</Text>
-              {nicknameValid && (
-                <Text style={[styles.selName, { color: colors.success }]}>사용 가능</Text>
-              )}
+              {isTaken ? (
+                <Text style={[styles.selName, { color: colors.error }]}>사용 중</Text>
+              ) : hasFormatError ? (
+                <Text style={[styles.selName, { color: colors.error }]}>허용되지 않는 문자</Text>
+              ) : isCurrent ? (
+                <Text style={[styles.selName, { color: colors.textTertiary }]}>현재 사용 중</Text>
+              ) : null}
             </View>
-            <View style={[styles.nickField, focused && styles.nickFieldFocus]}>
+            <View
+              style={[
+                styles.nickField,
+                focused && styles.nickFieldFocus,
+                (isTaken || hasFormatError) && styles.nickFieldError,
+              ]}
+            >
               <TextInput
                 value={nickname}
-                onChangeText={setNickname}
+                onChangeText={(t) => {
+                  setNickname(t);
+                  // 다른 이름으로 수정되면 takenName 매칭 자동 해제 → isTaken false
+                }}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
                 placeholder="닉네임을 입력해주세요"
@@ -151,41 +185,32 @@ export default function SetupScreen() {
                 autoCapitalize="none"
               />
               <Text style={styles.counter}>{nickname.length}/10</Text>
-              {nicknameValid && (
+              {(isTaken || hasFormatError) && (
                 <View style={styles.nickCheck}>
-                  <Svg width={16} height={16} viewBox="0 0 24 24">
-                    <Path
-                      d="M5 12l5 5L20 7"
-                      stroke={colors.success}
-                      strokeWidth={3}
-                      strokeLinecap="round"
-                      fill="none"
-                    />
+                  <Svg width={14} height={14} viewBox="0 0 24 24">
+                    <Path d="M6 6l12 12M6 18L18 6" stroke={colors.error} strokeWidth={2.5} strokeLinecap="round" />
                   </Svg>
                 </View>
               )}
             </View>
             <View style={styles.helperRow}>
-              {nicknameValid && (
+              {(isTaken || hasFormatError) && (
                 <Svg width={11} height={11} viewBox="0 0 24 24" style={{ marginRight: 4 }}>
-                  <Path
-                    d="M5 12l5 5L20 7"
-                    stroke={colors.success}
-                    strokeWidth={2.5}
-                    strokeLinecap="round"
-                    fill="none"
-                  />
+                  <Path d="M6 6l12 12M6 18L18 6" stroke={colors.error} strokeWidth={2.5} strokeLinecap="round" />
                 </Svg>
               )}
               <Text
                 style={[
                   styles.helper,
-                  nicknameValid && { color: colors.success, fontFamily: fontFamily.semibold },
+                  (isTaken || hasFormatError) && { color: colors.error, fontFamily: fontFamily.semibold },
                 ]}
               >
                 {helperText}
               </Text>
             </View>
+            <Text style={styles.nickFootnote}>
+              닉네임은 언제든 마이페이지에서 바꿀 수 있어요
+            </Text>
           </View>
         </ScrollView>
 
@@ -350,6 +375,9 @@ const styles = StyleSheet.create({
   nickFieldFocus: {
     borderColor: colors.primary,
   },
+  nickFieldError: {
+    borderColor: colors.error,
+  },
   nickInput: {
     flex: 1,
     fontFamily: fontFamily.semibold,
@@ -379,6 +407,14 @@ const styles = StyleSheet.create({
     ...typography.meta,
     fontSize: 11.5,
     color: colors.textTertiary,
+  },
+  nickFootnote: {
+    ...typography.meta,
+    fontSize: 10.5,
+    color: colors.textTertiary,
+    marginTop: 10,
+    paddingLeft: 4,
+    fontFamily: fontFamily.medium,
   },
   // Bottom CTA
   bottom: {
