@@ -17,7 +17,7 @@ export default function ProfileScreen() {
   const { user, setUser } = useAuthStore();
   const [nickname, setNickname] = useState(user?.displayName ?? '');
   const [characterType, setCharacterType] = useState<CharacterType>(
-    (user?.characterType ?? 'EGG') as CharacterType,
+    (user?.characterType ?? 'MIN') as CharacterType,
   );
   const [saving, setSaving] = useState(false);
 

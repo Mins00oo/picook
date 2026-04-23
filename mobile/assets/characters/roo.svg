@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100">
+  <ellipse cx="50" cy="97" rx="22" ry="2.5" fill="rgba(31,22,18,0.18)"/>
+  <rect x="41" y="80" width="7" height="14" rx="3" fill="#5B5F6B"/>
+  <rect x="52" y="80" width="7" height="14" rx="3" fill="#5B5F6B"/>
+  <ellipse cx="44.5" cy="95" rx="7.5" ry="3.2" fill="#FFFFFF" stroke="#D9CFC2" stroke-width="0.7"/>
+  <ellipse cx="55.5" cy="95" rx="7.5" ry="3.2" fill="#FFFFFF" stroke="#D9CFC2" stroke-width="0.7"/>
+  <line x1="37" y1="96.5" x2="52" y2="96.5" stroke="#FF6B4A" stroke-width="0.8"/>
+  <line x1="48" y1="96.5" x2="63" y2="96.5" stroke="#FF6B4A" stroke-width="0.8"/>
+  <rect x="36" y="58" width="28" height="26" rx="7" fill="#FF8847"/>
+  <line x1="36" y1="66" x2="64" y2="66" stroke="#FFFFFF" stroke-width="1.6"/>
+  <line x1="36" y1="72" x2="64" y2="72" stroke="#FFFFFF" stroke-width="1.6"/>
+  <line x1="36" y1="78" x2="64" y2="78" stroke="#FFFFFF" stroke-width="1.6"/>
+  <rect x="46" y="51" width="8" height="8" fill="#E8C9A5"/>
+  <path d="M 70 22 Q 82 18 84 30 Q 86 40 78 42 Q 74 36 72 28 Z" fill="#C4642A"/>
+  <rect x="70" y="21" width="4.5" height="2.8" rx="1" fill="#FF6B4A"/>
+  <ellipse cx="50" cy="32" rx="22" ry="25" fill="#E8C9A5" stroke="#A87E58" stroke-width="0.8" stroke-opacity="0.5"/>
+  <ellipse cx="28.5" cy="34" rx="2.8" ry="4" fill="#E8C9A5" stroke="#A87E58" stroke-width="0.6" stroke-opacity="0.5"/>
+  <ellipse cx="71.5" cy="34" rx="2.8" ry="4" fill="#E8C9A5" stroke="#A87E58" stroke-width="0.6" stroke-opacity="0.5"/>
+  <path d="M 28 22 Q 28 10 38 6 Q 50 2 62 6 Q 72 10 72 22 L 72 32 Q 70 28 66 26 L 60 24 L 40 24 L 34 26 Q 30 28 28 32 Z" fill="#C4642A"/>
+  <path d="M 42 18 Q 44 12 46 16" stroke="#8B4513" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+  <path d="M 55 16 Q 58 12 60 16" stroke="#8B4513" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+  <ellipse cx="36" cy="40" rx="4.5" ry="3" fill="#FF9B85" opacity="0.75"/>
+  <ellipse cx="64" cy="40" rx="4.5" ry="3" fill="#FF9B85" opacity="0.75"/>
+  <circle cx="43" cy="35" r="2.1" fill="#1F1612"/>
+  <circle cx="57" cy="35" r="2.1" fill="#1F1612"/>
+  <circle cx="43.6" cy="34.3" r="0.8" fill="#FFFFFF"/>
+  <circle cx="57.6" cy="34.3" r="0.8" fill="#FFFFFF"/>
+  <path d="M 65 31 L 65.5 32.3 L 67 32.6 L 65.5 33 L 65 34.3 L 64.5 33 L 63 32.6 L 64.5 32.3 Z" fill="#FFD66E"/>
+  <path d="M 44 43 Q 50 48 56 43" stroke="#3A2418" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <path d="M 47 45 L 53 45" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M 36 64 Q 28 70 28 80" stroke="#FF8847" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <circle cx="28" cy="81" r="4" fill="#E8C9A5" stroke="#A87E58" stroke-width="0.6"/>
+  <path d="M 64 64 Q 72 70 72 80" stroke="#FF8847" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <circle cx="72" cy="81" r="4" fill="#E8C9A5" stroke="#A87E58" stroke-width="0.6"/>
+</svg>
