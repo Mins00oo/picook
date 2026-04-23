@@ -24,6 +24,13 @@ public class Ingredient {
     @Column(name = "icon_url")
     private String iconUrl;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subcategory_id")
+    private IngredientSubcategory subcategory;
+
+    @Column(name = "emoji", length = 8)
+    private String emoji;
+
     @BatchSize(size = 100)
     @OneToMany(mappedBy = "ingredient", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<IngredientSynonym> synonyms = new ArrayList<>();
@@ -39,6 +46,12 @@ public class Ingredient {
     public Ingredient(String name, IngredientCategory category) {
         this.name = name;
         this.category = category;
+    }
+
+    public Ingredient(String name, IngredientCategory category, IngredientSubcategory subcategory, String emoji) {
+        this(name, category);
+        this.subcategory = subcategory;
+        this.emoji = emoji;
     }
 
     @PrePersist
@@ -72,6 +85,12 @@ public class Ingredient {
 
     public String getIconUrl() { return iconUrl; }
     public void setIconUrl(String iconUrl) { this.iconUrl = iconUrl; }
+
+    public IngredientSubcategory getSubcategory() { return subcategory; }
+    public void setSubcategory(IngredientSubcategory subcategory) { this.subcategory = subcategory; }
+
+    public String getEmoji() { return emoji; }
+    public void setEmoji(String emoji) { this.emoji = emoji; }
 
     public List<IngredientSynonym> getSynonyms() { return synonyms; }
 

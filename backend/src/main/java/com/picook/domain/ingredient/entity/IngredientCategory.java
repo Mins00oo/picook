@@ -17,6 +17,9 @@ public class IngredientCategory {
     @Column(name = "sort_order")
     private Integer sortOrder = 0;
 
+    @Column(length = 8)
+    private String emoji;
+
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 
@@ -41,6 +44,9 @@ public class IngredientCategory {
 
     public Integer getSortOrder() { return sortOrder; }
     public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
+
+    public String getEmoji() { return emoji; }
+    public void setEmoji(String emoji) { this.emoji = emoji; }
 
     public Instant getCreatedAt() { return createdAt; }
 }
