@@ -5,43 +5,54 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  FlatList,
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { colors, shadow, fontFamily } from '../../../src/constants/theme';
 import { PicookLogo } from '../../../src/components/brand/PicookLogo';
-import { Character } from '../../../src/components/brand/Character';
+import { CharacterOutfit } from '../../../src/components/brand/CharacterOutfit';
 import { EggIcon } from '../../../src/components/points/EggIcon';
 import { DailyCheckModal } from '../../../src/components/attendance/DailyCheckModal';
 import { useAuthStore } from '../../../src/stores/authStore';
-import { getLevelForCount } from '../../../src/constants/levels';
+import { getLevelForExp } from '../../../src/constants/levels';
 import { getCharacterName } from '../../../src/constants/characters';
 import { useAttendanceToday, useCheckInMutation } from '../../../src/hooks/useAttendance';
 import { usePointBalance } from '../../../src/hooks/usePoints';
-
-function getTimeGreeting(): { label: string; kicker: string; emoji: string } {
-  const h = new Date().getHours();
-  if (h < 10) return { label: '아침이네요!', kicker: '아침', emoji: '🌅' };
-  if (h < 15) return { label: '점심이네요!', kicker: '점심', emoji: '🍜' };
-  if (h < 18) return { label: '간식시간이에요!', kicker: '오후', emoji: '☕' };
-  if (h < 22) return { label: '저녁이네요!', kicker: '저녁', emoji: '🍲' };
-  return { label: '야식이네요!', kicker: '야식', emoji: '🌙' };
-}
+import { useTimeRecipes } from '../../../src/hooks/useTimeRecipes';
+import { useOutfitMe, useOutfitCatalog, useEquippedImages } from '../../../src/hooks/useOutfits';
+import { useFridge } from '../../../src/hooks/useFridge';
+import { getCurrentPeriod, TIME_COPY } from '../../../src/utils/timePeriod';
+import { formatCookTime, formatDifficulty, toAbsoluteImageUrl } from '../../../src/utils/format';
+import type { RecipeSummary } from '../../../src/types/recipe';
 
 export default function HomeScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const level = getLevelForCount(user?.completedCookingCount ?? 0);
-  const greeting = useMemo(getTimeGreeting, []);
-  const characterType = user?.characterType ?? 'EGG';
+  const totalExp = user?.totalExp ?? 0;
+  const level = getLevelForExp(totalExp);
+  const period = useMemo(() => getCurrentPeriod(), []);
+  const copy = TIME_COPY[period];
+  const characterType = user?.characterType ?? 'MIN';
+
+  const { data: outfitMe } = useOutfitMe();
+  const { data: catalog } = useOutfitCatalog();
+  const equippedImages = useEquippedImages(outfitMe?.equipped, catalog);
 
   const { data: balance = 0 } = usePointBalance();
   const { data: todayData } = useAttendanceToday(!!user);
   const checkInMutation = useCheckInMutation();
+  const { data: timeRecipes, isLoading: timeLoading, error: timeError } = useTimeRecipes(period);
+  const { data: fridge } = useFridge();
+  const fridgeCount = fridge?.length ?? 0;
   const [modalOpen, setModalOpen] = useState(false);
+
+  const notReady = () =>
+    Alert.alert('준비 중', '곧 만나요. 다음 업데이트를 기대해주세요 :)');
 
   // 오늘 미출석이면 모달 자동 오픈 (앱 세션당 최대 1회)
   useEffect(() => {
@@ -65,9 +76,6 @@ export default function HomeScreen() {
     }
   };
 
-  const notReady = () =>
-    Alert.alert('준비 중', '곧 만나요. 다음 업데이트를 기대해주세요 :)');
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -90,14 +98,18 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.shopBtn}
-              onPress={() => router.push('/(tabs)/mypage/attendance')}
+              onPress={() => router.push('/(tabs)/mypage/shop')}
               activeOpacity={0.85}
             >
               <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                <Rect x={3} y={5} width={18} height={16} rx={2} stroke={colors.textPrimary} strokeWidth={1.7} />
-                <Path d="M3 10h18" stroke={colors.textPrimary} strokeWidth={1.7} strokeLinecap="round" />
-                <Path d="M8 3v4M16 3v4" stroke={colors.textPrimary} strokeWidth={1.7} strokeLinecap="round" />
-                <Path d="M8 15l2 2 4-4" stroke={colors.primary} strokeWidth={2} strokeLinecap="round" fill="none" />
+                <Path
+                  d="M3 9l2-5h14l2 5M3 9v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9M3 9h18M9 13a3 3 0 0 0 6 0"
+                  stroke={colors.textPrimary}
+                  strokeWidth={1.7}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
               </Svg>
             </TouchableOpacity>
           </View>
@@ -107,11 +119,15 @@ export default function HomeScreen() {
         <View style={styles.charWidget}>
           <View style={styles.charArtWrap}>
             <View style={styles.blob} />
-            <Character type={characterType} size={76} withHat />
+            <CharacterOutfit
+              characterType={characterType}
+              equipped={equippedImages}
+              size={76}
+            />
           </View>
           <View style={styles.charTextArea}>
             <Text style={styles.charGreet}>
-              {greeting.label}{' '}
+              {copy.greetingKicker}!{' '}
               <Text style={styles.charGreetAccent}>오늘</Text>은 뭘 만들어볼까요?
             </Text>
             <View style={styles.charMetaRow}>
@@ -174,8 +190,8 @@ export default function HomeScreen() {
             bg={colors.mint}
             stroke="#2E5D2A"
             label="내 냉장고"
-            badge="8"
-            onPress={notReady}
+            badge={fridgeCount > 0 ? String(fridgeCount) : undefined}
+            onPress={() => router.push('/(tabs)/fridge')}
             iconType="fridge"
           />
           <MenuItem
@@ -196,7 +212,7 @@ export default function HomeScreen() {
             bg={colors.blue}
             stroke="#2F4E7A"
             label="찜한 요리"
-            onPress={() => router.push('/(tabs)/favorites')}
+            onPress={() => router.push('/(tabs)/mypage/favorites')}
             iconType="save"
           />
         </View>
@@ -205,10 +221,10 @@ export default function HomeScreen() {
         <View style={styles.timeSection}>
           <View style={styles.secHead}>
             <View style={styles.secHeadLeft}>
-              <Text style={styles.secTitle}>{greeting.kicker}에 어울리는 한 끼</Text>
+              <Text style={styles.secTitle}>{copy.sectionTitle}</Text>
               <View style={styles.timePill}>
                 <Text style={styles.timePillText}>
-                  {greeting.emoji} {greeting.kicker}
+                  {copy.sectionEmoji} {copy.sectionKicker}
                 </Text>
               </View>
             </View>
@@ -217,18 +233,13 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <View style={styles.emptyRec}>
-            <Text style={styles.emptyRecEmoji}>🍲</Text>
-            <Text style={styles.emptyRecTitle}>맛있는 추천을 준비 중이에요</Text>
-            <Text style={styles.emptyRecDesc}>곧 만나요 — 재료를 골라 직접 추천받아볼까요?</Text>
-            <TouchableOpacity
-              style={styles.emptyRecBtn}
-              onPress={() => router.push('/(tabs)/home/select')}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.emptyRecBtnText}>재료 고르기</Text>
-            </TouchableOpacity>
-          </View>
+          <TimeRecipeList
+            recipes={timeRecipes ?? []}
+            loading={timeLoading}
+            errored={!!timeError}
+            onRecipePress={(id) => router.push(`/recipe/${id}` as any)}
+            onBrowse={() => router.push('/(tabs)/home/select')}
+          />
         </View>
       </ScrollView>
 
@@ -243,6 +254,82 @@ export default function HomeScreen() {
         onClose={() => setModalOpen(false)}
       />
     </SafeAreaView>
+  );
+}
+
+interface TimeRecipeListProps {
+  recipes: RecipeSummary[];
+  loading: boolean;
+  errored: boolean;
+  onRecipePress: (id: number) => void;
+  onBrowse: () => void;
+}
+
+function TimeRecipeList({ recipes, loading, errored, onRecipePress, onBrowse }: TimeRecipeListProps) {
+  if (loading) {
+    return (
+      <View style={styles.trSkeletonRow}>
+        {[0, 1, 2].map((i) => (
+          <View key={i} style={styles.trSkeletonCard} />
+        ))}
+      </View>
+    );
+  }
+  if (errored) {
+    return (
+      <View style={styles.emptyRec}>
+        <Text style={styles.emptyRecEmoji}>⚠️</Text>
+        <Text style={styles.emptyRecTitle}>추천을 불러오지 못했어요</Text>
+        <Text style={styles.emptyRecDesc}>잠시 후 다시 시도해주세요</Text>
+      </View>
+    );
+  }
+  if (recipes.length === 0) {
+    return (
+      <View style={styles.emptyRec}>
+        <Text style={styles.emptyRecEmoji}>🍲</Text>
+        <Text style={styles.emptyRecTitle}>준비된 추천이 없어요</Text>
+        <Text style={styles.emptyRecDesc}>재료를 골라 직접 추천받아볼까요?</Text>
+        <TouchableOpacity
+          style={styles.emptyRecBtn}
+          onPress={onBrowse}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.emptyRecBtnText}>재료 고르기</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  return (
+    <FlatList
+      data={recipes.slice(0, 5)}
+      keyExtractor={(r) => String(r.id)}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.trListContent}
+      renderItem={({ item }) => (
+        <TimeRecipeCard recipe={item} onPress={() => onRecipePress(item.id)} />
+      )}
+    />
+  );
+}
+
+function TimeRecipeCard({ recipe, onPress }: { recipe: RecipeSummary; onPress: () => void }) {
+  const thumb = toAbsoluteImageUrl(recipe.thumbnailUrl ?? recipe.imageUrl);
+  return (
+    <TouchableOpacity style={styles.trCard} onPress={onPress} activeOpacity={0.85}>
+      {thumb ? (
+        <Image source={{ uri: thumb }} style={styles.trThumb} contentFit="cover" />
+      ) : (
+        <View style={[styles.trThumb, styles.trThumbPlaceholder]}>
+          <Text style={{ fontSize: 28 }}>🍽️</Text>
+        </View>
+      )}
+      <Text style={styles.trTitle} numberOfLines={1}>{recipe.title}</Text>
+      <Text style={styles.trMeta} numberOfLines={1}>
+        {formatCookTime(recipe.cookingTimeMinutes)} · {formatDifficulty(recipe.difficulty)}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
@@ -628,5 +715,44 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#FFFFFF',
     letterSpacing: -0.2,
+  },
+
+  // Time recipe list
+  trListContent: { paddingHorizontal: 16, gap: 10 },
+  trCard: {
+    width: 150,
+    gap: 6,
+  },
+  trThumb: {
+    width: 150,
+    aspectRatio: 1.25,
+    borderRadius: 14,
+    backgroundColor: colors.lineSoft,
+  },
+  trThumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  trTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: 13,
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
+    marginTop: 2,
+  },
+  trMeta: {
+    fontFamily: fontFamily.medium,
+    fontSize: 11,
+    color: colors.textSecondary,
+    letterSpacing: -0.1,
+  },
+  trSkeletonRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 16,
+  },
+  trSkeletonCard: {
+    width: 150,
+    aspectRatio: 1.25,
+    borderRadius: 14,
+    backgroundColor: colors.lineSoft,
+    opacity: 0.6,
   },
 });
