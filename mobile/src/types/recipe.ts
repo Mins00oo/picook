@@ -28,6 +28,7 @@ export interface Recipe {
   difficulty: string;
   cookingTimeMinutes: number;
   servings: number;
+  calories: number | null;       // v1.0 리뉴얼: 백엔드 Recipe.calories
   imageUrl: string | null;
   thumbnailUrl: string | null;
   tips: string | null;

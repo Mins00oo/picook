@@ -1,5 +1,6 @@
 import api from './client';
 import type { ApiResponse } from '../types/api';
+import type { Outfit } from '../types/outfit';
 
 export interface AttendanceToday {
   checkDate: string;        // yyyy-MM-dd
@@ -12,7 +13,12 @@ export interface CheckInResult {
   checkDate: string;
   streakDays: number;
   pointsEarned: number;
+  expEarned: number;
   pointBalance: number;
+  totalExp: number;
+  leveledUp: boolean;
+  newLevel: number | null;
+  grantedOutfits: Outfit[];
 }
 
 export interface MonthHistory {

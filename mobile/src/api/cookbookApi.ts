@@ -1,5 +1,6 @@
 import api from './client';
 import type { ApiResponse } from '../types/api';
+import type { Outfit } from '../types/outfit';
 
 export interface CookbookEntry {
   id: number;
@@ -14,7 +15,18 @@ export interface CookbookEntry {
   photoUrls: string[];
   cookedAt: string;
   createdAt: string;
-  pointsEarned: number | null; // set on create response only
+  // 응답 전용(생성 직후) 필드들
+  pointsEarned: number | null;
+  expEarned: number | null;
+  sequenceNumber: number | null; // 유저별 N번째 기록 (사진 있는 entry 기준)
+  leveledUp: boolean;
+  newLevel: number | null;
+  grantedOutfits: Outfit[];
+}
+
+export interface CookbookMonthlyStats {
+  yearMonth: string; // yyyy-MM
+  monthlyCount: number;
 }
 
 export interface CookbookEntryPage {
@@ -67,4 +79,9 @@ export const cookbookApi = {
 
   getDetail: (id: number) =>
     api.get<ApiResponse<CookbookEntry>>(`/api/v1/cookbook/entries/${id}`),
+
+  stats: (yearMonth?: string) =>
+    api.get<ApiResponse<CookbookMonthlyStats>>('/api/v1/cookbook/stats', {
+      params: yearMonth ? { yearMonth } : undefined,
+    }),
 };
