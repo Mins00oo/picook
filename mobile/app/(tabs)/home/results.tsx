@@ -24,6 +24,7 @@ import {
 } from '../../../src/constants/theme';
 import { Loading } from '../../../src/components/common/Loading';
 import { ErrorScreen } from '../../../src/components/common/ErrorScreen';
+import { SlideDrawer } from '../../../src/components/common/SlideDrawer';
 import { recipeApi } from '../../../src/api/recipeApi';
 import { ingredientApi } from '../../../src/api/ingredientApi';
 import { useSelectionStore } from '../../../src/stores/selectionStore';
@@ -73,8 +74,8 @@ export default function ResultsScreen() {
   } = useFilterStore();
   const [sortKey, setSortKey] = useState<SortKey>('matchRate');
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false);
-  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
-  const [sortSheetOpen, setSortSheetOpen] = useState(false);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [presetInstant, setPresetInstant] = useState(false);
 
   const { data: rawRecipes, isLoading, error, refetch } = useQuery({
     queryKey: ['recommend', selectedIds, maxCookTimeMinutes, difficulty, servings],
@@ -122,6 +123,19 @@ export default function ResultsScreen() {
 
   const activeFilterCount = [maxCookTimeMinutes, difficulty, servings].filter((v) => v !== null && v !== undefined).length;
 
+  // 프리셋: "바로 가능" 은 클라 사이드 (matchingRate >= 100)
+  const instantCount = useMemo(
+    () => sortedRecipes.filter((r) => r.matchingRate >= 100).length,
+    [sortedRecipes],
+  );
+  const displayedRecipes = presetInstant
+    ? sortedRecipes.filter((r) => r.matchingRate >= 100)
+    : sortedRecipes;
+
+  const isAllPreset = !presetInstant && activeFilterCount === 0;
+  const isTime15Preset = maxCookTimeMinutes === 15;
+  const isEasyPreset = difficulty === 'EASY';
+
   if (selectedIds.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -168,19 +182,45 @@ export default function ResultsScreen() {
         </Svg>
       </TouchableOpacity>
 
-      {/* 필터 칩 */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.chipRow}
-        contentContainerStyle={styles.chipRowContent}
-      >
-        <TouchableOpacity
-          style={[styles.chip, activeFilterCount > 0 && styles.chipActive]}
-          onPress={() => setFilterSheetOpen(true)}
-          activeOpacity={0.8}
+      {/* 프리셋 칩 + 고급 필터 */}
+      <View style={styles.presetRowWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.presetRowContent}
         >
-          <Svg width={12} height={12} viewBox="0 0 24 24">
+          <PresetChip
+            label="전체"
+            count={sortedRecipes.length}
+            active={isAllPreset}
+            onPress={() => {
+              setPresetInstant(false);
+              reset();
+            }}
+          />
+          <PresetChip
+            label="바로 가능"
+            count={instantCount}
+            active={presetInstant}
+            onPress={() => setPresetInstant((v) => !v)}
+          />
+          <PresetChip
+            label="15분 이내"
+            active={isTime15Preset}
+            onPress={() => setMaxCookTime(isTime15Preset ? null : 15)}
+          />
+          <PresetChip
+            label="쉬움"
+            active={isEasyPreset}
+            onPress={() => setDifficulty(isEasyPreset ? null : 'EASY')}
+          />
+        </ScrollView>
+        <TouchableOpacity
+          style={[styles.filterIconBtn, activeFilterCount > 0 && styles.filterIconBtnActive]}
+          onPress={() => setFilterDrawerOpen(true)}
+          activeOpacity={0.7}
+        >
+          <Svg width={16} height={16} viewBox="0 0 24 24">
             <Path
               d="M3 6h18M6 12h12M10 18h4"
               stroke={activeFilterCount > 0 ? '#fff' : colors.textPrimary}
@@ -188,46 +228,15 @@ export default function ResultsScreen() {
               strokeLinecap="round"
             />
           </Svg>
-          <Text style={[styles.chipText, activeFilterCount > 0 && styles.chipTextActive]}>
-            필터{activeFilterCount > 0 ? ` ${activeFilterCount}` : ''}
-          </Text>
-        </TouchableOpacity>
-
-        <FilterChip
-          label={maxCookTimeMinutes ? `${maxCookTimeMinutes}분 이내` : '시간'}
-          active={maxCookTimeMinutes !== null}
-          onPress={() => setFilterSheetOpen(true)}
-        />
-        <FilterChip
-          label={difficulty ? formatDifficulty(difficulty) : '난이도'}
-          active={difficulty !== null}
-          onPress={() => setFilterSheetOpen(true)}
-        />
-        <FilterChip
-          label={servings ? `${servings}인분` : '인분'}
-          active={servings !== null}
-          onPress={() => setFilterSheetOpen(true)}
-        />
-      </ScrollView>
-
-      {/* 카운트 + 정렬 */}
-      <View style={styles.countRow}>
-        <Text style={styles.countText}>
-          <Text style={styles.countNum}>{sortedRecipes.length}</Text>개 요리
-        </Text>
-        <TouchableOpacity
-          style={styles.sortBtn}
-          onPress={() => setSortSheetOpen(true)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.sortText}>{SORT_LABELS[sortKey]}</Text>
-          <Svg width={11} height={11} viewBox="0 0 24 24">
-            <Path d="M6 9l6 6 6-6" stroke={colors.textSecondary} strokeWidth={2} strokeLinecap="round" fill="none" />
-          </Svg>
+          {activeFilterCount > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
-      {sortedRecipes.length === 0 ? (
+      {displayedRecipes.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyEmoji}>😅</Text>
           <Text style={styles.emptyTitle}>맞는 레시피가 없어요</Text>
@@ -235,14 +244,14 @@ export default function ResultsScreen() {
         </View>
       ) : (
         <FlatList
-          data={sortedRecipes}
+          data={displayedRecipes}
           keyExtractor={(r) => String(r.id)}
           renderItem={({ item }) => (
             <RecipeResultCard
               recipe={item}
               onPress={() =>
                 router.push({
-                  pathname: `/(tabs)/recipe/${item.id}`,
+                  pathname: `/recipe/${item.id}`,
                   params: item.missingIngredients?.length
                     ? { missingIds: item.missingIngredients.map((i) => i.id).join(',') }
                     : undefined,
@@ -267,27 +276,22 @@ export default function ResultsScreen() {
         }}
       />
 
-      {/* 필터 바텀시트 */}
-      <FilterSheet
-        visible={filterSheetOpen}
-        onClose={() => setFilterSheetOpen(false)}
+      {/* 고급 필터 + 정렬 — 오른쪽 슬라이드 드로어 */}
+      <FilterDrawer
+        visible={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
         time={maxCookTimeMinutes}
         diff={difficulty}
         servings={servings}
+        sortKey={sortKey}
         onTimeChange={setMaxCookTime}
         onDiffChange={setDifficulty}
         onServingsChange={setServings}
-        onReset={reset}
-      />
-
-      {/* 정렬 바텀시트 */}
-      <SortSheet
-        visible={sortSheetOpen}
-        onClose={() => setSortSheetOpen(false)}
-        current={sortKey}
-        onChange={(k) => {
-          setSortKey(k);
-          setSortSheetOpen(false);
+        onSortChange={setSortKey}
+        onReset={() => {
+          reset();
+          setPresetInstant(false);
+          setSortKey('matchRate');
         }}
       />
     </SafeAreaView>
@@ -318,15 +322,20 @@ function NavBar({ count, onBack }: { count: number; onBack: () => void }) {
   );
 }
 
-// ---------- Filter chip ----------
-function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+// ---------- Preset chip ----------
+function PresetChip({
+  label, count, active, onPress,
+}: { label: string; count?: number; active: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity
-      style={[styles.chip, active && styles.chipActive]}
+      style={[styles.presetChip, active && styles.presetChipActive]}
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+      <Text style={[styles.presetChipText, active && styles.presetChipTextActive]}>{label}</Text>
+      {count !== undefined && (
+        <Text style={[styles.presetChipCount, active && styles.presetChipCountActive]}>{count}</Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -522,84 +531,91 @@ function IngredientSummarySheet({ visible, onClose, ingredients, categories, onE
   );
 }
 
-// ---------- Filter Sheet ----------
-interface FilterSheetProps {
+// ---------- Filter Drawer (고급 필터 + 정렬) ----------
+interface FilterDrawerProps {
   visible: boolean;
   onClose: () => void;
   time: number | null;
   diff: Difficulty | null;
   servings: number | null;
+  sortKey: SortKey;
   onTimeChange: (v: number | null) => void;
   onDiffChange: (v: Difficulty | null) => void;
   onServingsChange: (v: number | null) => void;
+  onSortChange: (k: SortKey) => void;
   onReset: () => void;
 }
 
-function FilterSheet({
-  visible, onClose, time, diff, servings,
-  onTimeChange, onDiffChange, onServingsChange, onReset,
-}: FilterSheetProps) {
+function FilterDrawer({
+  visible, onClose, time, diff, servings, sortKey,
+  onTimeChange, onDiffChange, onServingsChange, onSortChange, onReset,
+}: FilterDrawerProps) {
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.sheetBackdrop}>
-        <Pressable style={styles.scrim} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.sheetHandle} />
-          <View style={[styles.sheetHead, { borderBottomColor: colors.line }]}>
-            <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>필터</Text>
-            <TouchableOpacity style={[styles.sheetClose, { backgroundColor: colors.line }]} onPress={onClose}>
-              <Svg width={14} height={14} viewBox="0 0 24 24">
-                <Path d="M6 6l12 12M6 18l12-12" stroke={colors.textPrimary} strokeWidth={2} strokeLinecap="round" />
-              </Svg>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 22, paddingTop: 8 }}>
-            <FilterGroup label="조리 시간">
-              {TIME_OPTIONS.map((o) => (
-                <OptionPill
-                  key={String(o.value)}
-                  active={time === o.value}
-                  label={o.label}
-                  onPress={() => onTimeChange(o.value)}
-                />
-              ))}
-            </FilterGroup>
-
-            <FilterGroup label="난이도">
-              {DIFF_OPTIONS.map((o) => (
-                <OptionPill
-                  key={String(o.value)}
-                  active={diff === o.value}
-                  label={o.label}
-                  onPress={() => onDiffChange(o.value)}
-                />
-              ))}
-            </FilterGroup>
-
-            <FilterGroup label="인분">
-              {SERVING_OPTIONS.map((o) => (
-                <OptionPill
-                  key={String(o.value)}
-                  active={servings === o.value}
-                  label={o.label}
-                  onPress={() => onServingsChange(o.value)}
-                />
-              ))}
-            </FilterGroup>
-          </ScrollView>
-
-          <View style={[styles.sheetBottom, { backgroundColor: colors.surface, borderTopColor: colors.line, flexDirection: 'row', gap: 8 }]}>
-            <TouchableOpacity style={styles.resetBtn} onPress={onReset} activeOpacity={0.7}>
-              <Text style={styles.resetBtnText}>초기화</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.editBtn, { flex: 1, backgroundColor: colors.primary }]} onPress={onClose} activeOpacity={0.85}>
-              <Text style={styles.editBtnText}>결과 보기</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+    <SlideDrawer visible={visible} onClose={onClose} width="86%" side="right">
+      <View style={styles.drawerHead}>
+        <Text style={styles.drawerTitle}>고급 필터</Text>
+        <TouchableOpacity style={styles.drawerCloseBtn} onPress={onClose} hitSlop={8}>
+          <Svg width={16} height={16} viewBox="0 0 24 24">
+            <Path d="M6 6l12 12M6 18l12-12" stroke={colors.textPrimary} strokeWidth={2} strokeLinecap="round" />
+          </Svg>
+        </TouchableOpacity>
       </View>
-    </Modal>
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.drawerBody}>
+        <FilterGroup label="조리 시간">
+          {TIME_OPTIONS.map((o) => (
+            <OptionPill
+              key={String(o.value)}
+              active={time === o.value}
+              label={o.label}
+              onPress={() => onTimeChange(o.value)}
+            />
+          ))}
+        </FilterGroup>
+
+        <FilterGroup label="난이도">
+          {DIFF_OPTIONS.map((o) => (
+            <OptionPill
+              key={String(o.value)}
+              active={diff === o.value}
+              label={o.label}
+              onPress={() => onDiffChange(o.value)}
+            />
+          ))}
+        </FilterGroup>
+
+        <FilterGroup label="인분">
+          {SERVING_OPTIONS.map((o) => (
+            <OptionPill
+              key={String(o.value)}
+              active={servings === o.value}
+              label={o.label}
+              onPress={() => onServingsChange(o.value)}
+            />
+          ))}
+        </FilterGroup>
+
+        <FilterGroup label="정렬">
+          {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
+            <OptionPill
+              key={k}
+              active={sortKey === k}
+              label={SORT_LABELS[k]}
+              onPress={() => onSortChange(k)}
+            />
+          ))}
+        </FilterGroup>
+      </ScrollView>
+
+      <View style={styles.drawerBottom}>
+        <TouchableOpacity style={styles.resetBtn} onPress={onReset} activeOpacity={0.7}>
+          <Text style={styles.resetBtnText}>초기화</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.editBtn, { flex: 1, backgroundColor: colors.primary }]} onPress={onClose} activeOpacity={0.85}>
+          <Text style={styles.editBtnText}>결과 보기</Text>
+        </TouchableOpacity>
+      </View>
+    </SlideDrawer>
   );
 }
 
@@ -621,47 +637,6 @@ function OptionPill({ label, active, onPress }: { label: string; active: boolean
     >
       <Text style={[styles.optionPillText, active && styles.optionPillTextActive]}>{label}</Text>
     </TouchableOpacity>
-  );
-}
-
-// ---------- Sort Sheet ----------
-function SortSheet({
-  visible, onClose, current, onChange,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  current: SortKey;
-  onChange: (k: SortKey) => void;
-}) {
-  return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.sheetBackdrop}>
-        <Pressable style={styles.scrim} onPress={onClose} />
-        <View style={[styles.sheet, { maxHeight: '40%' }]}>
-          <View style={styles.sheetHandle} />
-          <View style={{ paddingHorizontal: 22, paddingTop: 4, paddingBottom: 12 }}>
-            <Text style={[styles.sheetTitle, { color: colors.textPrimary, marginBottom: 12 }]}>정렬</Text>
-            {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
-              <TouchableOpacity
-                key={k}
-                style={styles.sortRow}
-                onPress={() => onChange(k)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.sortRowText, current === k && { color: colors.primary, fontFamily: fontFamily.bold }]}>
-                  {SORT_LABELS[k]}
-                </Text>
-                {current === k && (
-                  <Svg width={16} height={16} viewBox="0 0 24 24">
-                    <Path d="M5 12l5 5L20 7" stroke={colors.primary} strokeWidth={2.5} strokeLinecap="round" fill="none" />
-                  </Svg>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </View>
-    </Modal>
   );
 }
 
@@ -718,10 +693,15 @@ const styles = StyleSheet.create({
   },
   summaryNum: { color: colors.primary, fontFamily: fontFamily.bold },
 
-  // Chips
-  chipRow: { flexGrow: 0, flexShrink: 0 },
-  chipRowContent: { paddingHorizontal: 16, gap: 6, paddingVertical: 4 },
-  chip: {
+  // Preset chip row + 고급 필터 아이콘
+  presetRowWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 12,
+    paddingVertical: 6,
+  },
+  presetRowContent: { paddingHorizontal: 16, gap: 6, paddingVertical: 4 },
+  presetChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -732,16 +712,92 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
-  chipActive: {
+  presetChipActive: {
     backgroundColor: colors.inkDark,
     borderColor: colors.inkDark,
   },
-  chipText: {
+  presetChipText: {
     fontFamily: fontFamily.semibold,
     fontSize: 11.5,
     color: colors.textPrimary,
+    letterSpacing: -0.2,
   },
-  chipTextActive: { color: '#fff' },
+  presetChipTextActive: { color: '#fff' },
+  presetChipCount: {
+    fontFamily: fontFamily.bold,
+    fontSize: 11,
+    color: colors.textTertiary,
+    marginLeft: 2,
+  },
+  presetChipCountActive: { color: 'rgba(255,255,255,0.75)' },
+
+  filterIconBtn: {
+    width: 36,
+    height: 32,
+    borderRadius: 100,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  filterIconBtnActive: {
+    backgroundColor: colors.inkDark,
+    borderColor: colors.inkDark,
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterBadgeText: {
+    fontFamily: fontFamily.extrabold,
+    fontSize: 9,
+    color: '#fff',
+  },
+
+  // Drawer
+  drawerHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 22,
+    paddingTop: 14,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  drawerTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
+  },
+  drawerCloseBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.lineSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  drawerBody: { padding: 22, paddingTop: 14 },
+  drawerBottom: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    backgroundColor: colors.surface,
+  },
 
   // Count row
   countRow: {
