@@ -4,6 +4,7 @@ import com.picook.global.response.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -37,6 +38,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error("VALIDATION_ERROR", message));
+    }
+
+    /**
+     * 서비스 계층에서 선검사를 통과했더라도 동시 요청으로 유니크 제약에 걸릴 수 있음.
+     * display_name 유니크 충돌은 409 + DISPLAY_NAME_TAKEN으로 매핑, 그 외 무결성 충돌은 CONFLICT로 일반화.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException e) {
+        log.warn("Data integrity violation: {}", e.getMostSpecificCause().getMessage());
+        putExceptionToMdc(e);
+        String causeMessage = e.getMostSpecificCause().getMessage();
+        if (causeMessage != null && causeMessage.contains("uq_users_display_name")) {
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.error("DISPLAY_NAME_TAKEN", "이미 사용 중인 닉네임입니다"));
+        }
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("DATA_INTEGRITY_VIOLATION", "데이터 무결성 제약 위반"));
     }
 
     @ExceptionHandler(Exception.class)
