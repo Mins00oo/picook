@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { Config } from '../constants/config';
 import { userApi } from '../api/userApi';
+import { queryClient } from '../lib/queryClient';
 import type { User } from '../types/user';
 
 interface AuthState {
@@ -59,6 +60,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await SecureStore.deleteItemAsync(Config.JWT_ACCESS_KEY);
     await SecureStore.deleteItemAsync(Config.JWT_REFRESH_KEY);
     await SecureStore.deleteItemAsync(Config.USER_KEY);
+    // 이전 유저의 react-query 캐시(쿡북·포인트·의상 등)가 다음 유저에게 보이지 않도록
+    queryClient.clear();
     set({ user: null, isAuthenticated: false });
   },
 }));

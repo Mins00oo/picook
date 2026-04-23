@@ -2,6 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { Config } from '../constants/config';
+import { queryClient } from './queryClient';
 
 const api = axios.create({
   baseURL: Config.API_BASE_URL,
@@ -119,8 +120,20 @@ api.interceptors.response.use(
 );
 
 async function clearTokens() {
+  // 401 리프레시 실패 등 "비정상 세션 종료" 시 호출.
+  // 토큰 + 유저 프로필 캐시 + react-query 서버 상태 전부 비워서
+  // 다음 로그인 유저에게 이전 세션 데이터가 남지 않도록.
   await SecureStore.deleteItemAsync(Config.JWT_ACCESS_KEY);
   await SecureStore.deleteItemAsync(Config.JWT_REFRESH_KEY);
+  await SecureStore.deleteItemAsync(Config.USER_KEY);
+  queryClient.clear();
+  // zustand 상태도 초기화 (동적 require로 순환 import 회피)
+  try {
+    const { useAuthStore } = require('../stores/authStore');
+    useAuthStore.setState({ user: null, isAuthenticated: false });
+  } catch {
+    // 초기 로드 타이밍엔 store가 아직 준비 안 됐을 수 있음 — 무시
+  }
 }
 
 export default api;
