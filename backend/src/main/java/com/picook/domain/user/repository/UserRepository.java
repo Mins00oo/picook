@@ -19,14 +19,16 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByAppleId(String appleId);
 
+    boolean existsByDisplayName(String displayName);
+
     long countByStatus(UserStatus status);
 
     long countByLoginType(LoginType loginType);
 
     long countByCreatedAtBetween(Instant start, Instant end);
 
-    @Query("SELECT u.completedCookingCount, COUNT(u) FROM User u GROUP BY u.completedCookingCount ORDER BY u.completedCookingCount")
-    java.util.List<Object[]> findCookingCountDistribution();
+    @Query("SELECT u.totalExp, COUNT(u) FROM User u GROUP BY u.totalExp ORDER BY u.totalExp")
+    java.util.List<Object[]> findTotalExpDistribution();
 
     @Query(value = "SELECT u FROM User u " +
             "WHERE (:status IS NULL OR u.status = :status) " +

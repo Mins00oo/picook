@@ -6,15 +6,17 @@ public record RankInfo(
         int level,
         String title,
         String emoji,
-        Integer nextLevelAt
+        Long nextLevelAt,
+        long currentExp
 ) {
-    public static RankInfo of(int completedCookingCount) {
-        UserRank rank = UserRank.fromCount(completedCookingCount);
+    public static RankInfo of(long totalExp) {
+        UserRank rank = UserRank.fromExp(totalExp);
         return new RankInfo(
                 rank.getLevel(),
                 rank.getTitle(),
                 rank.getEmoji(),
-                rank.getNextLevelAt(completedCookingCount)
+                rank.getNextLevelAt(),
+                totalExp
         );
     }
 }

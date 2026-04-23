@@ -58,6 +58,7 @@ public class AdminRecipeService {
                 request.cookingTimeMinutes(),
                 request.servings() != null ? request.servings() : 2
         );
+        recipe.setCalories(request.calories());
         recipe.setImageUrl(request.imageUrl());
         recipe.setThumbnailUrl(request.thumbnailUrl());
         recipe.setTips(request.tips());
@@ -101,6 +102,7 @@ public class AdminRecipeService {
         recipe.setDifficulty(request.difficulty().toLowerCase());
         recipe.setCookingTimeMinutes(request.cookingTimeMinutes());
         recipe.setServings(request.servings() != null ? request.servings() : recipe.getServings());
+        recipe.setCalories(request.calories());
         recipe.setImageUrl(request.imageUrl());
         recipe.setThumbnailUrl(request.thumbnailUrl());
         recipe.setTips(request.tips());

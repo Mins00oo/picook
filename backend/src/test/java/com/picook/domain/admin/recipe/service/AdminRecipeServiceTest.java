@@ -52,7 +52,7 @@ class AdminRecipeServiceTest {
         });
 
         AdminRecipeRequest request = new AdminRecipeRequest(
-                "김치찌개", "korean", "easy", 30, 2,
+                "김치찌개", "korean", "easy", 30, 2, 420,
                 null, null, "맛있게 만드세요",
                 List.of(new AdminRecipeRequest.IngredientItem(1, BigDecimal.ONE, "개", true, 0)),
                 List.of(new AdminRecipeRequest.StepItem(1, "양파를 썬다", null, "active", 60, false))
@@ -69,7 +69,7 @@ class AdminRecipeServiceTest {
     @Test
     void createRecipe_shouldThrowForInvalidCategory() {
         AdminRecipeRequest request = new AdminRecipeRequest(
-                "테스트", "invalid_category", "easy", 30, 2,
+                "테스트", "invalid_category", "easy", 30, 2, null,
                 null, null, null, List.of(), List.of()
         );
 
@@ -81,7 +81,7 @@ class AdminRecipeServiceTest {
     @Test
     void createRecipe_shouldThrowForInvalidDifficulty() {
         AdminRecipeRequest request = new AdminRecipeRequest(
-                "테스트", "korean", "super_hard", 30, 2,
+                "테스트", "korean", "super_hard", 30, 2, null,
                 null, null, null, List.of(), List.of()
         );
 
@@ -99,7 +99,7 @@ class AdminRecipeServiceTest {
         when(ingredientRepository.findById(2)).thenReturn(Optional.of(ingredient));
 
         AdminRecipeRequest request = new AdminRecipeRequest(
-                "수정된 레시피", "western", "medium", 45, 3,
+                "수정된 레시피", "western", "medium", 45, 3, 380,
                 null, null, null,
                 List.of(new AdminRecipeRequest.IngredientItem(2, new BigDecimal("0.5"), "개", true, 0)),
                 List.of(new AdminRecipeRequest.StepItem(1, "당근을 자른다", null, "active", 30, true))

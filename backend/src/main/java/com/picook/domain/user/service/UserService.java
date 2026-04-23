@@ -18,9 +18,11 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final UserLevelService userLevelService;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, UserLevelService userLevelService) {
         this.userRepository = userRepository;
+        this.userLevelService = userLevelService;
     }
 
     public UserProfileResponse getProfile(UUID userId) {
@@ -33,11 +35,24 @@ public class UserService {
         User user = findActiveUser(userId);
 
         if (request.displayName() != null) {
-            user.setDisplayName(request.displayName().trim());
+            String trimmed = request.displayName().trim();
+            if (!trimmed.equals(user.getDisplayName()) && userRepository.existsByDisplayName(trimmed)) {
+                throw new BusinessException("DISPLAY_NAME_TAKEN",
+                        "이미 사용 중인 닉네임입니다", HttpStatus.CONFLICT);
+            }
+            user.setDisplayName(trimmed);
         }
+        boolean firstCharacterSetup = false;
         if (request.characterType() != null) {
+            if (user.getCharacterType() == null) firstCharacterSetup = true;
             user.setCharacterType(request.characterType());
         }
+
+        // 온보딩 셋업 완료 시점: characterType이 처음 세팅될 때 기본 의상 지급 (멱등)
+        if (firstCharacterSetup) {
+            userLevelService.grantDefaultOutfitsIfNeeded(userId);
+        }
+
         return UserProfileResponse.of(user);
     }
 

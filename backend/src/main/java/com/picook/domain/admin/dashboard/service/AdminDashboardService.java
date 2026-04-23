@@ -80,15 +80,15 @@ public class AdminDashboardService {
     }
 
     private Map<String, Long> buildRankDistribution() {
-        List<Object[]> distribution = userRepository.findCookingCountDistribution();
+        List<Object[]> distribution = userRepository.findTotalExpDistribution();
         Map<String, Long> rankCounts = new LinkedHashMap<>();
         for (UserRank rank : UserRank.values()) {
             rankCounts.put(rank.name(), 0L);
         }
         for (Object[] row : distribution) {
-            int count = row[0] == null ? 0 : ((Number) row[0]).intValue();
+            long exp = row[0] == null ? 0L : ((Number) row[0]).longValue();
             long users = ((Number) row[1]).longValue();
-            UserRank rank = UserRank.fromCount(count);
+            UserRank rank = UserRank.fromExp(exp);
             rankCounts.merge(rank.name(), users, Long::sum);
         }
         return rankCounts;

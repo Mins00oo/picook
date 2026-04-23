@@ -20,6 +20,7 @@ public record AdminRecipeRequest(
         Integer cookingTimeMinutes,
 
         Integer servings,
+        Integer calories,
         String imageUrl,
         String thumbnailUrl,
         String tips,

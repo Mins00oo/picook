@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,4 +19,6 @@ public interface CookbookEntryRepository extends JpaRepository<CookbookEntry, Lo
     Optional<CookbookEntry> findByIdAndUserId(Long id, UUID userId);
 
     long countByUserId(UUID userId);
+
+    long countByUserIdAndCookedAtBetween(UUID userId, Instant from, Instant to);
 }

@@ -5,8 +5,10 @@ import com.picook.domain.attendance.dto.CheckInResponse;
 import com.picook.domain.attendance.dto.MonthHistoryResponse;
 import com.picook.domain.attendance.entity.AttendanceLog;
 import com.picook.domain.attendance.repository.AttendanceRepository;
+import com.picook.domain.outfit.dto.OutfitResponse;
 import com.picook.domain.point.entity.PointReason;
 import com.picook.domain.point.service.PointService;
+import com.picook.domain.user.service.UserLevelService;
 import com.picook.global.exception.BusinessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -25,13 +27,18 @@ public class AttendanceService {
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private static final int DAILY_CHECK_POINTS = 10;
+    private static final long DAILY_CHECK_EXP = 10L;
 
     private final AttendanceRepository attendanceRepository;
     private final PointService pointService;
+    private final UserLevelService userLevelService;
 
-    public AttendanceService(AttendanceRepository attendanceRepository, PointService pointService) {
+    public AttendanceService(AttendanceRepository attendanceRepository,
+                             PointService pointService,
+                             UserLevelService userLevelService) {
         this.attendanceRepository = attendanceRepository;
         this.pointService = pointService;
+        this.userLevelService = userLevelService;
     }
 
     @Transactional
@@ -49,8 +56,25 @@ public class AttendanceService {
                 userId, DAILY_CHECK_POINTS, PointReason.DAILY_CHECK, "ATTENDANCE", log.getId()
         );
 
+        UserLevelService.LevelUpResult levelResult = userLevelService.awardExp(userId, DAILY_CHECK_EXP);
+
+        List<OutfitResponse> grantedDtos = levelResult.grantedOutfits().stream()
+                .map(OutfitResponse::ofCatalog)
+                .toList();
+
         int streak = calculateCurrentStreak(userId, today);
-        return new CheckInResponse(today, streak, DAILY_CHECK_POINTS, newBalance);
+        return new CheckInResponse(
+                today,
+                streak,
+                DAILY_CHECK_POINTS,
+                newBalance,
+                (int) DAILY_CHECK_EXP,
+                levelResult.totalExpAfter(),
+                levelResult.newLevel(),
+                levelResult.leveledUp(),
+                levelResult.leveledUp() ? levelResult.newLevel() : null,
+                grantedDtos
+        );
     }
 
     @Transactional(readOnly = true)

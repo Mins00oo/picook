@@ -38,6 +38,10 @@ public class User {
     @Column(name = "completed_cooking_count")
     private Integer completedCookingCount = 0;
 
+    /** v1.0 게임화 — 누적 경험치 (레벨 산정 기준) */
+    @Column(name = "total_exp", nullable = false)
+    private Long totalExp = 0L;
+
     @Column(name = "point_balance", nullable = false)
     private Integer pointBalance = 0;
 
@@ -102,6 +106,9 @@ public class User {
 
     public Integer getCompletedCookingCount() { return completedCookingCount; }
     public void setCompletedCookingCount(Integer completedCookingCount) { this.completedCookingCount = completedCookingCount; }
+
+    public Long getTotalExp() { return totalExp; }
+    public void setTotalExp(Long totalExp) { this.totalExp = totalExp; }
 
     public Integer getPointBalance() { return pointBalance; }
     public void setPointBalance(Integer pointBalance) { this.pointBalance = pointBalance; }

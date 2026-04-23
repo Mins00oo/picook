@@ -12,12 +12,14 @@ public record UserProfileResponse(
         String loginType,
         String characterType,
         int completedCookingCount,
+        long totalExp,
         int pointBalance,
         RankInfo rank
 ) {
     public static UserProfileResponse of(User user) {
         int count = user.getCompletedCookingCount() == null ? 0 : user.getCompletedCookingCount();
         int points = user.getPointBalance() == null ? 0 : user.getPointBalance();
+        long exp = user.getTotalExp() == null ? 0L : user.getTotalExp();
         return new UserProfileResponse(
                 user.getId(),
                 user.getEmail(),
@@ -26,8 +28,9 @@ public record UserProfileResponse(
                 user.getLoginType().name(),
                 user.getCharacterType(),
                 count,
+                exp,
                 points,
-                RankInfo.of(count)
+                RankInfo.of(exp)
         );
     }
 }

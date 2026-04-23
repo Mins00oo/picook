@@ -30,6 +30,9 @@ public class Recipe {
     @Column(name = "servings", nullable = false)
     private Integer servings = 2;
 
+    @Column(name = "calories")
+    private Integer calories;
+
     @Column(name = "image_url")
     private String imageUrl;
 
@@ -131,6 +134,9 @@ public class Recipe {
 
     public Integer getServings() { return servings; }
     public void setServings(Integer servings) { this.servings = servings; }
+
+    public Integer getCalories() { return calories; }
+    public void setCalories(Integer calories) { this.calories = calories; }
 
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }

@@ -1,6 +1,7 @@
 package com.picook.domain.cookbook.controller;
 
 import com.picook.domain.cookbook.dto.CookbookEntryResponse;
+import com.picook.domain.cookbook.dto.CookbookStatsResponse;
 import com.picook.domain.cookbook.dto.CreateCookbookEntryRequest;
 import com.picook.domain.cookbook.service.CookbookService;
 import com.picook.global.response.ApiResponse;
@@ -44,6 +45,12 @@ public class CookbookController {
     @GetMapping("/entries/{id}")
     public ResponseEntity<ApiResponse<CookbookEntryResponse>> getDetail(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(cookbookService.getDetail(getCurrentUserId(), id)));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<CookbookStatsResponse>> getStats(
+            @RequestParam(value = "yearMonth", required = false) String yearMonth) {
+        return ResponseEntity.ok(ApiResponse.success(cookbookService.getStats(getCurrentUserId(), yearMonth)));
     }
 
     private UUID getCurrentUserId() {

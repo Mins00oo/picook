@@ -3,6 +3,7 @@ package com.picook.domain.recipe.controller;
 import com.picook.domain.recipe.dto.RecipeDetailResponse;
 import com.picook.domain.recipe.dto.RecommendRequest;
 import com.picook.domain.recipe.dto.RecommendResponse;
+import com.picook.domain.recipe.dto.TimeRecipeResponse;
 import com.picook.domain.recipe.service.RecipeService;
 import com.picook.domain.recipe.service.RecommendService;
 import com.picook.domain.searchhistory.service.SearchHistoryService;
@@ -60,6 +61,12 @@ public class RecipeController {
     public ResponseEntity<ApiResponse<RecipeDetailResponse>> getRecipeDetail(@PathVariable Integer id) {
         RecipeDetailResponse response = recipeService.getRecipeDetail(id);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/recommend-by-time")
+    public ResponseEntity<ApiResponse<List<TimeRecipeResponse>>> recommendByTime(
+            @RequestParam String period) {
+        return ResponseEntity.ok(ApiResponse.success(recipeService.recommendByTime(period)));
     }
 
     private UUID getCurrentUserId() {
