@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 100 100">
+  <rect width="100" height="100" fill="#FF6B4A"/>
+  <circle cx="38" cy="32" r="40" fill="#FFFFFF" opacity="0.10"/>
+  <path d="
+    M 30 20 L 30 84 L 44 84 L 44 60 L 56 60
+    C 74 60 82 52 82 40 C 82 28 74 20 56 20 Z
+    M 44 32 L 55 32 C 64 32 70 35 70 40
+    C 70 45 64 48 55 48 L 44 48 Z
+  " fill="#FFFFFF" fill-rule="evenodd"/>
+  <g transform="translate(62 14)">
+    <ellipse cx="0" cy="7" rx="11" ry="2.5" fill="#FFFFFF"/>
+    <path d="M -9 5 Q -11 -8 -3 -6 Q 0 -12 3 -8 Q 7 -12 9 -6 Q 11 -8 9 5 Z" fill="#FFFFFF"/>
+    <path d="M -9 5 L 9 5" stroke="#FF6B4A" stroke-width="1" opacity="0.35"/>
+  </g>
+</svg>

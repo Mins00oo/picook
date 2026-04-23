@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="flame" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#FFC64A"/>
+      <stop offset="55%" stop-color="#FF6B4A"/>
+      <stop offset="100%" stop-color="#FF6B4A" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="pot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF8E5C"/>
+      <stop offset="100%" stop-color="#A03A12"/>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" fill="#1F1612"/>
+  <ellipse cx="50" cy="92" rx="50" ry="22" fill="#FF6B4A" opacity="0.22"/>
+  <path d="
+    M 50 92
+    C 26 86 18 62 32 48
+    C 30 62 38 66 42 58
+    C 40 72 50 74 52 62
+    C 56 72 62 70 58 56
+    C 74 64 80 82 50 92
+    Z
+  " fill="url(#flame)"/>
+  <path d="
+    M 50 86
+    C 38 80 36 66 46 58
+    C 46 66 50 68 52 62
+    C 54 70 62 72 54 82
+    Z
+  " fill="#FFE58E" opacity="0.7"/>
+  <ellipse cx="50" cy="42" rx="30" ry="4.5" fill="#4A3428"/>
+  <path d="M 22 42 Q 22 62 34 66 L 66 66 Q 78 62 78 42 Z" fill="url(#pot)"/>
+  <path d="M 28 48 Q 28 60 34 64" stroke="#FFCAB6" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <rect x="14" y="48" width="10" height="7" rx="2.5" fill="#2A1A14"/>
+  <rect x="76" y="48" width="10" height="7" rx="2.5" fill="#2A1A14"/>
+  <rect x="46" y="34" width="8" height="6" rx="2" fill="#2A1A14"/>
+</svg>

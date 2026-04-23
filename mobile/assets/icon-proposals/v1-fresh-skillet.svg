@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF8060"/>
+      <stop offset="100%" stop-color="#FF5A2E"/>
+    </linearGradient>
+    <radialGradient id="yolk" cx="40%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#FFE58E"/>
+      <stop offset="60%" stop-color="#FFC64A"/>
+      <stop offset="100%" stop-color="#D59218"/>
+    </radialGradient>
+  </defs>
+  <rect width="100" height="100" fill="url(#bg)"/>
+  <ellipse cx="36" cy="24" rx="32" ry="20" fill="#FFFFFF" opacity="0.12"/>
+  <ellipse cx="50" cy="62" rx="30" ry="6" fill="rgba(31,22,18,0.22)"/>
+  <path d="M 78 50 L 96 46 Q 98 48 98 52 L 98 56 Q 98 60 96 60 L 78 60 Z" fill="#FFFFFF"/>
+  <circle cx="50" cy="54" r="30" fill="#FFFFFF"/>
+  <circle cx="50" cy="54" r="27" fill="#FFF4E6"/>
+  <path d="M 34 48 Q 28 56 34 64 Q 42 72 52 68 Q 66 68 66 56 Q 68 44 56 42 Q 42 38 34 48 Z" fill="#FFFFFF"/>
+  <circle cx="50" cy="52" r="9" fill="url(#yolk)"/>
+  <ellipse cx="47" cy="48" rx="3" ry="2" fill="#FFF5D6" opacity="0.9"/>
+  <path d="M 30 42 Q 44 34 56 38" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.55"/>
+</svg>
