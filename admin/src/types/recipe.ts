@@ -32,6 +32,7 @@ export interface AdminRecipeDetail {
   difficulty: string;
   cookingTimeMinutes: number;
   servings: number;
+  calories?: number;
   imageUrl?: string;
   thumbnailUrl?: string;
   tips?: string;
@@ -71,6 +72,7 @@ export interface AdminRecipeRequest {
   difficulty: string;
   cookingTimeMinutes: number;
   servings?: number;
+  calories?: number;
   imageUrl?: string;
   thumbnailUrl?: string;
   tips?: string;

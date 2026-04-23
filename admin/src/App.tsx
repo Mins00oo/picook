@@ -28,6 +28,8 @@ import CoachingStats from '@/pages/stats/CoachingStats';
 import ShortsStatsPage from '@/pages/stats/ShortsStats';
 import RankingStats from '@/pages/stats/RankingStats';
 import AdminAccountList from '@/pages/accounts/AdminAccountList';
+import OutfitList from '@/pages/outfits/OutfitList';
+import OutfitForm from '@/pages/outfits/OutfitForm';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -86,6 +88,9 @@ export default function App() {
               <Route path="stats/shorts" element={<ShortsStatsPage />} />
               <Route path="stats/ranking" element={<RankingStats />} />
               <Route path="accounts" element={<AdminAccountList />} />
+              <Route path="outfits" element={<OutfitList />} />
+              <Route path="outfits/new" element={<OutfitForm />} />
+              <Route path="outfits/:id/edit" element={<OutfitForm />} />
             </Route>
           </Routes>
         </BrowserRouter>

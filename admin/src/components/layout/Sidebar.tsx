@@ -8,6 +8,7 @@ import {
   MessageOutlined,
   BarChartOutlined,
   SettingOutlined,
+  SkinOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { usePermission } from '@/hooks/usePermission';
@@ -69,6 +70,11 @@ export default function Sidebar() {
       key: '/feedback',
       icon: <MessageOutlined />,
       label: '피드백 관리',
+    },
+    {
+      key: '/outfits',
+      icon: <SkinOutlined />,
+      label: '의상 관리',
     },
     {
       key: 'stats',

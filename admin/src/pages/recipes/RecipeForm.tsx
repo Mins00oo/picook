@@ -41,6 +41,7 @@ export default function RecipeForm() {
       difficulty: '',
       cookingTimeMinutes: undefined as unknown as number,
       servings: undefined,
+      calories: undefined,
       imageUrl: '',
       thumbnailUrl: '',
       tips: '',
@@ -66,6 +67,7 @@ export default function RecipeForm() {
         difficulty: recipe.difficulty,
         cookingTimeMinutes: recipe.cookingTimeMinutes,
         servings: recipe.servings,
+        calories: recipe.calories,
         imageUrl: recipe.imageUrl,
         thumbnailUrl: recipe.thumbnailUrl,
         tips: recipe.tips,
@@ -193,6 +195,21 @@ export default function RecipeForm() {
                     value={field.value ?? undefined}
                     onChange={(v) => field.onChange(v)}
                     min={1}
+                  />
+                )}
+              />
+            </FormField>
+            <FormField label="칼로리(kcal)" error={errors.calories?.message}>
+              <Controller
+                name="calories"
+                control={control}
+                render={({ field }) => (
+                  <InputNumber
+                    {...field}
+                    value={field.value ?? undefined}
+                    onChange={(v) => field.onChange(v ?? undefined)}
+                    min={0}
+                    placeholder="선택"
                   />
                 )}
               />

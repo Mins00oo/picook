@@ -21,6 +21,7 @@ export const recipeSchema = z.object({
   difficulty: z.string().min(1, '난이도를 선택하세요'),
   cookingTimeMinutes: z.number({ error: '조리시간을 입력하세요' }).min(1, '1분 이상 입력하세요'),
   servings: z.number().optional(),
+  calories: z.number().min(0, '0 이상 입력하세요').optional(),
   imageUrl: z.string().optional(),
   thumbnailUrl: z.string().optional(),
   tips: z.string().optional(),
