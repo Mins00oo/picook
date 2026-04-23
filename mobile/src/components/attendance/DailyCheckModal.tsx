@@ -50,7 +50,7 @@ export function DailyCheckModal({
             {/* Character */}
             <View style={styles.charWrap}>
               <View style={styles.charGlow} />
-              <Character type={characterType} size={110} withHat />
+              <Character type={characterType} size={110} />
               {/* +10P bubble */}
               <View style={styles.pointBubble}>
                 <EggIcon size={16} />
@@ -67,30 +67,31 @@ export function DailyCheckModal({
               오늘도 <Text style={styles.titleAccent}>출석!</Text>
             </Text>
             <Text style={styles.desc}>
-              매일 출석하고 계란 포인트를 모아보세요
+              포인트를 모아서 캐릭터를 꾸며보세요
             </Text>
           </LinearGradient>
 
           {/* Streak row */}
           <View style={styles.streakBody}>
-            <Text style={styles.streakLabel}>이번 주 출석</Text>
+            <Text style={styles.streakLabel}>이번 주</Text>
             <View style={styles.streakRow}>
               {recentSevenDays.map((v, i) => {
                 const isToday = i === recentSevenDays.length - 1;
+                const dayLabel = getDayLabelForOffset(recentSevenDays.length - 1 - i);
+                const on = v === 1;
                 return (
                   <View
                     key={i}
                     style={[
                       styles.streakDot,
-                      v === 1 && styles.streakDotOn,
-                      isToday && v === 0 && styles.streakDotToday,
+                      on && styles.streakDotOn,
+                      isToday && !on && styles.streakDotTodayEmpty,
+                      isToday && on && styles.streakDotTodayOn,
                     ]}
                   >
-                    {v === 1 && (
-                      <Svg width={9} height={9} viewBox="0 0 24 24">
-                        <Path d="M5 12l5 5L20 7" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" fill="none" />
-                      </Svg>
-                    )}
+                    <Text style={[styles.streakDotText, on && styles.streakDotTextOn]}>
+                      {dayLabel}
+                    </Text>
                   </View>
                 );
               })}
@@ -106,7 +107,7 @@ export function DailyCheckModal({
               activeOpacity={0.9}
             >
               <Text style={styles.ctaText}>
-                {isChecking ? '출석 중...' : `확인하고 +${pointsToEarn}P 받기`}
+                {isChecking ? '출석 중...' : '확인'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -249,9 +250,27 @@ const styles = StyleSheet.create({
   streakDotOn: {
     backgroundColor: colors.primary,
   },
-  streakDotToday: {
+  streakDotTodayEmpty: {
     borderWidth: 1.5,
     borderColor: colors.primary,
+    backgroundColor: colors.primary,
+  },
+  streakDotTodayOn: {
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
+  },
+  streakDotText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 10,
+    color: colors.textTertiary,
+    letterSpacing: -0.2,
+  },
+  streakDotTextOn: {
+    color: '#fff',
   },
 
   ctaWrap: { paddingHorizontal: 24, paddingBottom: 24, paddingTop: 4 },
@@ -269,3 +288,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
 });
+
+// 오늘로부터 offset만큼 과거일에 해당하는 요일 한글 라벨 ("월", "화", ...)
+function getDayLabelForOffset(offset: number): string {
+  const labels = ['일', '월', '화', '수', '목', '금', '토'];
+  const d = new Date();
+  d.setDate(d.getDate() - offset);
+  return labels[d.getDay()];
+}
