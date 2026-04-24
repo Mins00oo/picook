@@ -73,8 +73,9 @@ public class AdminIngredientController {
 
     @PostMapping("/bulk-upload")
     public ResponseEntity<ApiResponse<IngredientBulkUploadResponse>> bulkUpload(
-            @RequestParam("file") MultipartFile file) {
-        IngredientBulkUploadResponse response = bulkUploadService.uploadFromExcel(file);
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "dryRun", defaultValue = "false") boolean dryRun) {
+        IngredientBulkUploadResponse response = bulkUploadService.uploadFromExcel(file, dryRun);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
