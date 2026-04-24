@@ -3,8 +3,11 @@ package com.picook.domain.admin.ingredient.controller;
 import com.picook.domain.admin.ingredient.dto.AdminIngredientRequest;
 import com.picook.domain.admin.ingredient.dto.AdminIngredientResponse;
 import com.picook.domain.admin.ingredient.dto.IngredientBulkUploadResponse;
+import com.picook.domain.admin.ingredient.dto.IngredientStatsResponse;
 import com.picook.domain.admin.ingredient.service.AdminIngredientService;
 import com.picook.domain.admin.ingredient.service.IngredientBulkUploadService;
+import com.picook.domain.admin.ingredient.service.IngredientExportService;
+import com.picook.domain.admin.ingredient.service.IngredientStatsService;
 import com.picook.global.response.ApiResponse;
 import com.picook.global.util.PageResponse;
 import jakarta.validation.Valid;
@@ -22,11 +25,17 @@ public class AdminIngredientController {
 
     private final AdminIngredientService adminIngredientService;
     private final IngredientBulkUploadService bulkUploadService;
+    private final IngredientExportService exportService;
+    private final IngredientStatsService statsService;
 
     public AdminIngredientController(AdminIngredientService adminIngredientService,
-                                     IngredientBulkUploadService bulkUploadService) {
+                                     IngredientBulkUploadService bulkUploadService,
+                                     IngredientExportService exportService,
+                                     IngredientStatsService statsService) {
         this.adminIngredientService = adminIngredientService;
         this.bulkUploadService = bulkUploadService;
+        this.exportService = exportService;
+        this.statsService = statsService;
     }
 
     @GetMapping
@@ -86,5 +95,22 @@ public class AdminIngredientController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ingredient_template.xlsx")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(template);
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) Integer subcategoryId,
+            @RequestParam(required = false) String keyword) {
+        byte[] data = exportService.exportToExcel(categoryId, subcategoryId, keyword);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ingredients-export.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(data);
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<IngredientStatsResponse>> getStats() {
+        return ResponseEntity.ok(ApiResponse.success(statsService.getStats()));
     }
 }

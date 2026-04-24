@@ -3,10 +3,12 @@ package com.picook.domain.ingredient.repository;
 import com.picook.domain.ingredient.entity.Ingredient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -74,4 +76,44 @@ public interface IngredientRepository extends JpaRepository<Ingredient, Integer>
             "WHERE ri.ingredient.id IN :ingredientIds " +
             "GROUP BY ri.ingredient.id")
     List<Object[]> countRecipeUsageByIngredientIds(@Param("ingredientIds") List<Integer> ingredientIds);
+
+    @Query("SELECT DISTINCT i FROM Ingredient i " +
+            "LEFT JOIN FETCH i.category " +
+            "LEFT JOIN FETCH i.subcategory " +
+            "LEFT JOIN FETCH i.synonyms " +
+            "WHERE (:categoryId IS NULL OR i.category.id = :categoryId) " +
+            "AND (:subcategoryId IS NULL OR i.subcategory.id = :subcategoryId) " +
+            "AND (:keyword IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS text), '%')))")
+    List<Ingredient> findForExport(@Param("categoryId") Integer categoryId,
+                                   @Param("subcategoryId") Integer subcategoryId,
+                                   @Param("keyword") String keyword,
+                                   Sort sort);
+
+    @Query("SELECT COUNT(i) FROM Ingredient i WHERE i.subcategory IS NULL")
+    long countMissingSubcategory();
+
+    @Query("SELECT COUNT(i) FROM Ingredient i WHERE i.emoji IS NULL OR i.emoji = ''")
+    long countMissingEmoji();
+
+    @Query("SELECT COUNT(i) FROM Ingredient i WHERE i.synonyms IS EMPTY")
+    long countMissingSynonyms();
+
+    @Query("SELECT COUNT(i) FROM Ingredient i " +
+            "WHERE NOT EXISTS (SELECT 1 FROM RecipeIngredient ri WHERE ri.ingredient = i)")
+    long countUnusedInRecipes();
+
+    @Query("SELECT i.category.id, i.category.name, COUNT(i) " +
+            "FROM Ingredient i GROUP BY i.category.id, i.category.name ORDER BY i.category.id")
+    List<Object[]> countByCategoryGrouped();
+
+    @Query("SELECT i.subcategory.id, i.subcategory.name, i.category.id, i.category.name, COUNT(i) " +
+            "FROM Ingredient i WHERE i.subcategory IS NOT NULL " +
+            "GROUP BY i.subcategory.id, i.subcategory.name, i.category.id, i.category.name, i.subcategory.sortOrder " +
+            "ORDER BY i.category.id, i.subcategory.sortOrder")
+    List<Object[]> countBySubcategoryGrouped();
+
+    @Query(value = "SELECT CAST(created_at AS DATE) AS day, COUNT(*) FROM ingredients " +
+            "WHERE created_at >= :since GROUP BY CAST(created_at AS DATE) ORDER BY day",
+            nativeQuery = true)
+    List<Object[]> countDailyAdded(@Param("since") Instant since);
 }

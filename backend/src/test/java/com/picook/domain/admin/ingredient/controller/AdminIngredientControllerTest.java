@@ -2,6 +2,8 @@ package com.picook.domain.admin.ingredient.controller;
 
 import com.picook.domain.admin.ingredient.service.AdminIngredientService;
 import com.picook.domain.admin.ingredient.service.IngredientBulkUploadService;
+import com.picook.domain.admin.ingredient.service.IngredientExportService;
+import com.picook.domain.admin.ingredient.service.IngredientStatsService;
 import com.picook.support.BaseControllerTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -39,6 +41,16 @@ class AdminIngredientControllerTest extends BaseControllerTest {
         @Bean
         IngredientBulkUploadService ingredientBulkUploadService() {
             return Mockito.mock(IngredientBulkUploadService.class);
+        }
+
+        @Bean
+        IngredientExportService ingredientExportService() {
+            return Mockito.mock(IngredientExportService.class);
+        }
+
+        @Bean
+        IngredientStatsService ingredientStatsService() {
+            return Mockito.mock(IngredientStatsService.class);
         }
     }
 
