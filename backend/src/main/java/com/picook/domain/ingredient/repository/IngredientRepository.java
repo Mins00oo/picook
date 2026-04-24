@@ -43,6 +43,8 @@ public interface IngredientRepository extends JpaRepository<Ingredient, Integer>
 
     int countByCategoryId(Integer categoryId);
 
+    long countBySubcategoryId(Integer subcategoryId);
+
     @Query("SELECT i.category.id, COUNT(i) FROM Ingredient i GROUP BY i.category.id")
     List<Object[]> countGroupByCategoryId();
 
