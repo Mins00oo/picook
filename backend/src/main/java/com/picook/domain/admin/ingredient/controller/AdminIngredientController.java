@@ -2,6 +2,9 @@ package com.picook.domain.admin.ingredient.controller;
 
 import com.picook.domain.admin.ingredient.dto.AdminIngredientRequest;
 import com.picook.domain.admin.ingredient.dto.AdminIngredientResponse;
+import com.picook.domain.admin.ingredient.dto.BulkDeleteRequest;
+import com.picook.domain.admin.ingredient.dto.BulkDeleteResponse;
+import com.picook.domain.admin.ingredient.dto.BulkMoveRequest;
 import com.picook.domain.admin.ingredient.dto.IngredientBulkUploadResponse;
 import com.picook.domain.admin.ingredient.dto.IngredientStatsResponse;
 import com.picook.domain.admin.ingredient.service.AdminIngredientService;
@@ -112,5 +115,17 @@ public class AdminIngredientController {
     @GetMapping("/stats")
     public ResponseEntity<ApiResponse<IngredientStatsResponse>> getStats() {
         return ResponseEntity.ok(ApiResponse.success(statsService.getStats()));
+    }
+
+    @PostMapping("/bulk-delete")
+    public ResponseEntity<ApiResponse<BulkDeleteResponse>> bulkDelete(
+            @Valid @RequestBody BulkDeleteRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(adminIngredientService.bulkDelete(request)));
+    }
+
+    @PatchMapping("/bulk-move")
+    public ResponseEntity<ApiResponse<Void>> bulkMove(@Valid @RequestBody BulkMoveRequest request) {
+        adminIngredientService.bulkMove(request);
+        return ResponseEntity.ok(ApiResponse.success());
     }
 }

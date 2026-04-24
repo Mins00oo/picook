@@ -2,6 +2,9 @@ package com.picook.domain.admin.ingredient.service;
 
 import com.picook.domain.admin.ingredient.dto.AdminIngredientRequest;
 import com.picook.domain.admin.ingredient.dto.AdminIngredientResponse;
+import com.picook.domain.admin.ingredient.dto.BulkDeleteRequest;
+import com.picook.domain.admin.ingredient.dto.BulkDeleteResponse;
+import com.picook.domain.admin.ingredient.dto.BulkMoveRequest;
 import com.picook.domain.ingredient.entity.Ingredient;
 import com.picook.domain.ingredient.entity.IngredientCategory;
 import com.picook.domain.ingredient.entity.IngredientSubcategory;
@@ -19,6 +22,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -144,6 +149,72 @@ public class AdminIngredientService {
                 .findFirst()
                 .map(row -> ((Number) row[1]).longValue())
                 .orElse(0L);
+    }
+
+    @Transactional
+    @CacheEvict(value = "ingredients", allEntries = true)
+    public BulkDeleteResponse bulkDelete(BulkDeleteRequest request) {
+        List<Integer> ids = request.ids();
+        List<Ingredient> found = ingredientRepository.findAllById(ids);
+        Map<Integer, Ingredient> foundMap = found.stream()
+                .collect(Collectors.toMap(Ingredient::getId, i -> i));
+
+        Map<Integer, Long> usageMap = ids.isEmpty()
+                ? Map.of()
+                : ingredientRepository.countRecipeUsageByIngredientIds(ids).stream()
+                        .collect(Collectors.toMap(
+                                row -> (Integer) row[0],
+                                row -> ((Number) row[1]).longValue()));
+
+        List<BulkDeleteResponse.SkipReason> skipped = new ArrayList<>();
+        List<Ingredient> toDelete = new ArrayList<>();
+
+        for (Integer id : ids) {
+            Ingredient ingredient = foundMap.get(id);
+            if (ingredient == null) {
+                skipped.add(new BulkDeleteResponse.SkipReason(id, "존재하지 않음"));
+                continue;
+            }
+            long usage = usageMap.getOrDefault(id, 0L);
+            if (usage > 0) {
+                skipped.add(new BulkDeleteResponse.SkipReason(id,
+                        "레시피에서 사용 중 (" + usage + "건)"));
+                continue;
+            }
+            toDelete.add(ingredient);
+        }
+
+        if (!toDelete.isEmpty()) {
+            ingredientRepository.deleteAll(toDelete);
+        }
+
+        return new BulkDeleteResponse(ids.size(), toDelete.size(), skipped.size(), skipped);
+    }
+
+    @Transactional
+    @CacheEvict(value = "ingredients", allEntries = true)
+    public void bulkMove(BulkMoveRequest request) {
+        IngredientCategory target = loadCategory(request.targetCategoryId());
+        IngredientSubcategory targetSub = loadSubcategoryNullable(
+                request.targetSubcategoryId(), target.getId());
+
+        List<Integer> ids = request.ids();
+        List<Ingredient> items = ingredientRepository.findAllById(ids);
+
+        if (items.size() != ids.size()) {
+            Map<Integer, Ingredient> found = new HashMap<>();
+            items.forEach(i -> found.put(i.getId(), i));
+            List<Integer> missing = ids.stream()
+                    .filter(id -> !found.containsKey(id))
+                    .toList();
+            throw new BusinessException("INGREDIENT_NOT_FOUND",
+                    "재료를 찾을 수 없습니다: " + missing, HttpStatus.NOT_FOUND);
+        }
+
+        for (Ingredient i : items) {
+            i.setCategory(target);
+            i.setSubcategory(targetSub);
+        }
     }
 
     private IngredientCategory loadCategory(Integer id) {
