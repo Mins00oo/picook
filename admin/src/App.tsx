@@ -14,6 +14,8 @@ import IngredientList from '@/pages/ingredients/IngredientList';
 import IngredientForm from '@/pages/ingredients/IngredientForm';
 import IngredientBulkUpload from '@/pages/ingredients/IngredientBulkUpload';
 import CategoryManage from '@/pages/ingredients/CategoryManage';
+import SubcategoryManage from '@/pages/ingredients/SubcategoryManage';
+import IngredientOverview from '@/pages/ingredients/IngredientOverview';
 import ShortsCacheList from '@/pages/shorts/ShortsCacheList';
 import ShortsCacheDetail from '@/pages/shorts/ShortsCacheDetail';
 import ShortsStats from '@/pages/shorts/ShortsStats';
@@ -74,6 +76,8 @@ export default function App() {
               <Route path="ingredients/:id/edit" element={<IngredientForm />} />
               <Route path="ingredients/bulk-upload" element={<IngredientBulkUpload />} />
               <Route path="ingredients/categories" element={<CategoryManage />} />
+              <Route path="ingredients/subcategories" element={<SubcategoryManage />} />
+              <Route path="ingredients/overview" element={<IngredientOverview />} />
               <Route path="shorts" element={<ShortsCacheList />} />
               <Route path="shorts/:id" element={<ShortsCacheDetail />} />
               <Route path="shorts/stats" element={<ShortsStats />} />

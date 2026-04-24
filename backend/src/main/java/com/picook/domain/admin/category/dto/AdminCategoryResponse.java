@@ -7,6 +7,7 @@ import java.time.Instant;
 public record AdminCategoryResponse(
         Integer id,
         String name,
+        String emoji,
         Integer sortOrder,
         int ingredientCount,
         Instant createdAt
@@ -15,6 +16,7 @@ public record AdminCategoryResponse(
         return new AdminCategoryResponse(
                 category.getId(),
                 category.getName(),
+                category.getEmoji(),
                 category.getSortOrder(),
                 ingredientCount,
                 category.getCreatedAt()

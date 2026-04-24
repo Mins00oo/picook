@@ -60,6 +60,7 @@ public class AdminCategoryService {
         }
 
         IngredientCategory category = new IngredientCategory(request.name(), sortOrder);
+        category.setEmoji(normalizeEmoji(request.emoji()));
         categoryRepository.save(category);
         return AdminCategoryResponse.of(category, 0);
     }
@@ -77,11 +78,18 @@ public class AdminCategoryService {
                 });
 
         category.setName(request.name());
+        category.setEmoji(normalizeEmoji(request.emoji()));
         if (request.sortOrder() != null) {
             category.setSortOrder(request.sortOrder());
         }
 
         return AdminCategoryResponse.of(category, ingredientRepository.countByCategoryId(id));
+    }
+
+    private String normalizeEmoji(String emoji) {
+        if (emoji == null) return null;
+        String trimmed = emoji.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     @Transactional

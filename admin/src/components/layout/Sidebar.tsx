@@ -42,9 +42,11 @@ export default function Sidebar() {
       label: '재료 관리',
       children: [
         { key: '/ingredients', label: '재료 목록' },
+        { key: '/ingredients/overview', label: '재료 통계' },
         { key: '/ingredients/categories', label: '카테고리 관리' },
+        { key: '/ingredients/subcategories', label: '서브카테고리 관리' },
         ...(canAccessMenu('ingredients')
-          ? [{ key: '/ingredients/bulk-upload', label: '엑셀 일괄등록' }]
+          ? [{ key: '/ingredients/bulk-upload', label: '엑셀 일괄등록·다운로드' }]
           : []),
       ],
     },

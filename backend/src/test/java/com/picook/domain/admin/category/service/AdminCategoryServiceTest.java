@@ -60,7 +60,7 @@ class AdminCategoryServiceTest {
 
     @Test
     void createCategory_shouldSucceed() {
-        AdminCategoryRequest request = new AdminCategoryRequest("해산물", 3);
+        AdminCategoryRequest request = new AdminCategoryRequest("해산물", null, 3);
 
         when(categoryRepository.existsByName("해산물")).thenReturn(false);
         when(categoryRepository.save(any(IngredientCategory.class)))
@@ -74,7 +74,7 @@ class AdminCategoryServiceTest {
 
     @Test
     void createCategory_autoSortOrder_whenNull() {
-        AdminCategoryRequest request = new AdminCategoryRequest("양념", null);
+        AdminCategoryRequest request = new AdminCategoryRequest("양념", null, null);
 
         when(categoryRepository.existsByName("양념")).thenReturn(false);
         when(categoryRepository.count()).thenReturn(5L);
@@ -88,7 +88,7 @@ class AdminCategoryServiceTest {
 
     @Test
     void createCategory_duplicateName_shouldThrow() {
-        AdminCategoryRequest request = new AdminCategoryRequest("채소", 1);
+        AdminCategoryRequest request = new AdminCategoryRequest("채소", null, 1);
 
         when(categoryRepository.existsByName("채소")).thenReturn(true);
 
@@ -106,7 +106,7 @@ class AdminCategoryServiceTest {
         when(categoryRepository.findByName("채소")).thenReturn(Optional.empty());
         when(ingredientRepository.countByCategoryId(1)).thenReturn(5);
 
-        AdminCategoryResponse response = service.updateCategory(1, new AdminCategoryRequest("채소", 1));
+        AdminCategoryResponse response = service.updateCategory(1, new AdminCategoryRequest("채소", null, 1));
 
         assertThat(response.name()).isEqualTo("채소");
     }
@@ -122,7 +122,7 @@ class AdminCategoryServiceTest {
         when(categoryRepository.findById(1)).thenReturn(Optional.of(existing));
         when(categoryRepository.findByName("육류")).thenReturn(Optional.of(other));
 
-        assertThatThrownBy(() -> service.updateCategory(1, new AdminCategoryRequest("육류", 1)))
+        assertThatThrownBy(() -> service.updateCategory(1, new AdminCategoryRequest("육류", null, 1)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("이미 존재하는 카테고리");
     }
