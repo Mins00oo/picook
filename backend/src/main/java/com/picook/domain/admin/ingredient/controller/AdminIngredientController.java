@@ -32,10 +32,15 @@ public class AdminIngredientController {
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<AdminIngredientResponse>>> getIngredients(
             @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) Integer subcategoryId,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Boolean hasSubcategory,
+            @RequestParam(required = false) Boolean hasEmoji,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        PageResponse<AdminIngredientResponse> response = adminIngredientService.getIngredients(categoryId, keyword, page, size);
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String sort) {
+        PageResponse<AdminIngredientResponse> response = adminIngredientService.list(
+                categoryId, subcategoryId, keyword, hasSubcategory, hasEmoji, page, size, sort);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
