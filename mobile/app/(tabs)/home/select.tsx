@@ -8,11 +8,11 @@ import {
   ScrollView,
   Modal,
   Pressable,
-  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import Svg, { Path, Circle } from 'react-native-svg';
 import {
   colors,
@@ -30,12 +30,46 @@ import { useFridge } from '../../../src/hooks/useFridge';
 import { searchIngredients } from '../../../src/utils/search';
 import type { Ingredient, IngredientCategory } from '../../../src/types/ingredient';
 
-const RAIL_WIDTH = 84;
+const RAIL_WIDTH = 70;
+
+// 행 단위 셀렉션 구독으로 토글 시 해당 행만 재렌더
+const IngredientRow = React.memo(function IngredientRow({
+  ingredient,
+}: {
+  ingredient: Ingredient;
+}) {
+  const selected = useSelectionStore((s) => s.selectedIds.has(ingredient.id));
+  const toggle = useSelectionStore((s) => s.toggle);
+  const onPress = useCallback(() => toggle(ingredient.id), [toggle, ingredient.id]);
+  const emoji = useMemo(() => getIngredientEmoji(ingredient.name), [ingredient.name]);
+  return (
+    <TouchableOpacity
+      style={[styles.ingRow, selected && styles.ingRowSelected]}
+      onPress={onPress}
+      activeOpacity={0.75}
+    >
+      <Text style={styles.irEmo}>{emoji}</Text>
+      <Text style={styles.irName} numberOfLines={1}>{ingredient.name}</Text>
+      <View style={[styles.cb, selected && styles.cbSelected]}>
+        {selected && (
+          <Svg width={10} height={10} viewBox="0 0 24 24">
+            <Path
+              d="M5 12l5 5L20 7"
+              stroke="#fff"
+              strokeWidth={3.5}
+              strokeLinecap="round"
+              fill="none"
+            />
+          </Svg>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+});
 
 export default function SelectScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { height: winHeight } = useWindowDimensions();
   const { selectedIds, toggle, count, clear, addMultiple } = useSelectionStore();
   const { data: fridgeItems } = useFridge();
   const [searchInput, setSearchInput] = useState('');
@@ -44,15 +78,22 @@ export default function SelectScreen() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listRef = useRef<FlashListRef<Ingredient>>(null);
 
-  // 진입 시 냉장고 재료 기본 선택 (selectionStore가 비어있을 때만)
+  // 카테고리/검색어 변경 시 패널 스크롤 최상단으로
+  useEffect(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [activeCategory, searchQuery]);
+
+  // 화면 fresh mount마다 1회: 이전 선택 폐기 + 냉장고 재료를 기본으로 세팅
+  // (이전엔 effect 두 개로 분리돼있어서 두번째 effect의 closure가 stale selectedIds.size를 캡처 →
+  //  alternating 버그. 단일 effect로 통합 + setState 직접 호출로 race 제거)
   useEffect(() => {
     if (prefilled || !fridgeItems) return;
-    if (selectedIds.size === 0 && fridgeItems.length > 0) {
-      addMultiple(fridgeItems.map((f) => f.ingredientId));
-    }
+    const ids = fridgeItems.map((f) => f.ingredientId);
+    useSelectionStore.setState({ selectedIds: new Set(ids) });
     setPrefilled(true);
-  }, [fridgeItems, selectedIds.size, addMultiple, prefilled]);
+  }, [fridgeItems, prefilled]);
 
   const handleLoadFromFridge = useCallback(() => {
     if (!fridgeItems) return;
@@ -123,9 +164,6 @@ export default function SelectScreen() {
   if (catLoading || ingLoading) return <Loading message="재료를 불러오는 중..." />;
   if (error) return <ErrorScreen message="재료 로드에 실패했습니다" onRetry={() => refetch()} />;
 
-  // split 높이 계산: 화면 전체 - 상단(status bar + nav + search) - 하단 (cart + tabbar safeArea)
-  const splitMinHeight = winHeight - 260 - insets.bottom - insets.top;
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Navbar */}
@@ -179,7 +217,7 @@ export default function SelectScreen() {
       </View>
 
       {/* Split */}
-      <View style={[styles.split, { minHeight: Math.max(splitMinHeight, 300) }]}>
+      <View style={styles.split}>
         {/* Rail */}
         <ScrollView
           style={styles.rail}
@@ -243,55 +281,32 @@ export default function SelectScreen() {
         </ScrollView>
 
         {/* Panel */}
-        <ScrollView
-          style={styles.panel}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.panelHead}>
-            <Text style={styles.panelHeadTitle}>{activeCatName}</Text>
-            <Text style={styles.panelHeadSub}>
-              {catSelectedCount} / {catTotal} 선택
-            </Text>
-          </View>
-
-          {displayedList.length > 0 ? (
-            displayedList.map((ing) => {
-              const selected = selectedIds.has(ing.id);
-              return (
-                <TouchableOpacity
-                  key={ing.id}
-                  style={[styles.ingRow, selected && styles.ingRowSelected]}
-                  onPress={() => toggle(ing.id)}
-                  activeOpacity={0.75}
-                >
-                  <Text style={styles.irEmo}>{getIngredientEmoji(ing.name)}</Text>
-                  <Text style={styles.irName} numberOfLines={1}>{ing.name}</Text>
-                  <View style={[styles.cb, selected && styles.cbSelected]}>
-                    {selected && (
-                      <Svg width={10} height={10} viewBox="0 0 24 24">
-                        <Path
-                          d="M5 12l5 5L20 7"
-                          stroke="#fff"
-                          strokeWidth={3.5}
-                          strokeLinecap="round"
-                          fill="none"
-                        />
-                      </Svg>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            })
-          ) : (
-            <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>{searchQuery ? '🔍' : '🥬'}</Text>
-              <Text style={styles.emptyText}>
-                {searchQuery ? '검색 결과가 없어요' : '이 카테고리엔 재료가 없어요'}
-              </Text>
-            </View>
-          )}
-        </ScrollView>
+        <View style={styles.panel}>
+          <FlashList
+            ref={listRef}
+            data={displayedList}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={({ item }) => <IngredientRow ingredient={item} />}
+            ListHeaderComponent={
+              <View style={styles.panelHead}>
+                <Text style={styles.panelHeadTitle}>{activeCatName}</Text>
+                <Text style={styles.panelHeadSub}>
+                  {catSelectedCount} / {catTotal} 선택
+                </Text>
+              </View>
+            }
+            ListEmptyComponent={
+              <View style={styles.empty}>
+                <Text style={styles.emptyEmoji}>{searchQuery ? '🔍' : '🥬'}</Text>
+                <Text style={styles.emptyText}>
+                  {searchQuery ? '검색 결과가 없어요' : '이 카테고리엔 재료가 없어요'}
+                </Text>
+              </View>
+            }
+            contentContainerStyle={{ paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
       </View>
 
       {/* Floating cart */}
@@ -629,18 +644,20 @@ const styles = StyleSheet.create({
   },
   rail: {
     width: RAIL_WIDTH,
+    flexShrink: 0,
+    flexGrow: 0,
     paddingVertical: 4,
-    paddingLeft: 10,
-    paddingRight: 8,
+    paddingHorizontal: 2,
     borderRightWidth: 1,
     borderRightColor: colors.line,
   },
   railItem: {
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderRadius: 12,
+    alignSelf: 'stretch',
+    gap: 2,
+    paddingVertical: 7,
+    paddingHorizontal: 0,
+    borderRadius: 8,
     marginBottom: 2,
     position: 'relative',
   },
@@ -648,17 +665,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentSoft,
   },
   rEmo: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     backgroundColor: colors.lineSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rEmoText: { fontSize: 19 },
+  rEmoText: { fontSize: 15 },
   rName: {
     fontFamily: fontFamily.semibold,
-    fontSize: 10.5,
+    fontSize: 10,
     color: colors.textSecondary,
     letterSpacing: -0.3,
   },
@@ -668,12 +685,12 @@ const styles = StyleSheet.create({
   },
   railBadge: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    minWidth: 16,
-    height: 16,
-    paddingHorizontal: 4,
-    borderRadius: 8,
+    top: 4,
+    right: 2,
+    minWidth: 15,
+    height: 15,
+    paddingHorizontal: 3,
+    borderRadius: 7.5,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -688,7 +705,7 @@ const styles = StyleSheet.create({
   },
 
   // Panel
-  panel: { flex: 1, paddingHorizontal: 14, paddingVertical: 10 },
+  panel: { flex: 1, paddingHorizontal: 12, paddingVertical: 8 },
   panelHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -853,7 +870,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingTop: 10,
-    maxHeight: '78%',
+    height: '78%',
   },
   sheetHandle: {
     alignSelf: 'center',

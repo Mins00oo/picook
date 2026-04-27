@@ -20,7 +20,7 @@ import { ImageLightbox } from '../../src/components/common/ImageLightbox';
 import { CheckmarkIcon } from '../../src/components/brand/CheckmarkIcon';
 import { recipeApi } from '../../src/api/recipeApi';
 import { useFavorites } from '../../src/hooks/useFavorites';
-import { formatCookTime, formatDifficulty, toAbsoluteImageUrl } from '../../src/utils/format';
+import { formatCookTime, formatDifficulty, formatCategory, toAbsoluteImageUrl } from '../../src/utils/format';
 import type { RecipeStep, RecipeIngredient } from '../../src/types/recipe';
 
 export default function RecipeDetailScreen() {
@@ -61,52 +61,28 @@ export default function RecipeDetailScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Hero image */}
-      <View style={styles.heroWrap}>
-        {heroImg ? (
-          <Image source={{ uri: heroImg }} style={styles.hero} contentFit="cover" />
-        ) : (
-          <View style={[styles.hero, styles.heroPlaceholder]}>
-            <Text style={{ fontSize: 48 }}>🍽️</Text>
-          </View>
-        )}
-        <View style={[styles.heroTop, { paddingTop: insets.top + (Platform.OS === 'android' ? 10 : 0) }]}>
-          <TouchableOpacity style={styles.heroBtn} onPress={() => router.back()} activeOpacity={0.85}>
-            <Svg width={20} height={20} viewBox="0 0 24 24">
-              <Path d="M15 18l-6-6 6-6" stroke={colors.textPrimary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </Svg>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.heroBtn} onPress={handleFavToggle} activeOpacity={0.85}>
-            <Svg width={18} height={18} viewBox="0 0 24 24">
-              <Path
-                d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
-                fill={isFav ? colors.primary : 'none'}
-                stroke={isFav ? colors.primary : colors.textPrimary}
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Hero image — scrolls with content */}
+        <View style={styles.heroWrap}>
+          {heroImg ? (
+            <Image source={{ uri: heroImg }} style={styles.hero} contentFit="cover" />
+          ) : (
+            <View style={[styles.hero, styles.heroPlaceholder]}>
+              <Text style={{ fontSize: 48 }}>🍽️</Text>
+            </View>
+          )}
+        </View>
+
         {/* Body card */}
         <View style={styles.body}>
           <View style={styles.pillsRow}>
             <View style={styles.categoryPill}>
-              <Text style={styles.pillText}>{recipe.category}</Text>
+              <Text style={styles.pillText}>{formatCategory(recipe.category)}</Text>
             </View>
-            {recipe.coachingReady && (
-              <View style={[styles.categoryPill, styles.pillAccent]}>
-                <Text style={[styles.pillText, { color: colors.primary }]}>초보 추천</Text>
-              </View>
-            )}
           </View>
 
           <Text style={styles.title}>{recipe.title}</Text>
@@ -196,6 +172,30 @@ export default function RecipeDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Top action buttons — fixed over content */}
+      <View
+        style={[styles.heroTop, { paddingTop: insets.top + (Platform.OS === 'android' ? 10 : 0) }]}
+        pointerEvents="box-none"
+      >
+        <TouchableOpacity style={styles.heroBtn} onPress={() => router.back()} activeOpacity={0.85}>
+          <Svg width={20} height={20} viewBox="0 0 24 24">
+            <Path d="M15 18l-6-6 6-6" stroke={colors.textPrimary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </Svg>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.heroBtn} onPress={handleFavToggle} activeOpacity={0.85}>
+          <Svg width={18} height={18} viewBox="0 0 24 24">
+            <Path
+              d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
+              fill={isFav ? colors.primary : 'none'}
+              stroke={isFav ? colors.primary : colors.textPrimary}
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </Svg>
+        </TouchableOpacity>
+      </View>
 
       {/* Bottom CTA — gradient fade */}
       <LinearGradient
@@ -298,9 +298,7 @@ function StepCard({
   last: boolean;
   onThumbPress: (uri: string) => void;
 }) {
-  const isWait = step.stepType === 'WAIT';
   const stepImg = toAbsoluteImageUrl(step.imageUrl);
-  const durationMin = step.durationSeconds ? Math.ceil(step.durationSeconds / 60) : 0;
   const { title, body } = splitStepText(step.description);
 
   return (
@@ -336,14 +334,6 @@ function StepCard({
         <View style={styles.stepBody}>
           {title && <Text style={styles.stepTitle}>{title}</Text>}
           <Text style={styles.stepDesc}>{body}</Text>
-          {durationMin > 0 && (
-            <View style={[styles.timeTag, isWait && styles.timeTagWait]}>
-              <Text style={{ fontSize: 10 }}>{isWait ? '⏱️' : '🔥'}</Text>
-              <Text style={[styles.timeTagText, isWait && { color: colors.warning }]}>
-                {durationMin}분 {isWait ? '대기' : '조리'}
-              </Text>
-            </View>
-          )}
         </View>
       </View>
     </View>
@@ -353,10 +343,10 @@ function StepCard({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
-  heroWrap: { position: 'relative' },
+  heroWrap: { width: '100%' },
   hero: {
     width: '100%',
-    aspectRatio: 1.15,
+    aspectRatio: 4 / 3,
     backgroundColor: colors.lineSoft,
   },
   heroPlaceholder: { alignItems: 'center', justifyContent: 'center' },
@@ -379,7 +369,7 @@ const styles = StyleSheet.create({
     ...shadow.sm,
   },
 
-  scroll: { flex: 1, marginTop: -28 },
+  scroll: { flex: 1 },
   scrollContent: {},
 
   body: {
@@ -389,6 +379,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 16,
+    marginTop: -28,
     gap: 10,
   },
   pillsRow: { flexDirection: 'row', gap: 6 },
@@ -400,7 +391,6 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     backgroundColor: colors.surface,
   },
-  pillAccent: { backgroundColor: colors.accentSoft, borderColor: colors.accent2 },
   pillText: {
     fontFamily: fontFamily.semibold,
     fontSize: 10.5,
@@ -599,25 +589,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     letterSpacing: -0.2,
   },
-  timeTag: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingVertical: 2,
-    paddingHorizontal: 7,
-    borderRadius: 100,
-    backgroundColor: colors.accentSoft,
-    marginTop: 2,
-  },
-  timeTagWait: { backgroundColor: '#FEF3C7' },
-  timeTagText: {
-    fontFamily: fontFamily.bold,
-    fontSize: 10,
-    color: colors.primary,
-    letterSpacing: -0.1,
-  },
-
   bottom: {
     position: 'absolute',
     bottom: 0,

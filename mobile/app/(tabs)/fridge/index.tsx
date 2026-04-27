@@ -8,10 +8,10 @@ import {
   TextInput,
   Modal,
   Pressable,
-  Animated,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import Svg, { Path, Circle } from 'react-native-svg';
 import {
   colors,
@@ -28,19 +28,48 @@ import { useFridge } from '../../../src/hooks/useFridge';
 import { searchIngredients } from '../../../src/utils/search';
 import type { Ingredient, IngredientCategory } from '../../../src/types/ingredient';
 
-const RAIL_WIDTH = 84;
+const RAIL_WIDTH = 70;
+
+interface IngredientRowProps {
+  ingredient: Ingredient;
+  held: boolean;
+  onToggle: (id: number, held: boolean) => void;
+}
+
+const IngredientRow = React.memo(function IngredientRow({
+  ingredient,
+  held,
+  onToggle,
+}: IngredientRowProps) {
+  const emoji = useMemo(() => getIngredientEmoji(ingredient.name), [ingredient.name]);
+  const onPress = useCallback(() => onToggle(ingredient.id, held), [onToggle, ingredient.id, held]);
+  return (
+    <TouchableOpacity
+      style={[styles.ingRow, held && styles.ingRowSelected]}
+      onPress={onPress}
+      activeOpacity={0.75}
+    >
+      <Text style={styles.irEmo}>{emoji}</Text>
+      <Text style={styles.irName} numberOfLines={1}>{ingredient.name}</Text>
+      <View style={[styles.cb, held && styles.cbSelected]}>
+        {held && (
+          <Svg width={10} height={10} viewBox="0 0 24 24">
+            <Path d="M5 12l5 5L20 7" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" fill="none" />
+          </Svg>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+});
 
 export default function FridgeScreen() {
-  const insets = useSafeAreaInsets();
   const { data: fridgeData, isLoading: fridgeLoading, add, remove } = useFridge();
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [savedVisible, setSavedVisible] = useState(false);
-  const savedOpacity = useRef(new Animated.Value(0)).current;
-  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listRef = useRef<FlashListRef<Ingredient>>(null);
 
   const handleSearchChange = useCallback((text: string) => {
     setSearchInput(text);
@@ -51,7 +80,6 @@ export default function FridgeScreen() {
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
     };
   }, []);
 
@@ -87,6 +115,11 @@ export default function FridgeScreen() {
     if (activeCategory !== null) return list.filter((ing) => ing.categoryId === activeCategory);
     return list;
   }, [ingredients, activeCategory, searchQuery]);
+
+  // 카테고리/검색 변경 시 패널 스크롤 최상단으로
+  useEffect(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [activeCategory, searchQuery]);
 
   const activeCatName = useMemo(() => {
     if (searchQuery.trim()) return `"${searchQuery}" 검색 결과`;
@@ -127,25 +160,14 @@ export default function FridgeScreen() {
       .sort((a, b) => (a.category!.sortOrder ?? 0) - (b.category!.sortOrder ?? 0));
   }, [fridgeData, ingredients, categories]);
 
-  const showSaved = useCallback(() => {
-    setSavedVisible(true);
-    savedOpacity.setValue(0);
-    Animated.timing(savedOpacity, { toValue: 0.9, duration: 200, useNativeDriver: true }).start();
-    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
-    savedTimerRef.current = setTimeout(() => {
-      Animated.timing(savedOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
-        setSavedVisible(false);
-      });
-    }, 1800);
-  }, [savedOpacity]);
-
-  const handleToggle = useCallback((ingredientId: number) => {
-    if (fridgeIds.has(ingredientId)) {
-      remove.mutate(ingredientId, { onSuccess: showSaved });
+  // 행에서 자기 held를 넘겨주므로 fridgeIds 의존 제거 → 레퍼런스 안정 → 메모 행 재렌더 방지
+  const handleToggle = useCallback((ingredientId: number, currentlyHeld: boolean) => {
+    if (currentlyHeld) {
+      remove.mutate(ingredientId);
     } else {
-      add.mutate(ingredientId, { onSuccess: showSaved });
+      add.mutate(ingredientId);
     }
-  }, [fridgeIds, add, remove, showSaved]);
+  }, [add, remove]);
 
   if ((fridgeLoading && !fridgeData) || ingLoading) return <Loading message="냉장고 재료 불러오는 중..." />;
   if (error) return <ErrorScreen message="재료 로드 실패" onRetry={() => refetch()} />;
@@ -155,14 +177,6 @@ export default function FridgeScreen() {
       <View style={styles.nav}>
         <Text style={styles.navTitle}>내 냉장고</Text>
       </View>
-
-      {/* Saved indicator */}
-      {savedVisible && (
-        <Animated.View style={[styles.saved, { opacity: savedOpacity }]} pointerEvents="none">
-          <View style={styles.savedDot} />
-          <Text style={styles.savedText}>저장됨</Text>
-        </Animated.View>
-      )}
 
       {/* Search */}
       <View style={styles.searchBar}>
@@ -273,45 +287,38 @@ export default function FridgeScreen() {
         </ScrollView>
 
         {/* Panel */}
-        <ScrollView style={styles.panel} contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
-          <View style={styles.panelHead}>
-            <Text style={styles.panelHeadTitle}>{activeCatName}</Text>
-            <Text style={styles.panelHeadSub}>
-              {catHeldCount} / {catTotal} 보유
-            </Text>
-          </View>
-
-          {displayedList.length > 0 ? (
-            displayedList.map((ing) => {
-              const held = fridgeIds.has(ing.id);
-              return (
-                <TouchableOpacity
-                  key={ing.id}
-                  style={[styles.ingRow, held && styles.ingRowSelected]}
-                  onPress={() => handleToggle(ing.id)}
-                  activeOpacity={0.75}
-                >
-                  <Text style={styles.irEmo}>{getIngredientEmoji(ing.name)}</Text>
-                  <Text style={styles.irName} numberOfLines={1}>{ing.name}</Text>
-                  <View style={[styles.cb, held && styles.cbSelected]}>
-                    {held && (
-                      <Svg width={10} height={10} viewBox="0 0 24 24">
-                        <Path d="M5 12l5 5L20 7" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" fill="none" />
-                      </Svg>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            })
-          ) : (
-            <View style={styles.emptyPanel}>
-              <Text style={styles.emptyPanelEmoji}>{searchQuery ? '🔍' : '🥬'}</Text>
-              <Text style={styles.emptyPanelText}>
-                {searchQuery ? '검색 결과가 없어요' : '이 카테고리엔 재료가 없어요'}
-              </Text>
-            </View>
-          )}
-        </ScrollView>
+        <View style={styles.panel}>
+          <FlashList
+            ref={listRef}
+            data={displayedList}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={({ item }) => (
+              <IngredientRow
+                ingredient={item}
+                held={fridgeIds.has(item.id)}
+                onToggle={handleToggle}
+              />
+            )}
+            ListHeaderComponent={
+              <View style={styles.panelHead}>
+                <Text style={styles.panelHeadTitle}>{activeCatName}</Text>
+                <Text style={styles.panelHeadSub}>
+                  {catHeldCount} / {catTotal} 보유
+                </Text>
+              </View>
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyPanel}>
+                <Text style={styles.emptyPanelEmoji}>{searchQuery ? '🔍' : '🥬'}</Text>
+                <Text style={styles.emptyPanelText}>
+                  {searchQuery ? '검색 결과가 없어요' : '이 카테고리엔 재료가 없어요'}
+                </Text>
+              </View>
+            }
+            contentContainerStyle={{ paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
       </View>
 
       {/* View Sheet */}
@@ -390,28 +397,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   navTitle: { ...typography.h1, fontSize: 18, color: colors.textPrimary, fontFamily: fontFamily.bold },
-
-  // Saved indicator
-  saved: {
-    position: 'absolute',
-    top: 70,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 5,
-    paddingLeft: 8,
-    paddingRight: 11,
-    borderRadius: 100,
-    backgroundColor: 'rgba(31,22,18,0.85)',
-    zIndex: 30,
-  },
-  savedDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#7BC47F' },
-  savedText: {
-    fontFamily: fontFamily.semibold,
-    fontSize: 11,
-    color: '#fff',
-  },
 
   // Search
   searchBar: {
@@ -499,45 +484,48 @@ const styles = StyleSheet.create({
   split: { flex: 1, flexDirection: 'row' },
   rail: {
     width: RAIL_WIDTH,
+    flexShrink: 0,
+    flexGrow: 0,
     paddingVertical: 4,
-    paddingLeft: 10,
-    paddingRight: 8,
+    paddingHorizontal: 4,
     borderRightWidth: 1,
     borderRightColor: colors.line,
   },
   railItem: {
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderRadius: 12,
+    alignSelf: 'stretch',
+    gap: 3,
+    paddingVertical: 8,
+    paddingHorizontal: 2,
+    borderRadius: 10,
     marginBottom: 2,
     position: 'relative',
   },
   railItemActive: { backgroundColor: colors.accentSoft },
   rEmo: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     backgroundColor: colors.lineSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rEmoText: { fontSize: 19 },
+  rEmoText: { fontSize: 15 },
   rName: {
     fontFamily: fontFamily.semibold,
-    fontSize: 10.5,
+    fontSize: 10,
     color: colors.textSecondary,
+    letterSpacing: -0.3,
   },
   rNameActive: { color: colors.primary, fontFamily: fontFamily.bold },
   railBadge: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    minWidth: 16,
-    height: 16,
-    paddingHorizontal: 4,
-    borderRadius: 8,
+    top: 4,
+    right: 2,
+    minWidth: 15,
+    height: 15,
+    paddingHorizontal: 3,
+    borderRadius: 7.5,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -550,7 +538,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  panel: { flex: 1, paddingHorizontal: 14, paddingTop: 10 },
+  panel: { flex: 1, paddingHorizontal: 12, paddingTop: 8 },
   panelHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -624,7 +612,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingTop: 10,
-    maxHeight: '72%',
+    height: '72%',
   },
   sheetHandle: {
     alignSelf: 'center',
