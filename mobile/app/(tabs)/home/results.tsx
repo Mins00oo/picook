@@ -29,7 +29,7 @@ import { recipeApi } from '../../../src/api/recipeApi';
 import { ingredientApi } from '../../../src/api/ingredientApi';
 import { useSelectionStore } from '../../../src/stores/selectionStore';
 import { useFilterStore } from '../../../src/stores/filterStore';
-import { formatCookTime, formatDifficulty, toAbsoluteImageUrl } from '../../../src/utils/format';
+import { formatCookTime, formatDifficulty, formatCategory, toAbsoluteImageUrl } from '../../../src/utils/format';
 import type { Difficulty, RecipeSummary } from '../../../src/types/recipe';
 import type { Ingredient, IngredientCategory } from '../../../src/types/ingredient';
 import { useFavorites } from '../../../src/hooks/useFavorites';
@@ -403,7 +403,7 @@ function RecipeResultCard({ recipe, onPress }: { recipe: RecipeSummary; onPress:
           <Text style={styles.cardTitle} numberOfLines={1}>{recipe.title}</Text>
         </View>
         <Text style={styles.cardMeta} numberOfLines={1}>
-          {formatCookTime(recipe.cookingTimeMinutes)} · {formatDifficulty(recipe.difficulty)} · {recipe.category}
+          {formatCookTime(recipe.cookingTimeMinutes)} · {formatDifficulty(recipe.difficulty)} · {formatCategory(recipe.category)}
         </Text>
 
         <View style={styles.matchSection}>

@@ -2,7 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { Config } from '../constants/config';
-import { queryClient } from './queryClient';
+import { queryClient } from '../lib/queryClient';
 
 const api = axios.create({
   baseURL: Config.API_BASE_URL,

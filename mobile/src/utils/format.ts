@@ -12,7 +12,7 @@ export function formatCookTime(minutes: number): string {
 }
 
 export function formatDifficulty(difficulty: string): string {
-  switch (difficulty) {
+  switch ((difficulty ?? '').toUpperCase()) {
     case 'EASY':
       return '쉬움';
     case 'MEDIUM':
@@ -22,6 +22,21 @@ export function formatDifficulty(difficulty: string): string {
     default:
       return difficulty;
   }
+}
+
+const CATEGORY_KO: Record<string, string> = {
+  korean: '한식',
+  western: '양식',
+  chinese: '중식',
+  japanese: '일식',
+  snack: '분식',
+  dessert: '디저트',
+  drink: '음료',
+  other: '기타',
+};
+
+export function formatCategory(category: string): string {
+  return CATEGORY_KO[(category ?? '').toLowerCase()] ?? category;
 }
 
 export function formatServings(servings: number): string {
