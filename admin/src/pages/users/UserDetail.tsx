@@ -6,7 +6,6 @@ import {
   getUser,
   suspendUser,
   activateUser,
-  getUserCoachingLogs,
   getUserCompletions,
   getUserFavorites,
   getUserSearchHistory,
@@ -21,7 +20,6 @@ export default function UserDetail() {
   const queryClient = useQueryClient();
 
   const [suspendReason, setSuspendReason] = useState('');
-  const [coachingPage, setCoachingPage] = useState(0);
   const [completionPage, setCompletionPage] = useState(0);
   const [favoritePage, setFavoritePage] = useState(0);
   const [searchPage, setSearchPage] = useState(0);
@@ -29,12 +27,6 @@ export default function UserDetail() {
   const { data: user, isLoading } = useQuery({
     queryKey: ['user', id],
     queryFn: () => getUser(id!),
-  });
-
-  const { data: coachingLogs } = useQuery({
-    queryKey: ['user', id, 'coaching-logs', coachingPage],
-    queryFn: () => getUserCoachingLogs(id!, { page: coachingPage, size: 10 }),
-    enabled: !!id,
   });
 
   const { data: completions } = useQuery({
@@ -126,7 +118,6 @@ export default function UserDetail() {
           <Descriptions.Item label="로그인">{user.loginType}</Descriptions.Item>
           <Descriptions.Item label="가입일">{formatDate(user.createdAt)}</Descriptions.Item>
           <Descriptions.Item label="실력">{user.cookingLevel}</Descriptions.Item>
-          <Descriptions.Item label="코칭">{user.coachingEnabled ? 'ON' : 'OFF'}</Descriptions.Item>
           <Descriptions.Item label="등급">
             Lv.{ranking.currentLevel.level} {ranking.currentLevel.title} {ranking.currentLevel.emoji}
             ({user.completedCookingCount}
@@ -145,8 +136,7 @@ export default function UserDetail() {
       </Card>
 
       <Card title="활동 요약" style={{ marginBottom: 16 }}>
-        <Descriptions column={3}>
-          <Descriptions.Item label="코칭 횟수">{user.activitySummary.coachingCount}</Descriptions.Item>
+        <Descriptions column={2}>
           <Descriptions.Item label="완료 횟수">{user.activitySummary.completionCount}</Descriptions.Item>
           <Descriptions.Item label="즐겨찾기">{user.activitySummary.favoriteCount}</Descriptions.Item>
         </Descriptions>
@@ -154,52 +144,6 @@ export default function UserDetail() {
 
       <Tabs
         items={[
-          {
-            key: 'coaching',
-            label: '코칭 이력',
-            children: (
-              <Table
-                rowKey="id"
-                dataSource={coachingLogs?.content}
-                size="small"
-                pagination={{
-                  current: coachingPage + 1,
-                  pageSize: 10,
-                  total: coachingLogs?.totalElements,
-                  onChange: (p) => setCoachingPage(p - 1),
-                }}
-                columns={[
-                  { title: '날짜', dataIndex: 'startedAt', render: (v: string) => formatDateTime(v) },
-                  {
-                    title: '레시피 ID',
-                    dataIndex: 'recipeIds',
-                    render: (v: number[]) => v?.join(', '),
-                  },
-                  { title: '모드', dataIndex: 'mode' },
-                  {
-                    title: '예상시간',
-                    dataIndex: 'estimatedSeconds',
-                    render: (v?: number) => (v ? `${Math.round(v / 60)}분` : '-'),
-                  },
-                  {
-                    title: '소요시간',
-                    dataIndex: 'actualSeconds',
-                    render: (v?: number) => (v ? `${Math.round(v / 60)}분` : '-'),
-                  },
-                  {
-                    title: '완료',
-                    dataIndex: 'completed',
-                    render: (v: boolean) => (v ? <Tag color="green">완료</Tag> : <Tag>미완료</Tag>),
-                  },
-                  {
-                    title: '완료일',
-                    dataIndex: 'completedAt',
-                    render: (v?: string) => (v ? formatDateTime(v) : '-'),
-                  },
-                ]}
-              />
-            ),
-          },
           {
             key: 'completions',
             label: '요리 완료',

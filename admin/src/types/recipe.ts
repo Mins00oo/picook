@@ -2,7 +2,6 @@ export type {
   RecipeCategory,
   Difficulty,
   RecipeStatus,
-  StepType,
   Recipe,
   RecipeDetail,
   RecipeIngredient,
@@ -19,7 +18,6 @@ export interface AdminRecipeListItem {
   thumbnailUrl?: string;
   totalIngredients: number;
   viewCount: number;
-  coachingReady: boolean;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -38,7 +36,6 @@ export interface AdminRecipeDetail {
   tips?: string;
   totalIngredients: number;
   viewCount: number;
-  coachingReady: boolean;
   status: string;
   ingredients: AdminRecipeIngredientItem[];
   steps: AdminRecipeStepItem[];
@@ -61,9 +58,6 @@ export interface AdminRecipeStepItem {
   stepNumber: number;
   description: string;
   imageUrl?: string;
-  stepType: string;
-  durationSeconds: number;
-  canParallel: boolean;
 }
 
 export interface AdminRecipeRequest {
@@ -87,9 +81,6 @@ export interface AdminRecipeRequest {
     stepNumber: number;
     description: string;
     imageUrl?: string;
-    stepType: string;
-    durationSeconds?: number;
-    canParallel?: boolean;
   }[];
 }
 

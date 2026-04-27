@@ -17,7 +17,6 @@ export interface AdminUserListItem {
 }
 
 export interface AdminUserActivitySummary {
-  coachingCount: number;
   completionCount: number;
   favoriteCount: number;
 }
@@ -29,7 +28,6 @@ export interface AdminUserDetail {
   profileImageUrl?: string;
   loginType: string;
   cookingLevel: string;
-  coachingEnabled: boolean;
   completedCookingCount: number;
   isOnboarded: boolean;
   status: string;
@@ -38,17 +36,6 @@ export interface AdminUserDetail {
   createdAt: string;
   updatedAt: string;
   activitySummary: AdminUserActivitySummary;
-}
-
-export interface AdminCoachingLogItem {
-  id: number;
-  mode: string;
-  recipeIds: number[];
-  estimatedSeconds?: number;
-  actualSeconds?: number;
-  completed: boolean;
-  startedAt: string;
-  completedAt?: string;
 }
 
 export interface AdminCookingCompletionItem {

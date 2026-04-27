@@ -3,7 +3,6 @@ import type {
   UserStatsData,
   RecipeStatsData,
   IngredientStatsData,
-  CoachingStatsData,
   ShortsStatsPageData,
   RankingStatsData,
 } from '@/types/stats';
@@ -18,10 +17,6 @@ export function getRecipeStats(): Promise<RecipeStatsData> {
 
 export function getIngredientStats(): Promise<IngredientStatsData> {
   return client.get('/admin/stats/ingredients') as Promise<IngredientStatsData>;
-}
-
-export function getCoachingStats(period?: string): Promise<CoachingStatsData> {
-  return client.get('/admin/stats/coaching', { params: { period } }) as Promise<CoachingStatsData>;
 }
 
 export function getShortsStats(): Promise<ShortsStatsPageData> {

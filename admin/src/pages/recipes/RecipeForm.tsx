@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Button, Card, Input, InputNumber, Select, Space, message, Alert } from 'antd';
+import { Button, Card, Input, InputNumber, Select, Space, message } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
@@ -33,7 +33,7 @@ export default function RecipeForm() {
   const isEdit = !!id;
   const navigate = useNavigate();
 
-  const { control, handleSubmit, reset, watch, formState: { errors } } = useForm<RecipeFormValues>({
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<RecipeFormValues>({
     resolver: zodResolver(recipeSchema),
     defaultValues: {
       title: '',
@@ -79,9 +79,6 @@ export default function RecipeForm() {
         })),
         steps: recipe.steps.map((step) => ({
           description: step.description,
-          stepType: step.stepType as 'active' | 'wait',
-          durationSeconds: step.durationSeconds || undefined,
-          canParallel: step.canParallel,
           imageUrl: step.imageUrl,
         })),
       });
@@ -106,7 +103,6 @@ export default function RecipeForm() {
       steps: values.steps?.map((step, i) => ({
         ...step,
         stepNumber: i + 1,
-        canParallel: step.canParallel ?? false,
       })) ?? [],
       ingredients: values.ingredients?.map((ing, i) => ({
         ...ing,
@@ -117,20 +113,9 @@ export default function RecipeForm() {
     saveMutation.mutate(request);
   };
 
-  const watchedSteps = watch('steps');
-  const hasStepsWithoutDuration = watchedSteps?.some((s) => !s?.durationSeconds);
-
   return (
     <div>
       <h2>{isEdit ? '레시피 수정' : '레시피 등록'}</h2>
-      {hasStepsWithoutDuration && watchedSteps.length > 0 && (
-        <Alert
-          type="warning"
-          message="일부 조리 단계에 소요시간이 입력되지 않았습니다. 이 경우 코칭 준비 상태가 미완료로 설정됩니다."
-          style={{ marginBottom: 16 }}
-          showIcon
-        />
-      )}
       <form onSubmit={handleSubmit(onSubmit)}>
         <Card title="기본 정보" style={{ marginBottom: 16 }}>
           <FormField label="요리명" error={errors.title?.message} required>

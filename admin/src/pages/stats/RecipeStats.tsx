@@ -20,9 +20,6 @@ export default function RecipeStats() {
       <h2>레시피 통계</h2>
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={8}><StatsCard title="총 레시피" value={data.totalRecipes} /></Col>
-        <Col span={8}>
-          <StatsCard title="코칭 준비율" value={`${(data.coachingReadyRate * 100).toFixed(1)}%`} />
-        </Col>
       </Row>
       <Row gutter={16}>
         <Col span={12}>

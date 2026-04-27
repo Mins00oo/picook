@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getRecipe, deleteRecipe, changeRecipeStatus } from '@/api/recipeApi';
 import StatusBadge from '@/components/common/StatusBadge';
-import CoachingReadyIndicator from '@/components/recipe/CoachingReadyIndicator';
 import { showConfirm } from '@/components/common/ConfirmModal';
 import { usePermission } from '@/hooks/usePermission';
 import { formatDateTime } from '@/utils/format';
@@ -82,9 +81,6 @@ export default function RecipeDetail() {
           <Descriptions.Item label="상태">
             <StatusBadge status={recipe.status} />
           </Descriptions.Item>
-          <Descriptions.Item label="코칭">
-            <CoachingReadyIndicator ready={recipe.coachingReady} />
-          </Descriptions.Item>
           <Descriptions.Item label="등록일">{formatDateTime(recipe.createdAt)}</Descriptions.Item>
           <Descriptions.Item label="수정일">{formatDateTime(recipe.updatedAt)}</Descriptions.Item>
         </Descriptions>
@@ -123,25 +119,6 @@ export default function RecipeDetail() {
           columns={[
             { title: '순서', dataIndex: 'stepNumber', width: 60 },
             { title: '설명', dataIndex: 'description' },
-            {
-              title: '유형',
-              dataIndex: 'stepType',
-              width: 80,
-              render: (v: string) =>
-                v === 'active' ? <Tag color="blue">능동</Tag> : <Tag color="orange">대기</Tag>,
-            },
-            {
-              title: '소요시간',
-              dataIndex: 'durationSeconds',
-              width: 100,
-              render: (v: number) => (v ? `${v}초` : '-'),
-            },
-            {
-              title: '병렬',
-              dataIndex: 'canParallel',
-              width: 60,
-              render: (v: boolean) => (v ? 'O' : '-'),
-            },
           ]}
         />
       </Card>

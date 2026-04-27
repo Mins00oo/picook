@@ -34,8 +34,6 @@ export interface ShortsConvertResult {
 export interface ShortsStep {
   stepNumber: number;
   description: string;
-  stepType: 'active' | 'wait';
-  durationSeconds: number;
 }
 
 export interface ShortsIngredient {

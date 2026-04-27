@@ -3,7 +3,6 @@ import type { PageResponse } from '@/types/common';
 import type {
   AdminUserListItem,
   AdminUserDetail,
-  AdminCoachingLogItem,
   AdminCookingCompletionItem,
   AdminFavoriteItem,
   AdminSearchHistoryItem,
@@ -37,15 +36,6 @@ export function suspendUser(id: string, reason: string): Promise<void> {
 
 export function activateUser(id: string): Promise<void> {
   return client.patch(`/admin/users/${id}/activate`) as Promise<void>;
-}
-
-export function getUserCoachingLogs(
-  id: string,
-  params?: PaginationParams,
-): Promise<PageResponse<AdminCoachingLogItem>> {
-  return client.get(`/admin/users/${id}/coaching-logs`, { params }) as Promise<
-    PageResponse<AdminCoachingLogItem>
-  >;
 }
 
 export function getUserCompletions(

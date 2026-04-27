@@ -11,7 +11,6 @@ interface RecipeListParams {
   status?: string;
   category?: string;
   difficulty?: string;
-  coachingReady?: boolean;
   keyword?: string;
   page?: number;
   size?: number;

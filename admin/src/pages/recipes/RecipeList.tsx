@@ -5,7 +5,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { getRecipes, deleteRecipe, changeRecipeStatus } from '@/api/recipeApi';
 import StatusBadge from '@/components/common/StatusBadge';
-import CoachingReadyIndicator from '@/components/recipe/CoachingReadyIndicator';
 import { showConfirm } from '@/components/common/ConfirmModal';
 import { usePermission } from '@/hooks/usePermission';
 import { formatDate } from '@/utils/format';
@@ -48,7 +47,6 @@ export default function RecipeList() {
     category: '',
     difficulty: '',
     keyword: '',
-    coachingReady: undefined as boolean | undefined,
   });
 
   const { data, isLoading } = useQuery({
@@ -61,7 +59,6 @@ export default function RecipeList() {
         category: filters.category || undefined,
         difficulty: filters.difficulty || undefined,
         keyword: filters.keyword || undefined,
-        coachingReady: filters.coachingReady,
       }),
   });
 
@@ -87,12 +84,6 @@ export default function RecipeList() {
     { title: '카테고리', dataIndex: 'category', width: 80 },
     { title: '난이도', dataIndex: 'difficulty', width: 80 },
     { title: '시간(분)', dataIndex: 'cookingTimeMinutes', width: 80 },
-    {
-      title: '코칭',
-      dataIndex: 'coachingReady',
-      width: 120,
-      render: (v: boolean) => <CoachingReadyIndicator ready={v} />,
-    },
     {
       title: '상태',
       dataIndex: 'status',
@@ -167,17 +158,6 @@ export default function RecipeList() {
           value={filters.difficulty}
           onChange={(v) => setFilters((f) => ({ ...f, difficulty: v }))}
           style={{ width: 120 }}
-        />
-        <Select
-          value={filters.coachingReady}
-          onChange={(v) => setFilters((f) => ({ ...f, coachingReady: v }))}
-          allowClear
-          placeholder="코칭 준비"
-          style={{ width: 120 }}
-          options={[
-            { value: true, label: '준비 완료' },
-            { value: false, label: '미준비' },
-          ]}
         />
         <Input.Search
           placeholder="요리명 검색"

@@ -29,31 +29,23 @@ export default function Dashboard() {
   if (isError || !data) return <Empty description="대시보드 데이터를 불러올 수 없습니다." />;
 
   // Merge chart series by date
-  const dateMap = new Map<string, { signups: number; coaching: number; shorts: number }>();
-  const mergeSeries = (items: DailyCount[], key: 'signups' | 'coaching' | 'shorts') => {
+  const dateMap = new Map<string, { signups: number; shorts: number }>();
+  const mergeSeries = (items: DailyCount[], key: 'signups' | 'shorts') => {
     for (const item of items) {
-      const entry = dateMap.get(item.date) ?? { signups: 0, coaching: 0, shorts: 0 };
+      const entry = dateMap.get(item.date) ?? { signups: 0, shorts: 0 };
       entry[key] = item.count;
       dateMap.set(item.date, entry);
     }
   };
   mergeSeries(data.charts.userSignups ?? [], 'signups');
-  mergeSeries(data.charts.coachingSessions ?? [], 'coaching');
   mergeSeries(data.charts.shortsConversions ?? [], 'shorts');
 
   const trendData = Array.from(dateMap.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .flatMap(([date, v]) => [
       { date, value: v.signups, type: '가입' },
-      { date, value: v.coaching, type: '코칭' },
       { date, value: v.shorts, type: '쇼츠' },
     ]);
-
-  // Coaching completion rate
-  const coachingRate =
-    data.summary.totalCoachingSessions > 0
-      ? data.summary.completedCoachingSessions / data.summary.totalCoachingSessions
-      : 0;
 
   // Level distribution from rankDistribution object
   const levelDistribution = Object.entries(data.summary.rankDistribution ?? {})
@@ -70,11 +62,6 @@ export default function Dashboard() {
         <Col span={6}><StatsCard title="활성 사용자" value={formatNumber(data.summary.activeUsers)} /></Col>
         <Col span={6}><StatsCard title="총 레시피" value={formatNumber(data.summary.totalRecipes)} /></Col>
         <Col span={6}><StatsCard title="쇼츠 변환" value={formatNumber(data.summary.totalShortsConversions)} /></Col>
-      </Row>
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col span={8}><StatsCard title="코칭 세션" value={formatNumber(data.summary.totalCoachingSessions)} /></Col>
-        <Col span={8}><StatsCard title="코칭 완료" value={formatNumber(data.summary.completedCoachingSessions)} /></Col>
-        <Col span={8}><StatsCard title="코칭 완료율" value={`${(coachingRate * 100).toFixed(1)}%`} /></Col>
       </Row>
 
       <Card

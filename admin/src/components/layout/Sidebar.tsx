@@ -86,7 +86,6 @@ export default function Sidebar() {
         { key: '/stats/users', label: '사용자 통계' },
         { key: '/stats/recipes', label: '레시피 통계' },
         { key: '/stats/ingredients', label: '재료 통계' },
-        { key: '/stats/coaching', label: '코칭 통계' },
         { key: '/stats/shorts', label: '쇼츠 통계' },
         { key: '/stats/ranking', label: '등급 통계' },
       ],

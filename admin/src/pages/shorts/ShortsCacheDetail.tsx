@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Button, Card, Descriptions, Space, Table, Tag, message } from 'antd';
+import { Button, Card, Descriptions, Space, Table, message } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getShortsCacheDetail, reconvertShorts, deleteShortCache } from '@/api/shortsApi';
@@ -108,19 +108,6 @@ export default function ShortsCacheDetail() {
             columns={[
               { title: '순서', dataIndex: 'stepNumber', width: 60 },
               { title: '설명', dataIndex: 'description' },
-              {
-                title: '유형',
-                dataIndex: 'stepType',
-                width: 80,
-                render: (v: string) =>
-                  v === 'active' ? <Tag color="blue">능동</Tag> : <Tag color="orange">대기</Tag>,
-              },
-              {
-                title: '소요시간',
-                dataIndex: 'durationSeconds',
-                width: 100,
-                render: (v: number) => (v ? `${v}초` : '-'),
-              },
             ]}
           />
         </Card>

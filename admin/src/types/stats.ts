@@ -4,8 +4,6 @@ export interface DashboardSummary {
   totalUsers: number;
   activeUsers: number;
   totalRecipes: number;
-  totalCoachingSessions: number;
-  completedCoachingSessions: number;
   totalShortsConversions: number;
   rankDistribution: Record<string, number>;
 }
@@ -35,7 +33,6 @@ export interface DailyCount {
 
 export interface DashboardCharts {
   userSignups: DailyCount[];
-  coachingSessions: DailyCount[];
   shortsConversions: DailyCount[];
 }
 
@@ -80,22 +77,12 @@ export interface UserStatsData {
 export interface RecipeStatsData {
   categoryDistribution: Record<string, number>;
   popularRecipes: RecipeRanking[];
-  coachingReadyRate: number;
   totalRecipes: number;
 }
 
 export interface IngredientStatsData {
   popularIngredients: IngredientRanking[];
   unusedIngredients: IngredientRanking[];
-}
-
-export interface CoachingStatsData {
-  totalSessions: number;
-  completedSessions: number;
-  completionRate: number;
-  averageDurationSeconds: number;
-  hourlyDistribution: Record<string, number>;
-  dailyTrend: { date: string; count: number }[];
 }
 
 export interface ShortsStatsPageData {

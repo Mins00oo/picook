@@ -2,9 +2,6 @@ import { z } from 'zod';
 
 const stepSchema = z.object({
   description: z.string().min(1, '설명을 입력하세요'),
-  stepType: z.enum(['active', 'wait']),
-  durationSeconds: z.number().min(0).optional(),
-  canParallel: z.boolean(),
   imageUrl: z.string().optional(),
 });
 

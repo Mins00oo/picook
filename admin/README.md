@@ -35,9 +35,8 @@ Picook 백오피스는 레시피/재료 데이터 관리, 유저 관리, 통계 
 - 최근 피드백 목록
 
 ### 2. 레시피 관리
-- 목록 (필터: 상태, 카테고리, 난이도, 코칭 준비 여부)
-- 생성/수정: 조리 단계 에디터 (active/wait 타입, 시간, 병렬 가능 여부)
-- 재료 매퍼 (자동완성 + 수량/단위)
+- 목록 (필터: 상태, 카테고리, 난이도)
+- 생성/수정: 조리 단계 에디터 + 재료 매퍼 (자동완성 + 수량/단위)
 - 상태 변경 (draft → published → hidden)
 - **엑셀 일괄 등록** + 템플릿 다운로드
 
@@ -57,18 +56,17 @@ Picook 백오피스는 레시피/재료 데이터 관리, 유저 관리, 통계 
 
 ### 6. 유저 관리 (SUPER_ADMIN 전용)
 - 유저 목록 (상태, 로그인 타입, 레벨 필터)
-- 상세: 프로필 + 탭 뷰 (코칭 로그, 완료 이력, 즐겨찾기, 검색 이력)
+- 상세: 프로필 + 탭 뷰 (완료 이력, 즐겨찾기, 검색 이력)
 - 계정 정지/활성화
 
 ### 7. 피드백 관리
 - 목록 (상태: 미읽음/읽음/해결, 평점 필터)
 - 상태 변경 + 관리자 메모
 
-### 8. 통계 (6개 페이지)
+### 8. 통계 (5개 페이지)
 - 유저 통계: 가입 추이, DAU/MAU, 로그인 방법 분포
-- 레시피 통계: 카테고리별, TOP 20, 코칭 준비율
+- 레시피 통계: 카테고리별, TOP 20
 - 재료 통계: 인기 재료 TOP 20, 미사용 재료
-- 코칭 통계: 이용률, 완료율, 시간대별 분포
 - 쇼츠 통계: 변환 추이, 성공률
 - 랭킹 통계: 레벨 분포, 사진 업로드율
 
@@ -135,7 +133,6 @@ npm run build
 │   ├── /stats/users                ← 유저 통계
 │   ├── /stats/recipes              ← 레시피 통계
 │   ├── /stats/ingredients          ← 재료 통계
-│   ├── /stats/coaching             ← 코칭 통계
 │   ├── /stats/shorts               ← 쇼츠 통계
 │   └── /stats/ranking              ← 랭킹 통계
 └── /accounts                       ← 관리자 계정 (SUPER_ADMIN)
@@ -156,7 +153,7 @@ admin/
 │   │   ├── shorts/                 ← ShortsCacheList, ShortsCacheDetail, ShortsStats
 │   │   ├── users/                  ← UserList, UserDetail
 │   │   ├── feedback/               ← FeedbackList, FeedbackDetail
-│   │   ├── stats/                  ← UserStats, RecipeStats, IngredientStats, CoachingStats, ShortsStats, RankingStats
+│   │   ├── stats/                  ← UserStats, RecipeStats, IngredientStats, ShortsStats, RankingStats
 │   │   └── accounts/               ← AdminAccountList
 │   │
 │   ├── api/                        ← API 클라이언트 (12개)
@@ -175,7 +172,7 @@ admin/
 │   ├── components/
 │   │   ├── layout/                 ← AppLayout, Sidebar (역할별 메뉴), Header
 │   │   ├── common/                 ← FormField, ExcelUpload, ImageUpload, ConfirmModal, StatsCard, StatusBadge
-│   │   └── recipe/                 ← RecipeStepEditor, IngredientMapper, CoachingReadyIndicator
+│   │   └── recipe/                 ← RecipeStepEditor, IngredientMapper
 │   │
 │   ├── stores/
 │   │   └── authStore.ts            ← JWT + 역할 정보 (localStorage 영속화)
@@ -213,9 +210,7 @@ admin/
 
 ### 레시피 단계 에디터
 - 동적 필드 배열 (React Hook Form useFieldArray)
-- step_type (active/wait) 선택, duration_seconds 입력
-- can_parallel 플래그 토글
-- 모든 단계에 시간 입력 시 coaching_ready 자동 활성화 (DB 트리거)
+- 단계 설명 + 이미지 URL
 
 ### 카테고리 드래그 정렬
 - Ant Design DnD 기반

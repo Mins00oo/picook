@@ -26,7 +26,6 @@ import FeedbackDetail from '@/pages/feedback/FeedbackDetail';
 import UserStats from '@/pages/stats/UserStats';
 import RecipeStats from '@/pages/stats/RecipeStats';
 import IngredientStats from '@/pages/stats/IngredientStats';
-import CoachingStats from '@/pages/stats/CoachingStats';
 import ShortsStatsPage from '@/pages/stats/ShortsStats';
 import RankingStats from '@/pages/stats/RankingStats';
 import AdminAccountList from '@/pages/accounts/AdminAccountList';
@@ -88,7 +87,6 @@ export default function App() {
               <Route path="stats/users" element={<UserStats />} />
               <Route path="stats/recipes" element={<RecipeStats />} />
               <Route path="stats/ingredients" element={<IngredientStats />} />
-              <Route path="stats/coaching" element={<CoachingStats />} />
               <Route path="stats/shorts" element={<ShortsStatsPage />} />
               <Route path="stats/ranking" element={<RankingStats />} />
               <Route path="accounts" element={<AdminAccountList />} />
