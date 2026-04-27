@@ -11,7 +11,10 @@ export interface RankInfo {
 
 export interface User {
   id: string; // UUID
-  displayName: string;
+  // 사용자가 직접 정한 앱 닉네임. setup 완료 전에는 null.
+  displayName: string | null;
+  // 카카오/Apple이 제공한 원본 이름. setup 화면 placeholder 등 안내용. UNIQUE 아님.
+  oauthName: string | null;
   email: string | null;
   profileImageUrl: string | null;
   loginType: LoginType;

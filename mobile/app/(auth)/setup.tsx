@@ -19,7 +19,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { userApi } from '../../src/api/userApi';
 import { Config } from '../../src/constants/config';
 import { Character } from '../../src/components/brand/Character';
-import { CHARACTERS, getCharacterName } from '../../src/constants/characters';
+import { CHARACTERS } from '../../src/constants/characters';
 import type { CharacterType } from '../../src/types/user';
 
 export default function SetupScreen() {
@@ -27,6 +27,7 @@ export default function SetupScreen() {
   const { user, setUser } = useAuthStore();
   const insets = useSafeAreaInsets();
   const [selectedChar, setSelectedChar] = useState<CharacterType>(user?.characterType ?? 'MIN');
+  // setup 진입은 신규 가입자(=displayName 미설정)만 허용되므로 빈칸으로 시작.
   const [nickname, setNickname] = useState(user?.displayName ?? '');
   const [focused, setFocused] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -38,7 +39,6 @@ export default function SetupScreen() {
   const NICK_REGEX = /^[가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9_]{2,10}$/;
   const lengthValid = trimmed.length >= 2 && trimmed.length <= 10;
   const formatValid = NICK_REGEX.test(trimmed);
-  const isCurrent = !!user?.displayName && trimmed === user.displayName.trim();
   const isTaken = takenName != null && trimmed === takenName;
   const canSubmit = !!selectedChar && formatValid && !saving && !isTaken;
   const hasFormatError = lengthValid && !formatValid;
@@ -49,9 +49,8 @@ export default function SetupScreen() {
     if (trimmed.length > 10) return '10자 이내로 입력해주세요';
     if (hasFormatError) return '한글·영문·숫자·밑줄(_)만 사용할 수 있어요';
     if (isTaken) return '이미 사용 중인 닉네임이에요';
-    if (isCurrent) return '현재 사용 중인 닉네임이에요';
     return '이 이름으로 시작해볼까요?';
-  }, [nickname, trimmed, hasFormatError, isTaken, isCurrent]);
+  }, [nickname, trimmed, hasFormatError, isTaken]);
 
   const handleComplete = async () => {
     if (!canSubmit) return;
@@ -104,7 +103,7 @@ export default function SetupScreen() {
           {/* 헤더 */}
           <View style={styles.head}>
             <Text style={styles.headTitle}>
-              시작해볼까요?{'\n'}나만의 <Text style={styles.headAccent}>친구</Text>를 골라주세요.
+              함께 요리할{'\n'}<Text style={styles.headAccent}>캐릭터</Text>를 골라주세요.
             </Text>
             <Text style={styles.headDesc}>
               캐릭터와 닉네임 모두 언제든 마이페이지에서 바꿀 수 있어요.
@@ -113,10 +112,6 @@ export default function SetupScreen() {
 
           {/* 캐릭터 셀렉터 */}
           <View style={styles.selector}>
-            <View style={styles.selectorLabelRow}>
-              <Text style={styles.fieldLabel}>캐릭터</Text>
-              <Text style={styles.selName}>{getCharacterName(selectedChar)} 선택됨</Text>
-            </View>
             <View style={styles.charGrid}>
               {CHARACTERS.map((c) => {
                 const isSel = selectedChar === c.type;
@@ -141,9 +136,8 @@ export default function SetupScreen() {
                       </View>
                     )}
                     <View style={styles.charArt}>
-                      <Character type={c.type} size={72} />
+                      <Character type={c.type} size={84} />
                     </View>
-                    <Text style={styles.charName}>{c.name}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -158,8 +152,6 @@ export default function SetupScreen() {
                 <Text style={[styles.selName, { color: colors.error }]}>사용 중</Text>
               ) : hasFormatError ? (
                 <Text style={[styles.selName, { color: colors.error }]}>허용되지 않는 문자</Text>
-              ) : isCurrent ? (
-                <Text style={[styles.selName, { color: colors.textTertiary }]}>현재 사용 중</Text>
               ) : null}
             </View>
             <View
@@ -177,7 +169,7 @@ export default function SetupScreen() {
                 }}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
-                placeholder="닉네임을 입력해주세요"
+                placeholder={user?.oauthName ? `예: ${user.oauthName}` : '닉네임을 입력해주세요'}
                 placeholderTextColor={colors.textTertiary}
                 maxLength={10}
                 style={styles.nickInput}
@@ -318,14 +310,14 @@ const styles = StyleSheet.create({
   },
   charCard: {
     flex: 1,
-    aspectRatio: 1 / 1.1,
+    aspectRatio: 1,
     borderRadius: 18,
     backgroundColor: colors.surface,
     borderWidth: 1.5,
     borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
+    padding: 6,
     overflow: 'hidden',
   },
   charCardSelected: {
@@ -346,15 +338,8 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   charArt: {
-    width: 72,
-    height: 72,
-    marginBottom: 4,
-  },
-  charName: {
-    ...typography.caption,
-    fontSize: 11,
-    color: colors.textPrimary,
-    fontFamily: fontFamily.bold,
+    width: 84,
+    height: 84,
   },
   // Nickname
   nickArea: {
