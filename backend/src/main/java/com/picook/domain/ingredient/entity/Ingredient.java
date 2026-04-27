@@ -31,6 +31,10 @@ public class Ingredient {
     @Column(name = "emoji", length = 8)
     private String emoji;
 
+    /** 양념 여부. 추천 매칭률 계산에서 제외됨 (소금/간장/설탕/식초/마늘 등). */
+    @Column(name = "is_seasoning", nullable = false)
+    private Boolean isSeasoning = false;
+
     @BatchSize(size = 100)
     @OneToMany(mappedBy = "ingredient", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<IngredientSynonym> synonyms = new ArrayList<>();
@@ -91,6 +95,9 @@ public class Ingredient {
 
     public String getEmoji() { return emoji; }
     public void setEmoji(String emoji) { this.emoji = emoji; }
+
+    public Boolean getIsSeasoning() { return isSeasoning; }
+    public void setIsSeasoning(Boolean isSeasoning) { this.isSeasoning = isSeasoning; }
 
     public List<IngredientSynonym> getSynonyms() { return synonyms; }
 

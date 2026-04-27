@@ -15,9 +15,22 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 재료 기반 레시피 추천.
+ *
+ * 매칭률 정의 (V24 이후):
+ *   매칭률 = 보유한 메인재료 / 레시피 전체 메인재료 × 100
+ *   - 메인재료 = ingredients.is_seasoning = false
+ *   - 양념(소금/간장/설탕/식초/마늘 등)은 매칭률 계산 제외
+ *   - 사용자가 양념을 가졌든 안 가졌든 추천에는 영향 없음. 다만 부족 양념 정보는 응답에 포함.
+ *   - 30% 이상 컷오프 → 매칭률 DESC 정렬 → TOP 10
+ */
 @Service
 @Transactional(readOnly = true)
 public class RecommendService {
+
+    private static final double MIN_MATCH_RATE = 0.3;
+    private static final int RESULT_LIMIT = 10;
 
     private final EntityManager entityManager;
     private final RecipeIngredientRepository recipeIngredientRepository;
@@ -36,16 +49,17 @@ public class RecommendService {
         meterRegistry.counter("picook.recommend.requests").increment();
         List<Integer> ingredientIds = request.ingredientIds();
 
+        // 메인재료 기반 매칭률 계산 + 컷오프 + 정렬을 한 SQL로
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT r.id, r.title, r.category, r.difficulty, r.cooking_time_minutes, ");
         sql.append("r.servings, r.image_url, r.thumbnail_url, ");
-        sql.append("COUNT(DISTINCT ri_match.id) AS matched_count, ");
-        sql.append("COUNT(DISTINCT ri_req.id) AS total_required ");
+        // 매칭된 메인재료 수 (사용자 보유)
+        sql.append("COUNT(DISTINCT CASE WHEN i.is_seasoning = false AND ri.ingredient_id IN (:ingredientIds) THEN ri.id END) AS matched_main, ");
+        // 전체 메인재료 수
+        sql.append("COUNT(DISTINCT CASE WHEN i.is_seasoning = false THEN ri.id END) AS total_main ");
         sql.append("FROM recipes r ");
-        sql.append("JOIN recipe_ingredients ri_req ON ri_req.recipe_id = r.id AND ri_req.is_required = true ");
-        sql.append("LEFT JOIN recipe_ingredients ri_match ON ri_match.recipe_id = r.id ");
-        sql.append("AND ri_match.is_required = true ");
-        sql.append("AND ri_match.ingredient_id IN (:ingredientIds) ");
+        sql.append("JOIN recipe_ingredients ri ON ri.recipe_id = r.id ");
+        sql.append("JOIN ingredients i ON i.id = ri.ingredient_id ");
         sql.append("WHERE r.status = 'published' AND r.is_deleted = false ");
 
         if (request.maxTime() != null) {
@@ -60,12 +74,18 @@ public class RecommendService {
 
         sql.append("GROUP BY r.id, r.title, r.category, r.difficulty, r.cooking_time_minutes, ");
         sql.append("r.servings, r.image_url, r.thumbnail_url ");
-        sql.append("HAVING COUNT(DISTINCT ri_match.id)::float / NULLIF(COUNT(DISTINCT ri_req.id), 0) >= 0.3 ");
-        sql.append("ORDER BY COUNT(DISTINCT ri_match.id)::float / COUNT(DISTINCT ri_req.id) DESC ");
-        sql.append("LIMIT 10");
+        // 메인재료 0개인 레시피는 의미 없으므로 NULLIF로 0 나누기 방지하면서 0이면 제외
+        sql.append("HAVING COUNT(DISTINCT CASE WHEN i.is_seasoning = false THEN ri.id END) > 0 ");
+        sql.append("AND COUNT(DISTINCT CASE WHEN i.is_seasoning = false AND ri.ingredient_id IN (:ingredientIds) THEN ri.id END)::float ");
+        sql.append("    / COUNT(DISTINCT CASE WHEN i.is_seasoning = false THEN ri.id END) >= :minRate ");
+        sql.append("ORDER BY COUNT(DISTINCT CASE WHEN i.is_seasoning = false AND ri.ingredient_id IN (:ingredientIds) THEN ri.id END)::float ");
+        sql.append("    / COUNT(DISTINCT CASE WHEN i.is_seasoning = false THEN ri.id END) DESC ");
+        sql.append("LIMIT :limit");
 
         Query query = entityManager.createNativeQuery(sql.toString());
         query.setParameter("ingredientIds", ingredientIds);
+        query.setParameter("minRate", MIN_MATCH_RATE);
+        query.setParameter("limit", RESULT_LIMIT);
 
         if (request.maxTime() != null) {
             query.setParameter("maxTime", request.maxTime());
@@ -82,13 +102,13 @@ public class RecommendService {
 
         Set<Integer> userIngredientSet = new HashSet<>(ingredientIds);
 
-        // 전체 레시피의 필수 재료를 1회 쿼리로 배치 로드 (N+1 방지)
+        // 부족 재료 표시용 — 후보 레시피의 모든 재료를 1회 쿼리로 fetch
         List<Integer> recipeIds = results.stream()
                 .map(row -> (Integer) row[0])
                 .toList();
-        Map<Integer, List<RecipeIngredient>> requiredByRecipe = recipeIds.isEmpty()
+        Map<Integer, List<RecipeIngredient>> allByRecipe = recipeIds.isEmpty()
                 ? Map.of()
-                : recipeIngredientRepository.findRequiredByRecipeIds(recipeIds).stream()
+                : recipeIngredientRepository.findAllByRecipeIds(recipeIds).stream()
                         .collect(Collectors.groupingBy(ri -> ri.getRecipe().getId()));
 
         List<RecommendResponse> responses = new ArrayList<>();
@@ -101,13 +121,22 @@ public class RecommendService {
             int servings = (Integer) row[5];
             String imageUrl = (String) row[6];
             String thumbnailUrl = (String) row[7];
-            long matchedCount = ((Number) row[8]).longValue();
-            long totalRequired = ((Number) row[9]).longValue();
-            double matchingRate = totalRequired > 0 ? (double) matchedCount / totalRequired * 100 : 0;
+            long matchedMain = ((Number) row[8]).longValue();
+            long totalMain = ((Number) row[9]).longValue();
+            double matchingRate = totalMain > 0 ? (double) matchedMain / totalMain * 100 : 0;
 
-            List<RecipeIngredient> requiredIngredients = requiredByRecipe.getOrDefault(recipeId, List.of());
+            List<RecipeIngredient> all = allByRecipe.getOrDefault(recipeId, List.of());
 
-            List<MissingIngredient> missing = requiredIngredients.stream()
+            // 메인재료 중 사용자 미보유
+            List<MissingIngredient> missingMain = all.stream()
+                    .filter(ri -> !Boolean.TRUE.equals(ri.getIngredient().getIsSeasoning()))
+                    .filter(ri -> !userIngredientSet.contains(ri.getIngredient().getId()))
+                    .map(ri -> new MissingIngredient(ri.getIngredient().getId(), ri.getIngredient().getName()))
+                    .toList();
+
+            // 양념 중 사용자 미보유 (별도 표시)
+            List<MissingIngredient> missingSeasonings = all.stream()
+                    .filter(ri -> Boolean.TRUE.equals(ri.getIngredient().getIsSeasoning()))
                     .filter(ri -> !userIngredientSet.contains(ri.getIngredient().getId()))
                     .map(ri -> new MissingIngredient(ri.getIngredient().getId(), ri.getIngredient().getName()))
                     .toList();
@@ -116,7 +145,8 @@ public class RecommendService {
                     recipeId, title, category, difficulty, cookingTime, servings,
                     imageUrl, thumbnailUrl,
                     Math.round(matchingRate * 10.0) / 10.0,
-                    missing
+                    missingMain,
+                    missingSeasonings
             ));
         }
 
