@@ -22,10 +22,8 @@
 | expo-secure-store | ~15.0.8 | JWT 토큰 저장 |
 | expo-image | ~3.0.11 | 이미지 렌더링 |
 | expo-image-picker | ~17.0.10 | 완성 사진 촬영 |
-| expo-speech | ~14.0.8 | TTS |
 | expo-clipboard | ~8.0.8 | 쇼츠 URL 붙여넣기 |
-| expo-notifications | ~0.32.16 | 타이머 완료 로컬 푸시 |
-| expo-keep-awake | ~15.0.8 | 코칭 중 화면잠금 방지 |
+| expo-notifications | ~0.32.16 | 로컬 푸시 |
 | expo-av | ~16.0.8 | 오디오 |
 | expo-apple-authentication | ~8.0.8 | Apple 로그인 |
 | expo-linking | ~8.0.11 | 딥링크 |
@@ -37,7 +35,6 @@
 | 패키지 | 버전 | 비고 |
 |--------|------|------|
 | @react-native-seoul/kakao-login | ~5.4.0 (5.4.2) | 카카오 로그인 (커스텀 config plugin 사용) |
-| @react-native-voice/voice | ~3.2.4 | STT (Expo Go 미지원, 네이티브 빌드 전용) |
 | @shopify/flash-list | 2.0.2 | 고성능 리스트 |
 | @tanstack/react-query | ~5.75.0 (5.75.7) | 서버 상태 |
 | axios | ~1.9.0 | HTTP 클라이언트 |
@@ -55,7 +52,6 @@
 5. **.npmrc**: `legacy-peer-deps=true` 유지 (EAS 빌드 서버 호환)
 
 ## 알려진 제약사항
-- **@react-native-voice/voice**: Expo Go에서 동작 안 함 → STTService에서 lazy-load 처리됨. 네이티브 빌드 필수.
 - **@react-native-seoul/kakao-login**: Expo Go에서 동작 안 함 → 네이티브 빌드 필수. `@expo/config-plugins`의 `codeMod` 모듈 제거 이슈로 커스텀 플러그인(`plugins/withKakaoLogin.js`) 사용.
 - **expo-notifications**: Expo Go에서 Android 원격 푸시 미지원 (SDK 53+). 로컬 알림은 동작.
 - **Windows 개발**: 폰 테스트 시 공유기 AP 격리 주의 → 폰 핫스팟으로 우회. 방화벽 포트 8081 인바운드 허용 필요.
@@ -70,7 +66,7 @@ app/
 ├── (auth)/
 │   ├── onboarding.tsx         # 3페이지 스와이프 소개
 │   ├── login.tsx              # Apple + 카카오
-│   └── setup.tsx              # 온보딩 2단계: 요리 실력 → 코칭 설정
+│   └── setup.tsx              # 닉네임/캐릭터 설정
 ├── (tabs)/
 │   ├── _layout.tsx            # 4탭
 │   ├── home/
@@ -85,14 +81,10 @@ app/
 │   ├── mypage/
 │   │   ├── index.tsx          # 등급 표시, 메뉴
 │   │   ├── profile.tsx        # 닉네임, 실력 수정
-│   │   ├── coaching-settings.tsx  # 코칭 on/off, 속도, 알림
 │   │   ├── settings.tsx       # 앱 설정
 │   │   └── delete-account.tsx # 회원 탈퇴
 │   ├── recipe/[id].tsx        # 레시피 상세
 │   └── cooking/
-│       ├── single/[id].tsx    # 싱글 코칭
-│       ├── multi-preview.tsx  # 타임라인 미리보기
-│       ├── multi-cooking.tsx  # 멀티 코칭
 │       └── complete.tsx       # 완료 + 사진 + 등급
 src/
 ├── api/                       # axios 래퍼 (컴포넌트에서 직접 호출 금지)
@@ -102,41 +94,28 @@ src/
 │   ├── ingredientApi.ts
 │   ├── recipeApi.ts
 │   ├── favoriteApi.ts
-│   ├── coachingApi.ts
 │   ├── shortsApi.ts
 │   └── searchHistoryApi.ts
-├── engines/
-│   ├── CoachingEngine.ts      # 싱글 코칭 상태 머신
-│   ├── TimelineEngine.ts      # 멀티 타임라인 생성
-│   └── TimerManager.ts        # 타이머 (백그라운드 포함)
-├── services/
-│   ├── TTSService.ts          # expo-speech 래핑
-│   ├── STTService.ts          # @react-native-voice 래핑
-│   └── AudioService.ts        # 알림음 재생
 ├── hooks/
 │   ├── useAuth.ts
 │   ├── useRecipes.ts          # useRecommendations, useRecipeDetail
 │   ├── useIngredients.ts      # 전체 재료 로드 + 로컬 검색
 │   ├── useFavorites.ts
-│   ├── useCoaching.ts         # 코칭 엔진 훅
-│   ├── useVoiceCommand.ts     # STT 훅
 │   ├── useShortsConvert.ts
 │   └── useRanking.ts          # 등급 조회
 ├── stores/
 │   ├── authStore.ts           # JWT 토큰, 사용자 정보
 │   ├── selectionStore.ts      # 선택된 재료 목록
-│   ├── filterStore.ts         # 시간/난이도/인분 필터
-│   └── coachingStore.ts       # 코칭 진행 상태
+│   └── filterStore.ts         # 시간/난이도/인분 필터
 ├── components/
 │   ├── common/                # Button, Input, Toast, Loading, ErrorScreen
-│   ├── recipe/                # RecipeCard, StepList, StepTypeIcon
+│   ├── recipe/                # RecipeCard, StepList
 │   ├── ingredient/            # IngredientChip, CategoryTab, IngredientGrid
-│   ├── coaching/              # CoachingCard, CircularTimer, TimelineView, MiniStatusBar
 │   ├── shorts/                # ShortsInput, ConvertResult, RecentList
 │   └── ranking/               # RankBadge, LevelUpAnimation, ProgressBar
 ├── types/
 │   ├── recipe.ts, ingredient.ts, user.ts
-│   ├── coaching.ts, shorts.ts, ranking.ts, api.ts
+│   ├── shorts.ts, ranking.ts, api.ts
 ├── utils/
 │   ├── search.ts              # 초성 검색 + 동의어 매칭
 │   ├── format.ts              # 시간, 숫자 포맷
@@ -146,18 +125,9 @@ src/
 └── i18n/                      # Phase 2
 ```
 
-## 온보딩 (2단계, MVP)
+## 온보딩 (MVP)
 ```
-스텝 1: 요리 실력
-  - 입문 / 초급 / 중급 / 고급 (카드형 싱글 선택)
-  - 각 선택지 설명 표시
-
-스텝 2: 코칭 설정
-  - "요리할 때 음성으로 안내받을 수 있어요" 안내
-  - 코칭 on/off 토글 (실력 기반 기본값: 입문/초급→on)
-  - 음성 속도: 느리게/보통/빠르게
-  
-→ 완료 → 홈
+캐릭터 선택 + 닉네임 입력 → 홈
 ```
 
 Phase 2 추가 예정: 알레르기 입력, 조리 도구 선택
@@ -186,13 +156,6 @@ const searchIngredients = (query, ingredients) => {
   );
 };
 ```
-
-## 코칭 핵심
-- 능동(active): 사용자 확인("다음"/탭) 후에만 진행
-- 대기(wait): 타이머 자동 → 완료 알림 → 사용자 확인
-- 딜레이: 예상 완료 시간만 조용히 업데이트 (재촉 없음)
-- 화면잠금 방지 + 백그라운드 타이머 + 로컬 푸시
-- 음성 명령: "다음"/"반복" 두 단어만. 화면 탭 항상 대체 가능.
 
 ## 등급 표시
 ```typescript
@@ -225,7 +188,7 @@ const api = axios.create({
 - ✅ 루트 레이아웃 (인증 분기 + QueryClient)
 - ✅ 온보딩 3페이지 (스와이프)
 - ✅ 로그인 화면 (카카오 + Apple)
-- ✅ 셋업 2단계 (요리실력 → 코칭설정 → PUT /api/v1/users/me)
+- ✅ 셋업 (캐릭터/닉네임 → PUT /api/v1/users/me)
 - ✅ 하단 4탭 레이아웃 (홈/쇼츠/즐겨찾기/마이)
 
 ### 3단계: 재료 선택 + 추천 + 상세
@@ -234,31 +197,17 @@ const api = axios.create({
 - ✅ selectionStore (Zustand)
 - ✅ 추천 전 확인 (시간/난이도/인분 필터)
 - ✅ 추천 결과 TOP 10
-- ✅ 레시피 상세 (active/wait 아이콘 + 코칭 시작 + 즐겨찾기)
+- ✅ 레시피 상세 (재료 + 단계 + 즐겨찾기)
 
 ### 4단계: 즐겨찾기 + 마이페이지
 - ✅ 즐겨찾기 탭 (목록 + 삭제 확인)
 - ✅ 즐겨찾기 추가/삭제 (하트 토글 + 낙관적 업데이트)
 - ✅ 마이페이지 (프로필 + 등급 뱃지 + 진행률)
 - ✅ 프로필 수정
-- ✅ 코칭 설정
 - ✅ 앱 설정 + 로그아웃
 - ✅ 회원 탈퇴
 
-### 5단계: 싱글 코칭
-- ✅ CoachingEngine (상태 머신)
-- ✅ TTSService (expo-speech)
-- ✅ STTService (@react-native-voice)
-- ✅ TimerManager (타이머 + 로컬 푸시)
-- ✅ 싱글 코칭 화면 (전체화면 + 타이머 + 진행바)
-- ✅ 완료 화면 (사진 업로드 + 등급 + 레벨업)
-
-### 6단계: 멀티 코칭
-- ✅ TimelineEngine (2개 레시피 통합)
-- ✅ 타임라인 미리보기
-- ✅ 멀티 코칭 화면 (미니 상태바 + 레시피 전환)
-
-### 7단계: 쇼츠 변환
+### 5단계: 쇼츠 변환
 - ✅ URL 입력 화면 (붙여넣기 + 검증 + 최근 목록)
 - ✅ useShortsConvert (mutation + polling)
 - ✅ 변환 결과 화면 (단계별 레시피)
@@ -277,7 +226,6 @@ const api = axios.create({
 - ✅ Expo SDK 55 → 54 다운그레이드 (Expo Go 최신 버전 호환)
 - ✅ react-native-web + react-dom 설치 (웹 번들링 지원)
 - ✅ react-native-worklets 설치 (reanimated 의존)
-- ✅ STTService lazy-load 처리 (@react-native-voice는 Expo Go 미지원 → 네이티브 빌드 전용)
 - ✅ EAS Build 설정 (eas.json — development/preview/production 프로필)
 - ✅ expo-dev-client 설치 (개발 빌드용)
 - ✅ 카카오 로그인 커스텀 config plugin (plugins/withKakaoLogin.js — @expo/config-plugins codeMod 호환 문제 해결)

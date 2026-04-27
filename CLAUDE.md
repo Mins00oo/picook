@@ -2,7 +2,7 @@
 
 ## 프로젝트 개요
 제품명은 "Picook"
-냉장고 재료 기반 레시피 추천 + 음성 코칭 + 유튜브 쇼츠 변환 iOS 앱.
+냉장고 재료 기반 레시피 추천 + 유튜브 쇼츠 변환 iOS 앱.
 1인 개발, 모노레포, 6개월 타임라인.
 
 ## 기획 문서
@@ -22,8 +22,8 @@
               ▼                          ▼
       [Spring Boot 4.0.3 — 모놀리식 단일 서버]
       │  인증(JWT)  │  사용자 API   │  관리자 API  │
-      │  레시피 추천 │  코칭 로그    │  쇼츠 변환   │
-      │  파일 업로드 │  엑셀 일괄등록│             │
+      │  레시피 추천 │  쇼츠 변환    │  파일 업로드 │
+      │  엑셀 일괄등록                              │
               │
       [Docker PostgreSQL 15]     [로컬 파일 저장소]
 ```
@@ -45,8 +45,7 @@
 - React Native (Expo SDK 52+) + TypeScript
 - expo-router (파일 기반 라우팅)
 - Zustand (상태) + @tanstack/react-query (서버 상태)
-- expo-speech (TTS) + @react-native-voice/voice (STT)
-- expo-keep-awake, expo-notifications, expo-av
+- expo-notifications, expo-av
 - expo-image-picker, expo-clipboard
 - @react-native-seoul/kakao-login
 - expo-apple-authentication
@@ -82,8 +81,7 @@ picook/                    ← 루트
 │       │   ├── auth/          ← Apple, 카카오, 이메일, JWT
 │       │   ├── user/          ← 사용자, 프로필, 등급
 │       │   ├── ingredient/    ← 재료, 카테고리, 동의어
-│       │   ├── recipe/        ← 레시피, 단계(active/wait), 추천
-│       │   ├── coaching/      ← 코칭 로그
+│       │   ├── recipe/        ← 레시피, 단계, 추천
 │       │   ├── shorts/        ← 쇼츠 변환 + 캐싱
 │       │   ├── favorite/      ← 즐겨찾기
 │       │   ├── file/          ← 파일 업로드 (로컬 저장소)
@@ -94,8 +92,6 @@ picook/                    ← 루트
 │   ├── app/                   ← expo-router (4탭: 홈/쇼츠/즐겨찾기/마이)
 │   └── src/
 │       ├── api/               ← 서버 API 호출
-│       ├── engines/           ← 코칭엔진, 타임라인엔진
-│       ├── services/          ← TTS, STT, Audio
 │       ├── hooks/, stores/, components/, types/, utils/
 ├── admin/                     ← 백오피스 (React)
 │   ├── CLAUDE.md
@@ -122,28 +118,16 @@ picook/                    ← 루트
 - 매칭률 30%+ → TOP 10개 반환
 - MVP에서 조리 도구 필터, 알레르기 필터 제외 (Phase 2)
 
-### 2. 음성 코칭 모드 (MVP)
-- 싱글 (1개 요리): 단계별 음성 안내 + 타이머
-- 멀티 (2개 요리): 타임라인 통합 + 음성 안내
-- 조리 단계 분류: active(손 필요) / wait(대기)
-- 능동: 사용자 확인 후에만 진행 (시간 강제 없음)
-- 대기: 타이머 자동 → 완료 알림 → 사용자 확인 후 진행
-- 딜레이: 예상 완료 시간만 조용히 업데이트 (재촉 없음)
-- on/off 설정 가능
-- 단계 전환: 음성 "다음"/"반복" + 화면 탭
-- TTS: iOS 기본 (MVP), Phase 2에서 고품질 교체
-- STT: iOS SFSpeechRecognizer, "다음"/"반복" 두 단어만
-
-### 3. 쇼츠 URL 변환 (MVP)
+### 2. 쇼츠 URL 변환 (MVP)
 - 유튜브 쇼츠 URL 붙여넣기 → 단계별 레시피 변환
 - 서버: yt-dlp(음성추출) → Whisper(STT) → gpt-5.4-mini(구조화)
 - 캐싱: shorts_cache 테이블 (url_hash + ai_model_version)
 - AI 모델 업그레이드 시 캐시 버전 불일치하면 재변환
 - 무료 무제한
-- 변환 결과로 코칭 시작 / 즐겨찾기 저장 가능
+- 변환 결과로 즐겨찾기 저장 가능
 
-### 4. 등급 시스템 (MVP)
-- 코칭 완료 + 완성 사진 업로드 = 1카운트
+### 3. 등급 시스템 (MVP)
+- 요리 완료 + 완성 사진 업로드 = 1카운트
 - Lv.1(병아리 0~2) ~ Lv.7(전설 51+)
 - 본인만 보기 (Phase 2에서 공개)
 - 레벨업 시 축하 애니메이션
@@ -169,6 +153,6 @@ picook/                    ← 루트
 ## 개발 순서
 1단계: 백엔드 기반 (인증, 재료 CRUD, 레시피 CRUD, 추천 API)
 2단계: 백오피스 (레시피/재료 관리 + 엑셀 일괄등록) → 데이터 입력 시작
-3단계: 모바일 (재료 선택 → 추천 → 상세 → 코칭)
+3단계: 모바일 (재료 선택 → 추천 → 상세)
 4단계: 쇼츠 변환 + 등급
 5단계: 통합 테스트 + 출시
