@@ -30,6 +30,4 @@ export const Colors = {
   appleBg: colors.appleBg,
   overlay: colors.overlay,
   timerBg: colors.timerBg,
-  activeStep: colors.active,
-  waitStep: colors.wait,
 };

@@ -29,6 +29,7 @@ export function DailyCheckModal({
   visible, characterType, streakDays, recentSevenDays, pointsToEarn = 10,
   isChecking, onConfirm, onClose,
 }: Props) {
+  const weekSlots = buildWeekSlots(recentSevenDays);
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
@@ -75,23 +76,38 @@ export function DailyCheckModal({
           <View style={styles.streakBody}>
             <Text style={styles.streakLabel}>이번 주</Text>
             <View style={styles.streakRow}>
-              {recentSevenDays.map((v, i) => {
-                const isToday = i === recentSevenDays.length - 1;
-                const dayLabel = getDayLabelForOffset(recentSevenDays.length - 1 - i);
-                const on = v === 1;
+              {weekSlots.map(({ label, value, isToday }) => {
+                const on = value === 1;
                 return (
-                  <View
-                    key={i}
-                    style={[
-                      styles.streakDot,
-                      on && styles.streakDotOn,
-                      isToday && !on && styles.streakDotTodayEmpty,
-                      isToday && on && styles.streakDotTodayOn,
-                    ]}
-                  >
-                    <Text style={[styles.streakDotText, on && styles.streakDotTextOn]}>
-                      {dayLabel}
+                  <View key={label} style={styles.streakSlot}>
+                    <Text
+                      style={[
+                        styles.streakDayLabel,
+                        isToday && styles.streakDayLabelToday,
+                      ]}
+                    >
+                      {label}
                     </Text>
+                    <View
+                      style={[
+                        styles.streakStamp,
+                        on && styles.streakStampOn,
+                        isToday && !on && styles.streakStampTodayEmpty,
+                      ]}
+                    >
+                      {on && (
+                        <Svg width={20} height={20} viewBox="0 0 24 24">
+                          <Path
+                            d="M5 12.5l4.2 4.2L19 7"
+                            stroke="#fff"
+                            strokeWidth={3.2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            fill="none"
+                          />
+                        </Svg>
+                      )}
+                    </View>
                   </View>
                 );
               })}
@@ -239,38 +255,42 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 6,
   },
-  streakDot: {
+  streakSlot: {
     flex: 1,
-    aspectRatio: 1,
-    borderRadius: 100,
-    backgroundColor: colors.line,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 4,
   },
-  streakDotOn: {
-    backgroundColor: colors.primary,
-  },
-  streakDotTodayEmpty: {
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  streakDotTodayOn: {
-    backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 4,
-  },
-  streakDotText: {
+  streakDayLabel: {
     fontFamily: fontFamily.bold,
-    fontSize: 10,
+    fontSize: 10.5,
     color: colors.textTertiary,
     letterSpacing: -0.2,
   },
-  streakDotTextOn: {
-    color: '#fff',
+  streakDayLabelToday: {
+    color: colors.primary,
+  },
+  streakStamp: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 100,
+    backgroundColor: colors.lineSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakStampOn: {
+    backgroundColor: colors.primary,
+    transform: [{ rotate: '-8deg' }],
+    shadowColor: colors.primary,
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  streakStampTodayEmpty: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
   },
 
   ctaWrap: { paddingHorizontal: 24, paddingBottom: 24, paddingTop: 4 },
@@ -289,10 +309,26 @@ const styles = StyleSheet.create({
   },
 });
 
-// 오늘로부터 offset만큼 과거일에 해당하는 요일 한글 라벨 ("월", "화", ...)
-function getDayLabelForOffset(offset: number): string {
+// 월~일 고정 순서로 출석 슬롯 빌드
+// recentSevenDays: [6일전, ..., 오늘]
+function buildWeekSlots(recentSevenDays: number[]): Array<{
+  label: string;
+  value: number;
+  isToday: boolean;
+}> {
   const labels = ['일', '월', '화', '수', '목', '금', '토'];
-  const d = new Date();
-  d.setDate(d.getDate() - offset);
-  return labels[d.getDay()];
+  const orderedDow = [1, 2, 3, 4, 5, 6, 0]; // 월~일
+  const byDow = new Map<number, { value: number; isToday: boolean }>();
+  const today = new Date();
+  recentSevenDays.forEach((v, i) => {
+    const offset = recentSevenDays.length - 1 - i;
+    const d = new Date(today);
+    d.setDate(d.getDate() - offset);
+    byDow.set(d.getDay(), { value: v, isToday: offset === 0 });
+  });
+  return orderedDow.map((dow) => ({
+    label: labels[dow],
+    value: byDow.get(dow)?.value ?? 0,
+    isToday: byDow.get(dow)?.isToday ?? false,
+  }));
 }

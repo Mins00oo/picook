@@ -52,14 +52,6 @@ export const colors = {
   // Rating / star (cook completion)
   star: '#FFB43B',
 
-  // Coaching (deprecated in v1.0 but kept for compat)
-  active: '#3B82F6',
-  wait: '#F59E0B',
-
-  // Multi coaching (deprecated)
-  recipeA: '#3B82F6',
-  recipeB: '#F97316',
-
   // Legacy / auth
   kakaoYellow: '#FEE500',
   kakaoBrown: '#1A1A1A',
