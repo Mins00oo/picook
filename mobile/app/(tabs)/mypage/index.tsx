@@ -46,7 +46,7 @@ export default function MypageScreen() {
   const SHOP: MenuItemDef[] = [
     {
       icon: <Text style={{ fontSize: 18 }}>🛍️</Text>, bg: colors.mint,
-      label: '상점', route: '/(tabs)/mypage/shop', newBadge: true,
+      label: '상점', route: '/shop', newBadge: true,
     },
     {
       icon: <Text style={{ fontSize: 18 }}>👗</Text>, bg: colors.blue,
@@ -54,7 +54,7 @@ export default function MypageScreen() {
     },
     {
       icon: <EggIcon size={18} />, bg: colors.sun,
-      label: '포인트 내역', route: '/(tabs)/mypage/points',
+      label: '포인트 내역', route: '/points',
       right: `${balance}P`, rightAccent: true,
     },
   ];
@@ -192,7 +192,7 @@ export default function MypageScreen() {
             value={balance}
             label="보유 포인트"
             accent
-            onPress={() => router.push('/(tabs)/mypage/points')}
+            onPress={() => router.push('/points')}
           />
         </View>
 

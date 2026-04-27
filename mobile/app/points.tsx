@@ -9,11 +9,11 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fontFamily, shadow, typography } from '../../../src/constants/theme';
-import { EggIcon } from '../../../src/components/points/EggIcon';
-import { usePointBalance, usePointHistory } from '../../../src/hooks/usePoints';
-import { Loading } from '../../../src/components/common/Loading';
-import type { PointHistoryItem } from '../../../src/api/pointApi';
+import { colors, fontFamily, shadow, typography } from '../src/constants/theme';
+import { EggIcon } from '../src/components/points/EggIcon';
+import { usePointBalance, usePointHistory } from '../src/hooks/usePoints';
+import { Loading } from '../src/components/common/Loading';
+import type { PointHistoryItem } from '../src/api/pointApi';
 
 const REASON_LABELS: Record<string, string> = {
   DAILY_CHECK: '매일 출석체크',

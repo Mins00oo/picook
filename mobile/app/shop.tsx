@@ -11,17 +11,17 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fontFamily, shadow, typography } from '../../../src/constants/theme';
-import { EggIcon } from '../../../src/components/points/EggIcon';
+import { colors, fontFamily, shadow, typography } from '../src/constants/theme';
+import { EggIcon } from '../src/components/points/EggIcon';
 import {
   useOutfitCatalog,
   useOutfitMe,
   usePurchaseMutation,
-} from '../../../src/hooks/useOutfits';
-import { usePointBalance } from '../../../src/hooks/usePoints';
-import { OUTFIT_SLOTS, SLOT_LABEL } from '../../../src/types/outfit';
-import type { Outfit, OutfitSlot } from '../../../src/types/outfit';
-import { toAbsoluteImageUrl } from '../../../src/utils/format';
+} from '../src/hooks/useOutfits';
+import { usePointBalance } from '../src/hooks/usePoints';
+import { OUTFIT_SLOTS, SLOT_LABEL } from '../src/types/outfit';
+import type { Outfit, OutfitSlot } from '../src/types/outfit';
+import { toAbsoluteImageUrl } from '../src/utils/format';
 
 type SlotFilter = 'all' | OutfitSlot;
 

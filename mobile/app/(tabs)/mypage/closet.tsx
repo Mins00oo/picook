@@ -68,7 +68,7 @@ export default function ClosetScreen() {
       } else {
         Alert.alert('미보유', '상점에서 먼저 구매해주세요', [
           { text: '취소', style: 'cancel' },
-          { text: '상점 가기', onPress: () => router.push('/(tabs)/mypage/shop') },
+          { text: '상점 가기', onPress: () => router.push('/shop') },
         ]);
       }
       return;
