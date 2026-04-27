@@ -24,12 +24,12 @@ class UserTest {
         user.setDisplayName("Test User");
         user.setAppleId("apple-sub-123");
         user.setKakaoId("kakao-123");
-        user.setCharacterType("EGG");
+        user.setCharacterType("MIN");
 
         assertThat(user.getEmail()).isEqualTo("test@example.com");
         assertThat(user.getDisplayName()).isEqualTo("Test User");
         assertThat(user.getAppleId()).isEqualTo("apple-sub-123");
         assertThat(user.getKakaoId()).isEqualTo("kakao-123");
-        assertThat(user.getCharacterType()).isEqualTo("EGG");
+        assertThat(user.getCharacterType()).isEqualTo("MIN");
     }
 }

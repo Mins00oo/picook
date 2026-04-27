@@ -114,7 +114,7 @@ class AdminUserControllerTest extends BaseControllerTest {
         void 사용자_상세_조회_성공() throws Exception {
             var detail = new AdminUserDetailResponse(
                     TEST_USER_ID, "user@test.com", "테스터", null, "KAKAO",
-                    "EGG", 5, 30, "ACTIVE", null,
+                    "MIN", 5, 30, "ACTIVE", null,
                     Instant.now(), Instant.now(), Instant.now(),
                     new AdminUserDetailResponse.ActivitySummary(3));
             when(adminUserService.getUser(TEST_USER_ID)).thenReturn(detail);
@@ -123,7 +123,7 @@ class AdminUserControllerTest extends BaseControllerTest {
                             .header("Authorization", "Bearer " + superAdminToken()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.displayName").value("테스터"))
-                    .andExpect(jsonPath("$.data.characterType").value("EGG"))
+                    .andExpect(jsonPath("$.data.characterType").value("MIN"))
                     .andExpect(jsonPath("$.data.activitySummary.favoriteCount").value(3));
         }
 

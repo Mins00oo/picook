@@ -69,12 +69,12 @@ class UserServiceTest {
         User user = createUser(0, 0L);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
-        UpdateProfileRequest request = new UpdateProfileRequest("새이름", "EGG");
+        UpdateProfileRequest request = new UpdateProfileRequest("새이름", "MIN");
 
         UserProfileResponse response = userService.updateProfile(userId, request);
 
         assertThat(response.displayName()).isEqualTo("새이름");
-        assertThat(response.characterType()).isEqualTo("EGG");
+        assertThat(response.characterType()).isEqualTo("MIN");
     }
 
     @Test
@@ -105,7 +105,7 @@ class UserServiceTest {
     @Test
     void 프로필_수정_일부_필드만() throws Exception {
         User user = createUser(0, 0L);
-        user.setCharacterType("POTATO");
+        user.setCharacterType("HARU");
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
         UpdateProfileRequest request = new UpdateProfileRequest("새이름만", null);
@@ -113,7 +113,7 @@ class UserServiceTest {
         UserProfileResponse response = userService.updateProfile(userId, request);
 
         assertThat(response.displayName()).isEqualTo("새이름만");
-        assertThat(response.characterType()).isEqualTo("POTATO");
+        assertThat(response.characterType()).isEqualTo("HARU");
     }
 
     @Test
