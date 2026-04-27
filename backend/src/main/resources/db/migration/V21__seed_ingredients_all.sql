@@ -209,7 +209,8 @@ BEGIN
         ('어린잎채소', cat_veg, sub_leaf, NULL),
         ('무청', cat_veg, sub_leaf, NULL),
         ('고구마순', cat_veg, sub_leaf, NULL),
-        ('샐러드채소믹스', cat_veg, sub_leaf, NULL);
+        ('샐러드채소믹스', cat_veg, sub_leaf, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 채소 > 뿌리채소 (35)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -247,7 +248,8 @@ BEGIN
         ('참마', cat_veg, sub_root, NULL),
         ('카사바', cat_veg, sub_root, NULL),
         ('호스래디시', cat_veg, sub_root, NULL),
-        ('와사비', cat_veg, sub_root, NULL);
+        ('와사비', cat_veg, sub_root, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 채소 > 열매채소 (34)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -287,7 +289,8 @@ BEGIN
         ('초당옥수수', cat_veg, sub_fruit_veg, NULL),
         ('미니옥수수', cat_veg, sub_fruit_veg, NULL),
         ('오크라', cat_veg, sub_fruit_veg, NULL),
-        ('여주', cat_veg, sub_fruit_veg, NULL);
+        ('여주', cat_veg, sub_fruit_veg, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 채소 > 버섯류 (18)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -308,7 +311,8 @@ BEGIN
         ('꽃송이버섯', cat_veg, sub_mushroom, NULL),
         ('포르치니버섯', cat_veg, sub_mushroom, NULL),
         ('송로버섯', cat_veg, sub_mushroom, NULL),
-        ('블랙트러플', cat_veg, sub_mushroom, NULL);
+        ('블랙트러플', cat_veg, sub_mushroom, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 채소 > 콩·콩나물 (18)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -330,7 +334,8 @@ BEGIN
         ('녹두', cat_veg, sub_bean, NULL),
         ('팥', cat_veg, sub_bean, NULL),
         ('동부콩', cat_veg, sub_bean, NULL),
-        ('에다마메', cat_veg, sub_bean, NULL);
+        ('에다마메', cat_veg, sub_bean, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 채소 > 해조류 (15)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -350,7 +355,8 @@ BEGIN
         ('매생이', cat_veg, sub_seaweed, NULL),
         ('꼬시래기', cat_veg, sub_seaweed, NULL),
         ('청각', cat_veg, sub_seaweed, NULL),
-        ('우뭇가사리', cat_veg, sub_seaweed, NULL);
+        ('우뭇가사리', cat_veg, sub_seaweed, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 채소 > 허브·향채 (22)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -375,7 +381,8 @@ BEGIN
         ('마조람', cat_veg, sub_herb, NULL),
         ('카피르라임잎', cat_veg, sub_herb, NULL),
         ('판단잎', cat_veg, sub_herb, NULL),
-        ('자소엽', cat_veg, sub_herb, NULL);
+        ('자소엽', cat_veg, sub_herb, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- ==========================================================================
     -- 과일 (91)
@@ -397,7 +404,8 @@ BEGIN
         ('거봉', cat_fruit, sub_berry, NULL),
         ('샤인머스캣', cat_fruit, sub_berry, NULL),
         ('머스캣', cat_fruit, sub_berry, NULL),
-        ('머루', cat_fruit, sub_berry, NULL);
+        ('머루', cat_fruit, sub_berry, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 과일 > 감귤류 (13)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -413,7 +421,8 @@ BEGIN
         ('블러드오렌지', cat_fruit, sub_citrus, NULL),
         ('자몽', cat_fruit, sub_citrus, NULL),
         ('유자', cat_fruit, sub_citrus, NULL),
-        ('금귤', cat_fruit, sub_citrus, NULL);
+        ('금귤', cat_fruit, sub_citrus, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 과일 > 인과·핵과류 (22)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -438,7 +447,8 @@ BEGIN
         ('홍시', cat_fruit, sub_pome, NULL),
         ('곶감', cat_fruit, sub_pome, NULL),
         ('대추', cat_fruit, sub_pome, NULL),
-        ('아보카도', cat_fruit, sub_pome, '🥑');
+        ('아보카도', cat_fruit, sub_pome, '🥑')
+    ON CONFLICT (name) DO NOTHING;
 
     -- 과일 > 열대과일 (19)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -460,7 +470,8 @@ BEGIN
         ('람부탄', cat_fruit, sub_tropical, NULL),
         ('스타프루트', cat_fruit, sub_tropical, NULL),
         ('코코넛', cat_fruit, sub_tropical, '🥥'),
-        ('코코넛워터', cat_fruit, sub_tropical, NULL);
+        ('코코넛워터', cat_fruit, sub_tropical, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 과일 > 수박·멜론류 (6)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -469,7 +480,8 @@ BEGIN
         ('참외', cat_fruit, sub_melon, '🍈'),
         ('멜론', cat_fruit, sub_melon, NULL),
         ('허니듀멜론', cat_fruit, sub_melon, NULL),
-        ('칸탈루프', cat_fruit, sub_melon, NULL);
+        ('칸탈루프', cat_fruit, sub_melon, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 과일 > 견과·씨앗 (16)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -488,7 +500,8 @@ BEGIN
         ('호박씨', cat_fruit, sub_nut, NULL),
         ('치아씨', cat_fruit, sub_nut, NULL),
         ('아마씨', cat_fruit, sub_nut, NULL),
-        ('땅콩', cat_fruit, sub_nut, '🥜');
+        ('땅콩', cat_fruit, sub_nut, '🥜')
+    ON CONFLICT (name) DO NOTHING;
 
     -- ==========================================================================
     -- 육류 (98)
@@ -520,7 +533,8 @@ BEGIN
         ('안창살', cat_meat, sub_beef, NULL),
         ('척아이롤', cat_meat, sub_beef, NULL),
         ('소갈빗살', cat_meat, sub_beef, NULL),
-        ('소불고기용', cat_meat, sub_beef, NULL);
+        ('소불고기용', cat_meat, sub_beef, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 육류 > 돼지고기 (18)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -541,7 +555,8 @@ BEGIN
         ('돼지혀', cat_meat, sub_pork, NULL),
         ('돼지머리고기', cat_meat, sub_pork, NULL),
         ('제육용돼지', cat_meat, sub_pork, NULL),
-        ('돼지불고기용', cat_meat, sub_pork, NULL);
+        ('돼지불고기용', cat_meat, sub_pork, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 육류 > 가금류 (21)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -566,7 +581,8 @@ BEGIN
         ('꿩', cat_meat, sub_poultry, NULL),
         ('칠면조', cat_meat, sub_poultry, '🦃'),
         ('칠면조가슴살', cat_meat, sub_poultry, NULL),
-        ('거위', cat_meat, sub_poultry, NULL);
+        ('거위', cat_meat, sub_poultry, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 육류 > 가공육 (16)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -585,7 +601,8 @@ BEGIN
         ('족발', cat_meat, sub_processed, NULL),
         ('보쌈', cat_meat, sub_processed, NULL),
         ('햄버거패티', cat_meat, sub_processed, NULL),
-        ('미트볼', cat_meat, sub_processed, NULL);
+        ('미트볼', cat_meat, sub_processed, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 육류 > 내장·특수부위 (11)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -600,7 +617,8 @@ BEGIN
         ('우족', cat_meat, sub_offal, NULL),
         ('돼지껍질', cat_meat, sub_offal, NULL),
         ('돼지등뼈', cat_meat, sub_offal, NULL),
-        ('닭염통', cat_meat, sub_offal, NULL);
+        ('닭염통', cat_meat, sub_offal, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 육류 > 기타육류 (7)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -610,7 +628,8 @@ BEGIN
         ('양다리', cat_meat, sub_other_meat, NULL),
         ('양꼬치용', cat_meat, sub_other_meat, NULL),
         ('토끼고기', cat_meat, sub_other_meat, NULL),
-        ('사슴고기', cat_meat, sub_other_meat, NULL);
+        ('사슴고기', cat_meat, sub_other_meat, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- ==========================================================================
     -- 해산물 (135)
@@ -657,7 +676,8 @@ BEGIN
         ('가오리', cat_seafood, sub_fish, NULL),
         ('다금바리', cat_seafood, sub_fish, NULL),
         ('복어', cat_seafood, sub_fish, NULL),
-        ('황새치', cat_seafood, sub_fish, NULL);
+        ('황새치', cat_seafood, sub_fish, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 해산물 > 갑각류 (13)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -673,7 +693,8 @@ BEGIN
         ('홍게', cat_seafood, sub_crustacean, NULL),
         ('털게', cat_seafood, sub_crustacean, NULL),
         ('킹크랩', cat_seafood, sub_crustacean, NULL),
-        ('가재', cat_seafood, sub_crustacean, NULL);
+        ('가재', cat_seafood, sub_crustacean, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 해산물 > 조개류 (19)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -696,7 +717,8 @@ BEGIN
         ('개조개', cat_seafood, sub_shellfish, NULL),
         ('키조개', cat_seafood, sub_shellfish, NULL),
         ('맛조개', cat_seafood, sub_shellfish, NULL),
-        ('골뱅이', cat_seafood, sub_shellfish, NULL);
+        ('골뱅이', cat_seafood, sub_shellfish, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 해산물 > 두족류 (8)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -707,7 +729,8 @@ BEGIN
         ('주꾸미', cat_seafood, sub_cephalopod, NULL),
         ('갑오징어', cat_seafood, sub_cephalopod, NULL),
         ('한치', cat_seafood, sub_cephalopod, NULL),
-        ('무늬오징어', cat_seafood, sub_cephalopod, NULL);
+        ('무늬오징어', cat_seafood, sub_cephalopod, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 해산물 > 건어물 (18)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -728,7 +751,8 @@ BEGIN
         ('과메기', cat_seafood, sub_dried_fish, NULL),
         ('쥐포', cat_seafood, sub_dried_fish, NULL),
         ('명태포', cat_seafood, sub_dried_fish, NULL),
-        ('가쓰오부시', cat_seafood, sub_dried_fish, NULL);
+        ('가쓰오부시', cat_seafood, sub_dried_fish, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 해산물 > 젓갈·어란 (15)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -747,7 +771,8 @@ BEGIN
         ('연어알', cat_seafood, sub_jeotgal, NULL),
         ('날치알', cat_seafood, sub_jeotgal, NULL),
         ('캐비어', cat_seafood, sub_jeotgal, NULL),
-        ('성게알', cat_seafood, sub_jeotgal, NULL);
+        ('성게알', cat_seafood, sub_jeotgal, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 해산물 > 가공해산물 (11)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -761,7 +786,8 @@ BEGIN
         ('꽁치캔', cat_seafood, sub_proc_sea, NULL),
         ('연어캔', cat_seafood, sub_proc_sea, NULL),
         ('문어숙회', cat_seafood, sub_proc_sea, NULL),
-        ('키조개관자', cat_seafood, sub_proc_sea, NULL);
+        ('키조개관자', cat_seafood, sub_proc_sea, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- ==========================================================================
     -- 유제품·계란 (60)
@@ -783,7 +809,8 @@ BEGIN
         ('귀리우유', cat_dairy, sub_milk, NULL),
         ('코코넛밀크', cat_dairy, sub_milk, NULL),
         ('코코넛크림', cat_dairy, sub_milk, NULL),
-        ('라이스밀크', cat_dairy, sub_milk, NULL);
+        ('라이스밀크', cat_dairy, sub_milk, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 유제품·계란 > 치즈 (20)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -806,7 +833,8 @@ BEGIN
         ('에멘탈', cat_dairy, sub_cheese, NULL),
         ('할루미', cat_dairy, sub_cheese, NULL),
         ('스모크치즈', cat_dairy, sub_cheese, NULL),
-        ('퀘소치즈', cat_dairy, sub_cheese, NULL);
+        ('퀘소치즈', cat_dairy, sub_cheese, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 유제품·계란 > 요거트·발효유 (8)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -817,7 +845,8 @@ BEGIN
         ('케피르', cat_dairy, sub_yogurt, NULL),
         ('라씨', cat_dairy, sub_yogurt, NULL),
         ('스키르', cat_dairy, sub_yogurt, NULL),
-        ('과일요거트', cat_dairy, sub_yogurt, NULL);
+        ('과일요거트', cat_dairy, sub_yogurt, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 유제품·계란 > 크림·버터 (10)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -830,7 +859,8 @@ BEGIN
         ('앵커버터', cat_dairy, sub_cream, NULL),
         ('기버터', cat_dairy, sub_cream, NULL),
         ('마가린', cat_dairy, sub_cream, NULL),
-        ('쇼트닝', cat_dairy, sub_cream, NULL);
+        ('쇼트닝', cat_dairy, sub_cream, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 유제품·계란 > 계란류 (6)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -839,7 +869,8 @@ BEGIN
         ('계란흰자', cat_dairy, sub_egg, NULL),
         ('계란노른자', cat_dairy, sub_egg, NULL),
         ('메추리알', cat_dairy, sub_egg, NULL),
-        ('오리알', cat_dairy, sub_egg, NULL);
+        ('오리알', cat_dairy, sub_egg, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- ==========================================================================
     -- 곡류·면 (113)
@@ -866,7 +897,8 @@ BEGIN
         ('쿠스쿠스', cat_grain, sub_rice, NULL),
         ('흑태보리', cat_grain, sub_rice, NULL),
         ('잡곡믹스', cat_grain, sub_rice, NULL),
-        ('찹쌀현미', cat_grain, sub_rice, NULL);
+        ('찹쌀현미', cat_grain, sub_rice, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 곡류·면 > 가루·전분 (21)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -890,7 +922,8 @@ BEGIN
         ('코코넛가루', cat_grain, sub_flour, NULL),
         ('콩가루', cat_grain, sub_flour, NULL),
         ('녹두가루', cat_grain, sub_flour, NULL),
-        ('메밀가루', cat_grain, sub_flour, NULL);
+        ('메밀가루', cat_grain, sub_flour, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 곡류·면 > 한국 면 (11)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -904,7 +937,8 @@ BEGIN
         ('냉면', cat_grain, sub_kr_noodle, NULL),
         ('잡채당면', cat_grain, sub_kr_noodle, NULL),
         ('당면', cat_grain, sub_kr_noodle, NULL),
-        ('비빔면', cat_grain, sub_kr_noodle, NULL);
+        ('비빔면', cat_grain, sub_kr_noodle, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 곡류·면 > 아시아 면 (10)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -917,7 +951,8 @@ BEGIN
         ('야끼소바면', cat_grain, sub_asia_noodle, NULL),
         ('곤약면', cat_grain, sub_asia_noodle, NULL),
         ('두부면', cat_grain, sub_asia_noodle, NULL),
-        ('라멘생면', cat_grain, sub_asia_noodle, NULL);
+        ('라멘생면', cat_grain, sub_asia_noodle, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 곡류·면 > 파스타·유럽면 (17)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -937,7 +972,8 @@ BEGIN
         ('토르텔리니', cat_grain, sub_pasta, NULL),
         ('파파르델레', cat_grain, sub_pasta, NULL),
         ('콩킬리에', cat_grain, sub_pasta, NULL),
-        ('파르팔레', cat_grain, sub_pasta, NULL);
+        ('파르팔레', cat_grain, sub_pasta, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 곡류·면 > 빵·시리얼 (22)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -963,7 +999,8 @@ BEGIN
         ('오트밀', cat_grain, sub_bread, NULL),
         ('그래놀라', cat_grain, sub_bread, NULL),
         ('뮤즐리', cat_grain, sub_bread, NULL),
-        ('콘플레이크', cat_grain, sub_bread, NULL);
+        ('콘플레이크', cat_grain, sub_bread, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 곡류·면 > 떡 (12)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -978,7 +1015,8 @@ BEGIN
         ('경단', cat_grain, sub_tteok, NULL),
         ('쑥떡', cat_grain, sub_tteok, NULL),
         ('꿀떡', cat_grain, sub_tteok, NULL),
-        ('영양찰떡', cat_grain, sub_tteok, NULL);
+        ('영양찰떡', cat_grain, sub_tteok, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- ==========================================================================
     -- 양념·소스 (213)
@@ -1009,7 +1047,8 @@ BEGIN
         ('다시다(소고기)', cat_sauce, sub_basic, NULL),
         ('다시다(해물)', cat_sauce, sub_basic, NULL),
         ('치킨스톡', cat_sauce, sub_basic, NULL),
-        ('야채스톡', cat_sauce, sub_basic, NULL);
+        ('야채스톡', cat_sauce, sub_basic, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 양념·소스 > 간장·장류 (23)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -1035,7 +1074,8 @@ BEGIN
         ('굴소스', cat_sauce, sub_jang, NULL),
         ('해선장', cat_sauce, sub_jang, NULL),
         ('낫토', cat_sauce, sub_jang, NULL),
-        ('약고추장', cat_sauce, sub_jang, NULL);
+        ('약고추장', cat_sauce, sub_jang, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 양념·소스 > 식초·드레싱 (22)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -1060,7 +1100,8 @@ BEGIN
         ('프렌치드레싱', cat_sauce, sub_vinegar, NULL),
         ('사우전드아일랜드', cat_sauce, sub_vinegar, NULL),
         ('요거트드레싱', cat_sauce, sub_vinegar, NULL),
-        ('고추장드레싱', cat_sauce, sub_vinegar, NULL);
+        ('고추장드레싱', cat_sauce, sub_vinegar, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 양념·소스 > 오일·기름 (18)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -1081,7 +1122,8 @@ BEGIN
         ('트러플오일', cat_sauce, sub_oil, NULL),
         ('고추기름', cat_sauce, sub_oil, NULL),
         ('라드', cat_sauce, sub_oil, NULL),
-        ('우지', cat_sauce, sub_oil, NULL);
+        ('우지', cat_sauce, sub_oil, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 양념·소스 > 가루양념·향신료 (42)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -1127,7 +1169,8 @@ BEGIN
         ('들깨', cat_sauce, sub_spice, NULL),
         ('들깨가루', cat_sauce, sub_spice, NULL),
         ('후리카케', cat_sauce, sub_spice, NULL),
-        ('김가루', cat_sauce, sub_spice, NULL);
+        ('김가루', cat_sauce, sub_spice, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 양념·소스 > 액체양념 (15)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -1145,7 +1188,8 @@ BEGIN
         ('데리야끼소스', cat_sauce, sub_liquid, NULL),
         ('연두', cat_sauce, sub_liquid, NULL),
         ('불닭소스', cat_sauce, sub_liquid, NULL),
-        ('간장게장소스', cat_sauce, sub_liquid, NULL);
+        ('간장게장소스', cat_sauce, sub_liquid, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 양념·소스 > 상업소스 (27)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -1175,7 +1219,8 @@ BEGIN
         ('알프레도소스', cat_sauce, sub_commercial, NULL),
         ('바질페스토', cat_sauce, sub_commercial, NULL),
         ('타르타르소스', cat_sauce, sub_commercial, NULL),
-        ('칵테일소스', cat_sauce, sub_commercial, NULL);
+        ('칵테일소스', cat_sauce, sub_commercial, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 양념·소스 > 건조허브·향신잎 (12)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -1190,7 +1235,8 @@ BEGIN
         ('프로방스허브', cat_sauce, sub_dried_herb, NULL),
         ('통월계수잎', cat_sauce, sub_dried_herb, NULL),
         ('건조카피르라임잎', cat_sauce, sub_dried_herb, NULL),
-        ('말린딜시드', cat_sauce, sub_dried_herb, NULL);
+        ('말린딜시드', cat_sauce, sub_dried_herb, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- ==========================================================================
     -- 기타 (64)
@@ -1218,7 +1264,8 @@ BEGIN
         ('얼그레이', cat_misc, sub_drink, NULL),
         ('우롱차', cat_misc, sub_drink, NULL),
         ('코코아파우더', cat_misc, sub_drink, NULL),
-        ('핫초코믹스', cat_misc, sub_drink, NULL);
+        ('핫초코믹스', cat_misc, sub_drink, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 기타 > 가공식품·캔 (18)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -1239,7 +1286,8 @@ BEGIN
         ('양송이캔', cat_misc, sub_canned, NULL),
         ('그린올리브(병)', cat_misc, sub_canned, NULL),
         ('블랙올리브(병)', cat_misc, sub_canned, NULL),
-        ('할라페뇨(병)', cat_misc, sub_canned, NULL);
+        ('할라페뇨(병)', cat_misc, sub_canned, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 기타 > 베이킹재료 (18)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -1261,7 +1309,8 @@ BEGIN
         ('펙틴', cat_misc, sub_baking, NULL),
         ('타피오카펄', cat_misc, sub_baking, NULL),
         ('슈가파우더', cat_misc, sub_baking, NULL),
-        ('바닐라빈', cat_misc, sub_baking, NULL);
+        ('바닐라빈', cat_misc, sub_baking, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
     -- 기타 > 기타 잡화 (5)
     INSERT INTO ingredients (name, category_id, subcategory_id, emoji) VALUES
@@ -1269,7 +1318,8 @@ BEGIN
         ('탄산수', cat_misc, sub_misc_item, NULL),
         ('정제수', cat_misc, sub_misc_item, NULL),
         ('사이다', cat_misc, sub_misc_item, NULL),
-        ('콜라', cat_misc, sub_misc_item, NULL);
+        ('콜라', cat_misc, sub_misc_item, NULL)
+    ON CONFLICT (name) DO NOTHING;
 
 END $$;
 

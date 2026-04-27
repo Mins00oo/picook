@@ -20,7 +20,6 @@ import { EggIcon } from '../../../src/components/points/EggIcon';
 import { DailyCheckModal } from '../../../src/components/attendance/DailyCheckModal';
 import { useAuthStore } from '../../../src/stores/authStore';
 import { getLevelForExp } from '../../../src/constants/levels';
-import { getCharacterName } from '../../../src/constants/characters';
 import { useAttendanceToday, useCheckInMutation } from '../../../src/hooks/useAttendance';
 import { usePointBalance } from '../../../src/hooks/usePoints';
 import { useTimeRecipes } from '../../../src/hooks/useTimeRecipes';
@@ -89,7 +88,7 @@ export default function HomeScreen() {
           <View style={styles.topRight}>
             <TouchableOpacity
               style={styles.eggPill}
-              onPress={() => router.push('/(tabs)/mypage/points')}
+              onPress={() => router.push('/points')}
               activeOpacity={0.85}
             >
               <EggIcon size={18} />
@@ -98,7 +97,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.shopBtn}
-              onPress={() => router.push('/(tabs)/mypage/shop')}
+              onPress={() => router.push('/shop')}
               activeOpacity={0.85}
             >
               <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
@@ -127,12 +126,12 @@ export default function HomeScreen() {
           </View>
           <View style={styles.charTextArea}>
             <Text style={styles.charGreet}>
-              {copy.greetingKicker}!{' '}
-              <Text style={styles.charGreetAccent}>오늘</Text>은 뭘 만들어볼까요?
+              {user?.displayName ? `${user.displayName}님, ` : ''}
+              <Text style={styles.charGreetAccent}>{copy.greetingKicker}</Text>
             </Text>
             <View style={styles.charMetaRow}>
               <View style={styles.pulseDot} />
-              <Text style={styles.charMetaText}>{getCharacterName(characterType)}</Text>
+              <Text style={styles.charMetaText}>{level.emoji} {level.title}</Text>
               <View style={styles.lvPill}>
                 <Text style={styles.lvPillText}>Lv.{level.level}</Text>
               </View>
