@@ -1,12 +1,13 @@
 import type { TimePeriod } from '../api/recipeApi';
 
-// 4구간 매핑 (확정 정책)
-// 아침 05-10 / 점심 10-14 / 저녁 14-21 / 야식 21-05
+// 5구간 매핑 (확정 정책)
+// 아침 06-10 / 점심 10-14 / 오후 14-17 / 저녁 17-21 / 야식 21-06
 export function getCurrentPeriod(now: Date = new Date()): TimePeriod {
   const h = now.getHours();
-  if (h >= 5 && h < 10) return 'breakfast';
+  if (h >= 6 && h < 10) return 'breakfast';
   if (h >= 10 && h < 14) return 'lunch';
-  if (h >= 14 && h < 21) return 'dinner';
+  if (h >= 14 && h < 17) return 'afternoon';
+  if (h >= 17 && h < 21) return 'dinner';
   return 'midnight';
 }
 
@@ -19,25 +20,31 @@ export interface TimeCopy {
 
 export const TIME_COPY: Record<TimePeriod, TimeCopy> = {
   breakfast: {
-    greetingKicker: '아침이네요',
+    greetingKicker: '오늘 아침은 가볍게',
     sectionKicker: '아침',
     sectionEmoji: '🌅',
     sectionTitle: '아침 한 끼',
   },
   lunch: {
-    greetingKicker: '점심이네요',
+    greetingKicker: '오늘 점심은 든든하게',
     sectionKicker: '점심',
     sectionEmoji: '🍜',
     sectionTitle: '점심 뭐 먹지?',
   },
+  afternoon: {
+    greetingKicker: '오후엔 가볍게',
+    sectionKicker: '오후',
+    sectionEmoji: '🍵',
+    sectionTitle: '오후 한 입',
+  },
   dinner: {
-    greetingKicker: '저녁이네요',
+    greetingKicker: '오늘 저녁은 따뜻하게',
     sectionKicker: '저녁',
     sectionEmoji: '🍲',
     sectionTitle: '저녁에 어울리는 한 끼',
   },
   midnight: {
-    greetingKicker: '야식 시간이네요',
+    greetingKicker: '오늘 밤은 한 입만',
     sectionKicker: '야식',
     sectionEmoji: '🌙',
     sectionTitle: '야식 땡길 땐',

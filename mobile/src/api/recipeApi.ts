@@ -2,7 +2,7 @@ import api from './client';
 import type { ApiResponse } from '../types/api';
 import type { Recipe, RecommendRequest, RecipeSummary } from '../types/recipe';
 
-export type TimePeriod = 'breakfast' | 'lunch' | 'dinner' | 'midnight';
+export type TimePeriod = 'breakfast' | 'lunch' | 'afternoon' | 'dinner' | 'midnight';
 
 export const recipeApi = {
   recommend: (data: RecommendRequest) =>
