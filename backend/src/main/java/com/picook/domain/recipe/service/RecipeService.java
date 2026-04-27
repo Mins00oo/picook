@@ -17,7 +17,7 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class RecipeService {
 
-    private static final Set<String> VALID_PERIODS = Set.of("breakfast", "lunch", "dinner", "midnight");
+    private static final Set<String> VALID_PERIODS = Set.of("breakfast", "lunch", "afternoon", "dinner", "midnight");
 
     private final RecipeRepository recipeRepository;
 
@@ -45,7 +45,7 @@ public class RecipeService {
     public List<TimeRecipeResponse> recommendByTime(String period) {
         if (period == null || !VALID_PERIODS.contains(period)) {
             throw new BusinessException("INVALID_PERIOD",
-                    "period는 breakfast/lunch/dinner/midnight 중 하나여야 합니다", HttpStatus.BAD_REQUEST);
+                    "period는 breakfast/lunch/afternoon/dinner/midnight 중 하나여야 합니다", HttpStatus.BAD_REQUEST);
         }
         return recipeRepository.findTopByViewCount(PageRequest.of(0, 5)).stream()
                 .filter(r -> "published".equals(r.getStatus()))
