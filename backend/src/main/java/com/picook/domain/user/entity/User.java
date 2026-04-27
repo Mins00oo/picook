@@ -18,6 +18,10 @@ public class User {
     @Column(name = "display_name", length = 50)
     private String displayName;
 
+    /** 소셜(카카오/Apple)이 제공한 원본 이름. UNIQUE 아님. setup 화면 placeholder 등 안내용. */
+    @Column(name = "oauth_name", length = 50)
+    private String oauthName;
+
     @Column(name = "profile_image_url")
     private String profileImageUrl;
 
@@ -31,7 +35,7 @@ public class User {
     @Column(name = "apple_id", length = 100)
     private String appleId;
 
-    /** v1.0 캐릭터 타입 — EGG / POTATO / CARROT */
+    /** 캐릭터 타입 — MIN / ROO / HARU */
     @Column(name = "character_type", length = 20)
     private String characterType;
 
@@ -89,6 +93,9 @@ public class User {
 
     public String getDisplayName() { return displayName; }
     public void setDisplayName(String displayName) { this.displayName = displayName; }
+
+    public String getOauthName() { return oauthName; }
+    public void setOauthName(String oauthName) { this.oauthName = oauthName; }
 
     public String getProfileImageUrl() { return profileImageUrl; }
     public void setProfileImageUrl(String profileImageUrl) { this.profileImageUrl = profileImageUrl; }

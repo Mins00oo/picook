@@ -76,7 +76,8 @@ public class KakaoAuthService {
                     User newUser = new User(LoginType.KAKAO);
                     newUser.setKakaoId(kakaoId);
                     newUser.setEmail(email);
-                    newUser.setDisplayName(nickname);
+                    // 카카오가 준 닉네임은 oauth_name에만 보관. display_name은 사용자가 setup 화면에서 직접 정함.
+                    newUser.setOauthName(nickname);
                     newUser.setProfileImageUrl(profileImage);
                     newUser.setLastLoginAt(Instant.now());
                     return userRepository.save(newUser);
