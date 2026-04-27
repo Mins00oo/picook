@@ -13,8 +13,6 @@ export interface UserProfile {
   profileImageUrl?: string;
   loginType: LoginType;
   cookingLevel: CookingLevel;
-  coachingEnabled: boolean;
-  coachingVoiceSpeed: number;
   completedCookingCount: number;
   isOnboarded: boolean;
   status: UserStatus;
@@ -25,12 +23,8 @@ export interface UserProfile {
 export interface UpdateProfileRequest {
   displayName?: string;
   cookingLevel?: CookingLevel;
-  coachingEnabled?: boolean;
-  coachingVoiceSpeed?: number;
 }
 
 export interface OnboardingRequest {
   cookingLevel: CookingLevel;
-  coachingEnabled: boolean;
-  coachingVoiceSpeed: number;
 }

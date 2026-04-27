@@ -1,14 +1,10 @@
 export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
-export type StepType = 'ACTIVE' | 'WAIT';
 
 export interface RecipeStep {
   id: number;
   stepNumber: number;
   description: string;
-  stepType: string;
-  durationSeconds: number;
   imageUrl: string | null;
-  canParallel: boolean;
 }
 
 export interface RecipeIngredient {
@@ -34,7 +30,6 @@ export interface Recipe {
   tips: string | null;
   totalIngredients: number;
   viewCount: number;
-  coachingReady: boolean;
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
   createdAt: string;

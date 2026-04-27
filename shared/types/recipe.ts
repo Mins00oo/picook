@@ -8,8 +8,6 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 
 export type RecipeStatus = 'draft' | 'published' | 'hidden';
 
-export type StepType = 'active' | 'wait';
-
 export interface Recipe {
   id: number;
   title: string;
@@ -22,7 +20,6 @@ export interface Recipe {
   tips?: string;
   totalIngredients: number;
   viewCount: number;
-  coachingReady: boolean;
   status: RecipeStatus;
 }
 
@@ -41,9 +38,6 @@ export interface RecipeStep {
   stepNumber: number;
   description: string;
   imageUrl?: string;
-  stepType: StepType;
-  durationSeconds: number;
-  canParallel: boolean;
 }
 
 export interface RecipeDetail extends Recipe {
