@@ -23,29 +23,14 @@ public class RecipeStep {
     @Column(name = "image_url")
     private String imageUrl;
 
-    @Column(name = "step_type", nullable = false, length = 10)
-    private String stepType = "active";
-
-    @Column(name = "duration_seconds", nullable = false)
-    private Integer durationSeconds;
-
-    @Column(name = "can_parallel")
-    private Boolean canParallel = true;
-
     protected RecipeStep() {}
 
-    public RecipeStep(Recipe recipe, Integer stepNumber, String description, String imageUrl,
-                      String stepType, Integer durationSeconds, Boolean canParallel) {
+    public RecipeStep(Recipe recipe, Integer stepNumber, String description, String imageUrl) {
         this.recipe = recipe;
         this.stepNumber = stepNumber;
         this.description = description;
         this.imageUrl = imageUrl;
-        this.stepType = stepType != null ? stepType : "active";
-        this.durationSeconds = durationSeconds;
-        this.canParallel = canParallel != null ? canParallel : true;
     }
-
-    // Getters
 
     public Integer getId() { return id; }
 
@@ -56,10 +41,4 @@ public class RecipeStep {
     public String getDescription() { return description; }
 
     public String getImageUrl() { return imageUrl; }
-
-    public String getStepType() { return stepType; }
-
-    public Integer getDurationSeconds() { return durationSeconds; }
-
-    public Boolean getCanParallel() { return canParallel; }
 }

@@ -39,10 +39,7 @@ public record RecipeDetailResponse(
             Integer id,
             int stepNumber,
             String description,
-            String imageUrl,
-            String stepType,
-            int durationSeconds,
-            boolean canParallel
+            String imageUrl
     ) {}
 
     public static RecipeDetailResponse of(Recipe recipe) {
@@ -63,10 +60,7 @@ public record RecipeDetailResponse(
                         rs.getId(),
                         rs.getStepNumber(),
                         rs.getDescription(),
-                        rs.getImageUrl(),
-                        rs.getStepType(),
-                        rs.getDurationSeconds(),
-                        rs.getCanParallel()
+                        rs.getImageUrl()
                 ))
                 .toList();
 

@@ -46,11 +46,6 @@ com.picook/
 │   │   ├── repository/
 │   │   ├── entity/Recipe.java, RecipeIngredient.java, RecipeStep.java
 │   │   └── dto/
-│   ├── coaching/
-│   │   ├── controller/CoachingController.java
-│   │   ├── service/CoachingService.java
-│   │   ├── entity/CoachingLog.java, CookingCompletion.java
-│   │   └── dto/
 │   ├── shorts/
 │   │   ├── controller/ShortsController.java
 │   │   ├── service/ShortsConvertService.java
@@ -133,14 +128,14 @@ com.picook/
 5회 실패 → 15분 잠금. 세션 액세스 1h + 리프레시 8h. 동시 2개.
 
 ### 2. 대시보드 (/api/admin/dashboard)
-| GET | /summary | 주요 지표 (사용자, 레시피, 코칭, 쇼츠, 등급분포) |
+| GET | /summary | 주요 지표 (사용자, 레시피, 쇼츠, 등급분포) |
 | GET | /charts | 차트 데이터 (?period=7d/30d/90d/custom) |
-| GET | /rankings | 인기 레시피/재료/코칭 TOP, 최근 피드백 |
+| GET | /rankings | 인기 레시피/재료 TOP, 최근 피드백 |
 
 ### 3. 레시피 관리 (/api/admin/recipes)
-| GET | / | 목록 (?status, category, difficulty, coachingReady, keyword, page, size, sort) |
+| GET | / | 목록 (?status, category, difficulty, keyword, page, size, sort) |
 | GET | /{id} | 상세 (재료+단계+전부) |
-| POST | / | 등록 (재료 매핑 + steps의 active/wait + duration 포함) |
+| POST | / | 등록 (재료 매핑 + 단계 포함) |
 | PUT | /{id} | 수정 |
 | DELETE | /{id} | 소프트 삭제 |
 | PATCH | /{id}/status | 상태 변경 (draft/published/hidden) |
@@ -179,7 +174,6 @@ com.picook/
 | GET | /{id} | 상세 (프로필+등급+활동) |
 | PATCH | /{id}/suspend | 정지 (사유 필수) |
 | PATCH | /{id}/activate | 해제 |
-| GET | /{id}/coaching-logs | 코칭 이력 |
 | GET | /{id}/completions | 완료 이력 (사진) |
 | GET | /{id}/favorites | 즐겨찾기 |
 | GET | /{id}/search-history | 검색 기록 |
@@ -193,9 +187,8 @@ com.picook/
 
 ### 9. 상세 통계 (/api/admin/stats) — VIEWER+
 | GET | /users | 가입추이, 로그인방식 분포, DAU/MAU, 리텐션 |
-| GET | /recipes | 카테고리별, 난이도별, 인기 TOP 20, coaching_ready율 |
+| GET | /recipes | 카테고리별, 난이도별, 인기 TOP 20 |
 | GET | /ingredients | 인기 재료 TOP 20, 미사용 재료 목록 |
-| GET | /coaching | 이용률, 완료율, 싱글/멀티 비율, 소요시간 비교, 시간대 분포 |
 | GET | /shorts | 변환추이, 성공률, 캐시 히트율, 인기 URL TOP 10 |
 | GET | /ranking | 레벨 분포, 평균 레벨, 레벨업 추이, 사진 업로드율 |
 
@@ -232,11 +225,6 @@ com.picook/
 
 ### 즐겨찾기 (/api/v1/favorites)
 | GET / | 목록 | POST / | 추가 | DELETE /{id} | 삭제 |
-
-### 코칭 (/api/v1/coaching)
-| POST /start | 시작 |
-| PATCH /{id}/complete | 완료 |
-| POST /{id}/photo | 사진 → 등급+1 |
 
 ### 쇼츠 (/api/v1/shorts)
 | POST /convert | 변환 |
@@ -285,7 +273,7 @@ http.authorizeHttpRequests(auth -> auth
    a. yt-dlp --dump-json으로 메타데이터(채널명, 원본제목, 길이, 썸네일) 파싱
    b. yt-dlp로 음성 추출 (.mp3)
    c. Whisper API로 STT
-   d. gpt-5.4-mini로 단계별 구조화 (JSON, stepType + durationSeconds 포함)
+   d. gpt-5.4-mini로 단계별 구조화 (JSON)
    e. 결과 + 메타데이터를 shorts_cache에 저장
 5. 반환 (channelName, originalTitle, durationSeconds 포함)
 ```
@@ -316,7 +304,6 @@ http.authorizeHttpRequests(auth -> auth
 - ✅ 재료/카테고리 CRUD + 엑셀 일괄등록
 - ✅ 레시피 CRUD + 추천 TOP 10
 - ✅ 즐겨찾기 + 검색기록 + S3
-- ✅ 코칭 로그 + 등급
 - ✅ 쇼츠 변환 + 캐싱
 - ✅ 피드백 도메인
 - ✅ 사용자 프로필 API (GET/PUT/DELETE /me)
@@ -367,7 +354,7 @@ http.authorizeHttpRequests(auth -> auth
 - ✅ AuthService, AdminAuthService
 - ✅ UserService, UserRank, User
 - ✅ RecommendService
-- ✅ CoachingService, FavoriteService, SearchHistoryService
+- ✅ FavoriteService, SearchHistoryService
 - ✅ ShortsConvertService, ShortsCacheService
 - ✅ AdminRecipeService, RecipeBulkUploadService
 - ✅ S3FileService

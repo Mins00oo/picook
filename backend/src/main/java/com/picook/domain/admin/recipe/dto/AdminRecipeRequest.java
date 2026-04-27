@@ -42,9 +42,6 @@ public record AdminRecipeRequest(
     public record StepItem(
             Integer stepNumber,
             String description,
-            String imageUrl,
-            String stepType,
-            Integer durationSeconds,
-            Boolean canParallel
+            String imageUrl
     ) {}
 }

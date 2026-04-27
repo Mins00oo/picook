@@ -78,10 +78,7 @@ public class AdminRecipeService {
         // 조리 단계
         if (request.steps() != null) {
             for (AdminRecipeRequest.StepItem item : request.steps()) {
-                validateStepType(item.stepType());
-                RecipeStep step = new RecipeStep(recipe, item.stepNumber(), item.description(),
-                        item.imageUrl(), item.stepType() != null ? item.stepType().toLowerCase() : "active",
-                        item.durationSeconds() != null ? item.durationSeconds() : 0, item.canParallel());
+                RecipeStep step = new RecipeStep(recipe, item.stepNumber(), item.description(), item.imageUrl());
                 recipe.addStep(step);
             }
         }
@@ -124,10 +121,7 @@ public class AdminRecipeService {
         recipe.clearSteps();
         if (request.steps() != null) {
             for (AdminRecipeRequest.StepItem item : request.steps()) {
-                validateStepType(item.stepType());
-                RecipeStep step = new RecipeStep(recipe, item.stepNumber(), item.description(),
-                        item.imageUrl(), item.stepType() != null ? item.stepType().toLowerCase() : "active",
-                        item.durationSeconds() != null ? item.durationSeconds() : 0, item.canParallel());
+                RecipeStep step = new RecipeStep(recipe, item.stepNumber(), item.description(), item.imageUrl());
                 recipe.addStep(step);
             }
         }
@@ -172,16 +166,6 @@ public class AdminRecipeService {
             com.picook.domain.recipe.entity.Difficulty.fromValue(difficulty);
         } catch (IllegalArgumentException e) {
             throw new BusinessException("INVALID_DIFFICULTY", "유효하지 않은 난이도입니다: " + difficulty, HttpStatus.BAD_REQUEST);
-        }
-    }
-
-    private void validateStepType(String stepType) {
-        if (stepType != null) {
-            try {
-                com.picook.domain.recipe.entity.StepType.fromValue(stepType);
-            } catch (IllegalArgumentException e) {
-                throw new BusinessException("INVALID_STEP_TYPE", "유효하지 않은 단계 타입입니다: " + stepType, HttpStatus.BAD_REQUEST);
-            }
         }
     }
 

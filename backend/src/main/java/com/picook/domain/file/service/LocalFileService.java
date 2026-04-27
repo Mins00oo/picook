@@ -27,7 +27,7 @@ public class LocalFileService implements FileStorageService {
             "image/jpeg", "image/png", "image/heic", "image/webp"
     );
     private static final Set<String> ALLOWED_CATEGORIES = Set.of(
-            "recipes", "ingredients", "coaching", "profile", "cookbook"
+            "recipes", "ingredients", "profile", "cookbook"
     );
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd");

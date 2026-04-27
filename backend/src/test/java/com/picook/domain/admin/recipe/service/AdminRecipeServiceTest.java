@@ -55,7 +55,7 @@ class AdminRecipeServiceTest {
                 "김치찌개", "korean", "easy", 30, 2, 420,
                 null, null, "맛있게 만드세요",
                 List.of(new AdminRecipeRequest.IngredientItem(1, BigDecimal.ONE, "개", true, 0)),
-                List.of(new AdminRecipeRequest.StepItem(1, "양파를 썬다", null, "active", 60, false))
+                List.of(new AdminRecipeRequest.StepItem(1, "양파를 썬다", null))
         );
 
         AdminRecipeResponse response = adminRecipeService.createRecipe(request);
@@ -102,7 +102,7 @@ class AdminRecipeServiceTest {
                 "수정된 레시피", "western", "medium", 45, 3, 380,
                 null, null, null,
                 List.of(new AdminRecipeRequest.IngredientItem(2, new BigDecimal("0.5"), "개", true, 0)),
-                List.of(new AdminRecipeRequest.StepItem(1, "당근을 자른다", null, "active", 30, true))
+                List.of(new AdminRecipeRequest.StepItem(1, "당근을 자른다", null))
         );
 
         AdminRecipeResponse response = adminRecipeService.updateRecipe(1, request);
