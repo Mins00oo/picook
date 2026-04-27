@@ -1,8 +1,0 @@
-# database/scripts/requirements.txt
-# 데이터 정제 스크립트용 Python 패키지
-
-anthropic>=0.40.0      # Claude API
-requests>=2.31.0       # 식품안전나라 API 호출
-openpyxl>=3.1.0        # 엑셀 읽기/쓰기
-python-dotenv>=1.0.0   # .env 파일 로드
-tqdm>=4.66.0           # 진행률 표시
