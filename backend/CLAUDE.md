@@ -7,8 +7,6 @@
 - Flyway (마이그레이션)
 - 로컬 파일 저장소 (이미지 — /data/picook/uploads/)
 - Apache POI (엑셀 파싱)
-- yt-dlp + ffmpeg (쇼츠 음성 추출, 서버에 설치 필요)
-- OpenAI API (Whisper STT + gpt-5.4-mini 구조화)
 
 ## 패키지 구조
 ```
@@ -26,10 +24,12 @@ com.picook/
 │   │   ├── controller/AuthController.java
 │   │   ├── service/AuthService.java
 │   │   ├── service/KakaoAuthService.java
+│   │   ├── service/AppleAuthService.java
 │   │   └── dto/
 │   ├── user/
 │   │   ├── controller/UserController.java
 │   │   ├── service/UserService.java
+│   │   ├── service/UserLevelService.java
 │   │   ├── repository/UserRepository.java
 │   │   ├── entity/User.java
 │   │   └── dto/
@@ -46,20 +46,26 @@ com.picook/
 │   │   ├── repository/
 │   │   ├── entity/Recipe.java, RecipeIngredient.java, RecipeStep.java
 │   │   └── dto/
-│   ├── shorts/
-│   │   ├── controller/ShortsController.java
-│   │   ├── service/ShortsConvertService.java
-│   │   ├── service/ShortsCacheService.java
-│   │   ├── entity/ShortsCache.java
+│   ├── cookbook/         ← 요리 완료 인증(별점/메모/사진 최대 4장)
+│   │   ├── controller/CookbookController.java
+│   │   ├── service/CookbookService.java
+│   │   ├── entity/CookbookEntry.java, CookbookPhoto.java
 │   │   └── dto/
+│   ├── fridge/           ← 사용자 냉장고 재료 관리
 │   ├── favorite/
 │   │   ├── controller/FavoriteController.java
 │   │   ├── service/FavoriteService.java
 │   │   ├── entity/Favorite.java
 │   │   └── dto/
+│   ├── searchhistory/
+│   ├── feedback/
+│   ├── point/            ← 포인트 적립/소비
+│   ├── attendance/       ← 출석체크
+│   ├── outfit/           ← 의상 카탈로그(레벨업 시 지급)
+│   ├── monitoring/       ← 운영 모니터링 (DAU/MAU 등)
 │   ├── file/
 │   │   ├── controller/FileController.java
-│   │   └── service/S3FileService.java
+│   │   └── service/LocalFileService.java
 │   └── admin/
 │       ├── auth/
 │       │   ├── controller/AdminAuthController.java
@@ -84,9 +90,13 @@ com.picook/
 │       │   ├── controller/AdminCategoryController.java
 │       │   ├── service/AdminCategoryService.java
 │       │   └── dto/
-│       ├── shorts/
-│       │   ├── controller/AdminShortsController.java
-│       │   ├── service/AdminShortsService.java
+│       ├── subcategory/
+│       │   ├── controller/AdminSubcategoryController.java
+│       │   ├── service/AdminSubcategoryService.java
+│       │   └── dto/
+│       ├── outfit/
+│       │   ├── controller/AdminOutfitController.java
+│       │   ├── service/AdminOutfitService.java
 │       │   └── dto/
 │       ├── user/
 │       │   ├── controller/AdminUserController.java
@@ -128,7 +138,7 @@ com.picook/
 5회 실패 → 15분 잠금. 세션 액세스 1h + 리프레시 8h. 동시 2개.
 
 ### 2. 대시보드 (/api/admin/dashboard)
-| GET | /summary | 주요 지표 (사용자, 레시피, 쇼츠, 등급분포) |
+| GET | /summary | 주요 지표 (사용자, 레시피, 등급분포) |
 | GET | /charts | 차트 데이터 (?period=7d/30d/90d/custom) |
 | GET | /rankings | 인기 레시피/재료 TOP, 최근 피드백 |
 
@@ -161,15 +171,20 @@ com.picook/
 | DELETE | /{id} | 삭제 (소속 재료 있으면 400) |
 | PUT | /reorder | 순서 변경 ({ orderedIds: [1,3,2,...] }) |
 
-### 6. 쇼츠 캐시 관리 (/api/admin/shorts)
-| GET | /cache | 캐시 목록 (?keyword, modelVersion, page, size) |
-| GET | /cache/{id} | 캐시 상세 (변환 결과 확인) |
-| DELETE | /cache/{id} | 개별 삭제 |
-| DELETE | /cache/clear-all | 전체 초기화 (SUPER_ADMIN만) |
-| POST | /cache/{id}/reconvert | 수동 재변환 |
-| GET | /stats | 쇼츠 통계 (캐시수, 히트율, 실패율, 평균시간) |
+### 6. 서브카테고리 관리 (/api/admin/subcategories)
+| GET | / | 목록 (?categoryId 필터 가능) |
+| POST | / | 등록 |
+| PUT | /{id} | 수정 |
+| DELETE | /{id} | 삭제 |
+| PUT | /reorder | 순서 변경 |
 
-### 7. 사용자 관리 (/api/admin/users) — SUPER_ADMIN
+### 7. 의상 카탈로그 관리 (/api/admin/outfits)
+| GET | / | 의상 목록 |
+| POST | / | 등록 (레벨 조건 등 포함) |
+| PUT | /{id} | 수정 |
+| DELETE | /{id} | 삭제 |
+
+### 8. 사용자 관리 (/api/admin/users) — SUPER_ADMIN
 | GET | / | 목록 (?status, loginType, levelMin, keyword, page, size) |
 | GET | /{id} | 상세 (프로필+등급+활동) |
 | PATCH | /{id}/suspend | 정지 (사유 필수) |
@@ -178,21 +193,20 @@ com.picook/
 | GET | /{id}/favorites | 즐겨찾기 |
 | GET | /{id}/search-history | 검색 기록 |
 
-### 8. 피드백 관리 (/api/admin/feedback)
+### 9. 피드백 관리 (/api/admin/feedback)
 | GET | / | 목록 (?status, rating, recipeId, page, size) |
 | GET | /{id} | 상세 (레시피+사용자 정보) |
 | PATCH | /{id}/status | 상태 (pending→reviewed→resolved) |
 | PUT | /{id}/note | 관리자 메모 |
 | GET | /summary | 요약 통계 (건수, 분포, 어려운 레시피 TOP) |
 
-### 9. 상세 통계 (/api/admin/stats) — VIEWER+
+### 10. 상세 통계 (/api/admin/stats) — VIEWER+
 | GET | /users | 가입추이, 로그인방식 분포, DAU/MAU, 리텐션 |
 | GET | /recipes | 카테고리별, 난이도별, 인기 TOP 20 |
 | GET | /ingredients | 인기 재료 TOP 20, 미사용 재료 목록 |
-| GET | /shorts | 변환추이, 성공률, 캐시 히트율, 인기 URL TOP 10 |
 | GET | /ranking | 레벨 분포, 평균 레벨, 레벨업 추이, 사진 업로드율 |
 
-### 10. 관리자 계정 관리 (/api/admin/accounts) — SUPER_ADMIN
+### 11. 관리자 계정 관리 (/api/admin/accounts) — SUPER_ADMIN
 | GET | / | 관리자 목록 |
 | POST | / | 관리자 생성 |
 | PUT | /{id} | 역할 변경 |
@@ -226,10 +240,11 @@ com.picook/
 ### 즐겨찾기 (/api/v1/favorites)
 | GET / | 목록 | POST / | 추가 | DELETE /{id} | 삭제 |
 
-### 쇼츠 (/api/v1/shorts)
-| POST /convert | 변환 |
-| GET /recent | 최근 변환 (URL 기준 중복 제거, 최대 20건) |
-| GET /{cacheId} | 캐시 상세 조회 (본인 변환 기록만 접근 가능) |
+### 요리북 (/api/v1/cookbook) — 요리 완료 인증
+| POST /entries | 등록 (multipart: rating 1~5, memo ≤1000자, photos 최대 4장) |
+| GET /entries | 본인 기록 목록 (페이징) |
+| GET /entries/{id} | 본인 기록 상세 |
+| GET /stats?yearMonth=YYYY-MM | 월별 요리 횟수 |
 
 ### 검색 기록 (/api/v1/search-history)
 | GET / | 목록 | DELETE /{id} | 개별삭제 | DELETE / | 전체삭제 |
@@ -243,7 +258,6 @@ http.authorizeHttpRequests(auth -> auth
     .requestMatchers("/api/admin/auth/login").permitAll()
     .requestMatchers("/api/admin/accounts/**").hasRole("SUPER_ADMIN")
     .requestMatchers("/api/admin/users/**").hasRole("SUPER_ADMIN")
-    .requestMatchers("/api/admin/shorts/cache/clear-all").hasRole("SUPER_ADMIN")
     .requestMatchers(HttpMethod.GET, "/api/admin/stats/**").hasAnyRole("SUPER_ADMIN", "CONTENT_ADMIN", "VIEWER")
     .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "CONTENT_ADMIN")
     .requestMatchers("/api/v1/**").authenticated()
@@ -255,27 +269,25 @@ http.authorizeHttpRequests(auth -> auth
 ## 추천 알고리즘 (RecommendService)
 ```
 입력: ingredientIds[], maxTime?, difficulty?, servings?
-1. recipe_ingredients에서 사용자 재료와 교집합 계산
-2. 매칭률 = 교집합 / 레시피 필수재료 총 수
-3. 매칭률 30% 미만 제외
+1. recipe_ingredients에서 사용자 재료와 교집합 계산 (양념 제외 — is_seasoning=false 메인재료만)
+2. 매칭률 = 보유 메인재료 / 레시피 전체 메인재료
+3. 매칭률 30% 미만 제외 (RecommendService.MIN_MATCH_RATE)
 4. 시간/난이도/인분 필터 적용
 5. 매칭률 DESC 정렬
-6. TOP 10 반환 (부족 재료 목록 포함)
+6. TOP 10 반환 (부족 메인재료 + 부족 양념 별도)
 ```
 
-## 쇼츠 변환 (ShortsConvertService)
+## 요리 완료 인증 (CookbookService)
 ```
-입력: youtubeUrl
-1. url_hash(SHA-256) 생성
-2. shorts_cache에서 hash + 현재 ai_model_version 조회
-3. 캐시 있으면 → 즉시 반환
-4. 캐시 없으면:
-   a. yt-dlp --dump-json으로 메타데이터(채널명, 원본제목, 길이, 썸네일) 파싱
-   b. yt-dlp로 음성 추출 (.mp3)
-   c. Whisper API로 STT
-   d. gpt-5.4-mini로 단계별 구조화 (JSON)
-   e. 결과 + 메타데이터를 shorts_cache에 저장
-5. 반환 (channelName, originalTitle, durationSeconds 포함)
+입력: recipeId, rating(1~5), memo(≤1000자), photos[] (최대 4장)
+1. 사진 4장 초과 시 PHOTO_LIMIT_EXCEEDED (400)
+2. 레시피 존재/미삭제 검증
+3. CookbookEntry 저장 + 사진 LocalFileService.upload(..., "cookbook")
+4. User.completedCookingCount +1
+5. 사진 1장 이상이면:
+   - 포인트 +50 (PointReason.COOKBOOK_ENTRY)
+   - 경험치 +80 → UserLevelService.awardExp → 레벨업/의상 지급
+6. 응답: sequenceNumber, leveledUp, newLevel, grantedOutfits 포함
 ```
 
 ## 엑셀 일괄등록
@@ -290,7 +302,7 @@ http.authorizeHttpRequests(auth -> auth
 1. RecommendService (매칭률)
 2. AuthService (JWT, 카카오)
 3. AdminAuthService (관리자 인증, 잠금)
-4. ShortsConvertService (캐싱)
+4. CookbookService (사진 4장 제한, 보상 지급)
 5. BulkUploadService (엑셀 파싱)
 6. AdminRecipeService (CRUD + 상태)
 7. AdminCategoryService (순서 변경)
@@ -301,32 +313,28 @@ http.authorizeHttpRequests(auth -> auth
 
 ### 백엔드 API
 - ✅ 인증 (JWT, 카카오, Apple, 관리자)
-- ✅ 재료/카테고리 CRUD + 엑셀 일괄등록
+- ✅ 재료/카테고리/서브카테고리 CRUD + 엑셀 일괄등록
 - ✅ 레시피 CRUD + 추천 TOP 10
-- ✅ 즐겨찾기 + 검색기록 + S3
-- ✅ 쇼츠 변환 + 캐싱
+- ✅ 즐겨찾기 + 검색기록
+- ✅ 요리북 (별점/메모/사진 최대 4장 + 포인트·경험치·의상 보상)
+- ✅ 포인트 / 출석체크 / 의상 카탈로그 / 냉장고
 - ✅ 피드백 도메인
 - ✅ 사용자 프로필 API (GET/PUT/DELETE /me)
+- ✅ 운영 모니터링 (Lighthouse 연동, Prometheus 메트릭)
 
 ### 관리자(백오피스) API
-- ✅ Phase 1: Feedback 엔티티 + Repository 확장 + V5 마이그레이션
-- ✅ Phase 2: 관리자 계정 CRUD (/api/admin/accounts)
-- ✅ Phase 3: 사용자 관리 (/api/admin/users)
-- ✅ Phase 4: 쇼츠 캐시 관리 (/api/admin/shorts)
-- ✅ Phase 5: 피드백 관리 (/api/admin/feedback)
-- ✅ Phase 6: 대시보드 (/api/admin/dashboard)
-- ✅ Phase 7: 상세 통계 (/api/admin/stats)
+- ✅ 관리자 계정 / 인증 (Phase 1~2)
+- ✅ 사용자 / 피드백 관리 (Phase 3, 5)
+- ✅ 대시보드 / 상세 통계 (Phase 6, 7)
+- ✅ 의상 / 서브카테고리 관리
 
-### Flyway 마이그레이션
-- ✅ V1: 초기 스키마
-- ✅ V2: 카테고리 시드 데이터
-- ✅ V3: 트리거
-- ✅ V4: 쇼츠 변환 이력 테이블
-- ✅ V5: Feedback updated_at 필드
-- ✅ V6: enum 대소문자 제약조건 수정
-- ✅ V7: 테스트 시드 데이터
-- ✅ V8: 쇼츠 변환 로그 테이블
-- ✅ V9: shorts_cache 유튜브 메타데이터 컬럼 (channel_name, original_title, duration_seconds)
+### Flyway 마이그레이션 (V1 ~ V24)
+- V1~V3: 초기 스키마 + 카테고리 시드 + 트리거
+- V5~V7: 피드백/enum/시드 보정
+- V13: 관리자 비밀번호 보정
+- V14~V18: 포인트, 출석, 요리북, 냉장고, 의상/경험치 리뉴얼
+- V17: v1.0 정리 마이그레이션 (폐기 기능 테이블 DROP)
+- V19~V24: 사용자/재료 보정, 메인재료·양념 분리
 
 ### 로깅 시스템
 - ✅ logback-spring.xml (local: 콘솔 DEBUG / prod: 4파일 분리)
@@ -348,13 +356,3 @@ http.authorizeHttpRequests(auth -> auth
 - ✅ AdminIngredientService: create/update/delete → @CacheEvict("ingredients")
 - ✅ IngredientBulkUploadService: uploadFromExcel → @CacheEvict("ingredients")
 - ✅ AdminCategoryService: create/update/delete/reorder → @CacheEvict("categories")
-
-### 테스트 (17개 파일, 전체 통과)
-- ✅ JwtProvider, JwtAuthenticationFilter
-- ✅ AuthService, AdminAuthService
-- ✅ UserService, UserRank, User
-- ✅ RecommendService
-- ✅ FavoriteService, SearchHistoryService
-- ✅ ShortsConvertService, ShortsCacheService
-- ✅ AdminRecipeService, RecipeBulkUploadService
-- ✅ S3FileService

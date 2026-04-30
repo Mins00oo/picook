@@ -2,8 +2,8 @@
 
 ## 프로젝트 개요
 제품명은 "Picook"
-냉장고 재료 기반 레시피 추천 + 유튜브 쇼츠 변환 iOS 앱.
-1인 개발, 모노레포, 6개월 타임라인.
+냉장고 재료 기반 레시피 추천 iOS 앱.
+1인 개발, 모노레포.
 
 ## 기획 문서
 `/docs/` 디렉토리에 전체 기획·설계 문서가 있음. 개발 전 반드시 참고할 것.
@@ -22,8 +22,8 @@
               ▼                          ▼
       [Spring Boot 4.0.3 — 모놀리식 단일 서버]
       │  인증(JWT)  │  사용자 API   │  관리자 API  │
-      │  레시피 추천 │  쇼츠 변환    │  파일 업로드 │
-      │  엑셀 일괄등록                              │
+      │  레시피 추천 │  요리 완료 인증 │  파일 업로드 │
+      │  포인트/레벨/의상  │  엑셀 일괄등록           │
               │
       [Docker PostgreSQL 15]     [로컬 파일 저장소]
 ```
@@ -37,9 +37,6 @@
 - Flyway (DB 마이그레이션)
 - 로컬 파일 저장소 (이미지 업로드 — /data/picook/uploads/)
 - Apache POI (엑셀 일괄등록)
-- yt-dlp + ffmpeg (쇼츠 음성 추출)
-- OpenAI Whisper API (쇼츠 STT)
-- gpt-5.4-mini (쇼츠 텍스트 구조화)
 
 ### 모바일 (iOS)
 - React Native (Expo SDK 52+) + TypeScript
@@ -73,23 +70,30 @@ picook/                    ← 루트
 ├── docs/                      ← 기획·설계 문서
 ├── backend/                   ← Spring Boot
 │   ├── CLAUDE.md
-│   ├── build.gradle
-│   ├── docker-compose.yml     ← PostgreSQL 로컬
+│   ├── build.gradle.kts
+│   ├── secrets.env            ← 환경변수 (gitignore)
 │   └── src/main/java/com/picook/
 │       ├── config/            ← Security, JWT, WebConfig, CORS
 │       ├── domain/
-│       │   ├── auth/          ← Apple, 카카오, 이메일, JWT
+│       │   ├── auth/          ← Apple, 카카오, JWT
 │       │   ├── user/          ← 사용자, 프로필, 등급
-│       │   ├── ingredient/    ← 재료, 카테고리, 동의어
+│       │   ├── ingredient/    ← 재료, 카테고리, 서브카테고리, 동의어
 │       │   ├── recipe/        ← 레시피, 단계, 추천
-│       │   ├── shorts/        ← 쇼츠 변환 + 캐싱
+│       │   ├── cookbook/      ← 요리 완료 인증 (별점/메모/사진)
+│       │   ├── fridge/        ← 사용자 냉장고
 │       │   ├── favorite/      ← 즐겨찾기
-│       │   ├── file/          ← 파일 업로드 (로컬 저장소)
+│       │   ├── searchhistory/ ← 검색 이력
+│       │   ├── feedback/      ← 피드백 (엔티티)
+│       │   ├── point/         ← 포인트 적립/사용
+│       │   ├── attendance/    ← 출석체크
+│       │   ├── outfit/        ← 의상 카탈로그/장착
+│       │   ├── monitoring/    ← 운영 모니터링
+│       │   ├── file/          ← 파일 업로드 (LocalFileService)
 │       │   └── admin/         ← 백오피스 API + 엑셀 일괄등록
 │       └── global/            ← 예외처리, 응답, 페이징
 ├── mobile/                    ← React Native (Expo)
 │   ├── CLAUDE.md
-│   ├── app/                   ← expo-router (4탭: 홈/쇼츠/즐겨찾기/마이)
+│   ├── app/                   ← expo-router 탭 라우팅
 │   └── src/
 │       ├── api/               ← 서버 API 호출
 │       ├── hooks/, stores/, components/, types/, utils/
@@ -104,33 +108,35 @@ picook/                    ← 루트
 │   ├── seeds/                 ← 초기 데이터 (엑셀)
 │   └── scripts/               ← AI 정제 스크립트
 └── infra/                     ← 인프라 설정
-    ├── docker-compose.yml     ← 전체 로컬 환경
+    ├── docker-compose.yml     ← 전체 로컬 환경 (postgres + backend + vector)
     ├── nginx/
     └── scripts/               ← deploy.sh, backup.sh
 ```
 
-## 핵심 기능 요약
+## 핵심 기능 요약 (v1.0)
 
-### 1. 재료 기반 추천 (MVP)
+### 1. 재료 기반 추천
 - 사용자가 사전 등록 재료 목록에서 체크 (자유입력 없음 → 정규화 문제 해결)
-- 매칭률 = 보유필수재료 / 전체필수재료 × 100%
+- 양념(소금/간장/마늘 등)은 매칭률 계산 제외 — 메인재료 기준
+- 매칭률 = 보유 메인재료 / 레시피 전체 메인재료 × 100%
 - 시간/난이도/인분 필터
-- 매칭률 30%+ → TOP 10개 반환
-- MVP에서 조리 도구 필터, 알레르기 필터 제외 (Phase 2)
+- 매칭률 30%+ → TOP 10개 반환 (부족 메인재료 + 부족 양념 별도 표시)
 
-### 2. 쇼츠 URL 변환 (MVP)
-- 유튜브 쇼츠 URL 붙여넣기 → 단계별 레시피 변환
-- 서버: yt-dlp(음성추출) → Whisper(STT) → gpt-5.4-mini(구조화)
-- 캐싱: shorts_cache 테이블 (url_hash + ai_model_version)
-- AI 모델 업그레이드 시 캐시 버전 불일치하면 재변환
-- 무료 무제한
-- 변환 결과로 즐겨찾기 저장 가능
+### 2. 요리 완료 인증
+- 별점(1~5) + 메모(≤1000자) + 사진 최대 4장 등록
+- 사진 1장 이상이면 보상 지급: 포인트 +50, 경험치 +80
+- 경험치 → 레벨업 시 의상(outfit) 자동 지급
+- 본인 기록만 조회 가능 (월별 통계 제공)
 
-### 3. 등급 시스템 (MVP)
-- 요리 완료 + 완성 사진 업로드 = 1카운트
-- Lv.1(병아리 0~2) ~ Lv.7(전설 51+)
-- 본인만 보기 (Phase 2에서 공개)
-- 레벨업 시 축하 애니메이션
+### 3. 등급 시스템
+- 요리 완료 + 사진 업로드 = 경험치 적립 → 레벨업
+- Lv.1(병아리) ~ Lv.7(전설)
+- 레벨업 시 축하 애니메이션 + 의상 지급
+
+### 4. 출석체크 / 포인트 / 의상
+- 일일 출석체크로 포인트 적립
+- 포인트로 의상 카탈로그에서 구매·장착
+- 레벨업 시 일부 의상 자동 지급
 
 ## API 규칙
 - 사용자: `/api/v1/**`
@@ -150,9 +156,10 @@ picook/                    ← 루트
 - 커밋: feat/fix/refactor/style/docs/chore
 - 커밋 메시지에 Co-Authored-By 줄 넣지 않기
 
-## 개발 순서
-1단계: 백엔드 기반 (인증, 재료 CRUD, 레시피 CRUD, 추천 API)
-2단계: 백오피스 (레시피/재료 관리 + 엑셀 일괄등록) → 데이터 입력 시작
-3단계: 모바일 (재료 선택 → 추천 → 상세)
-4단계: 쇼츠 변환 + 등급
-5단계: 통합 테스트 + 출시
+## v1.0 출시에서 제외된 기능 (Phase 2 이후 검토)
+- 유튜브 쇼츠 URL → 레시피 변환 (yt-dlp + Whisper + GPT 파이프라인)
+- 음성 코칭 모드 (단계별 TTS, 멀티 동시 진행)
+- 조리 도구 필터, 알레르기 필터
+- 다른 사용자 등급/요리 기록 공개
+
+위 기능들은 1인 개발 공수와 v1.0 우선순위를 고려해 출시 범위에서 제외했습니다. 관련 코드/마이그레이션은 `V17__v1_cleanup_and_fridge.sql` 등에서 정리됨.
