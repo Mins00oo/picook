@@ -16,9 +16,6 @@ import IngredientBulkUpload from '@/pages/ingredients/IngredientBulkUpload';
 import CategoryManage from '@/pages/ingredients/CategoryManage';
 import SubcategoryManage from '@/pages/ingredients/SubcategoryManage';
 import IngredientOverview from '@/pages/ingredients/IngredientOverview';
-import ShortsCacheList from '@/pages/shorts/ShortsCacheList';
-import ShortsCacheDetail from '@/pages/shorts/ShortsCacheDetail';
-import ShortsStats from '@/pages/shorts/ShortsStats';
 import UserList from '@/pages/users/UserList';
 import UserDetail from '@/pages/users/UserDetail';
 import FeedbackList from '@/pages/feedback/FeedbackList';
@@ -26,11 +23,11 @@ import FeedbackDetail from '@/pages/feedback/FeedbackDetail';
 import UserStats from '@/pages/stats/UserStats';
 import RecipeStats from '@/pages/stats/RecipeStats';
 import IngredientStats from '@/pages/stats/IngredientStats';
-import ShortsStatsPage from '@/pages/stats/ShortsStats';
 import RankingStats from '@/pages/stats/RankingStats';
 import AdminAccountList from '@/pages/accounts/AdminAccountList';
 import OutfitList from '@/pages/outfits/OutfitList';
 import OutfitForm from '@/pages/outfits/OutfitForm';
+import SeedManagement from '@/pages/seed/SeedManagement';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,9 +74,6 @@ export default function App() {
               <Route path="ingredients/categories" element={<CategoryManage />} />
               <Route path="ingredients/subcategories" element={<SubcategoryManage />} />
               <Route path="ingredients/overview" element={<IngredientOverview />} />
-              <Route path="shorts" element={<ShortsCacheList />} />
-              <Route path="shorts/:id" element={<ShortsCacheDetail />} />
-              <Route path="shorts/stats" element={<ShortsStats />} />
               <Route path="users" element={<UserList />} />
               <Route path="users/:id" element={<UserDetail />} />
               <Route path="feedback" element={<FeedbackList />} />
@@ -87,12 +81,12 @@ export default function App() {
               <Route path="stats/users" element={<UserStats />} />
               <Route path="stats/recipes" element={<RecipeStats />} />
               <Route path="stats/ingredients" element={<IngredientStats />} />
-              <Route path="stats/shorts" element={<ShortsStatsPage />} />
               <Route path="stats/ranking" element={<RankingStats />} />
               <Route path="accounts" element={<AdminAccountList />} />
               <Route path="outfits" element={<OutfitList />} />
               <Route path="outfits/new" element={<OutfitForm />} />
               <Route path="outfits/:id/edit" element={<OutfitForm />} />
+              <Route path="seed" element={<SeedManagement />} />
             </Route>
           </Routes>
         </BrowserRouter>

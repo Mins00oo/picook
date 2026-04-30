@@ -3,12 +3,12 @@ import {
   DashboardOutlined,
   FileTextOutlined,
   AppstoreOutlined,
-  VideoCameraOutlined,
   TeamOutlined,
   MessageOutlined,
   BarChartOutlined,
   SettingOutlined,
   SkinOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { usePermission } from '@/hooks/usePermission';
@@ -29,12 +29,7 @@ export default function Sidebar() {
       key: 'recipes',
       icon: <FileTextOutlined />,
       label: '레시피 관리',
-      children: [
-        { key: '/recipes', label: '레시피 목록' },
-        ...(canAccessMenu('recipes')
-          ? [{ key: '/recipes/bulk-upload', label: '엑셀 일괄등록' }]
-          : []),
-      ],
+      children: [{ key: '/recipes', label: '레시피 목록' }],
     },
     {
       key: 'ingredients',
@@ -45,20 +40,28 @@ export default function Sidebar() {
         { key: '/ingredients/overview', label: '재료 통계' },
         { key: '/ingredients/categories', label: '카테고리 관리' },
         { key: '/ingredients/subcategories', label: '서브카테고리 관리' },
-        ...(canAccessMenu('ingredients')
-          ? [{ key: '/ingredients/bulk-upload', label: '엑셀 일괄등록·다운로드' }]
-          : []),
       ],
     },
-    {
-      key: 'shorts',
-      icon: <VideoCameraOutlined />,
-      label: '쇼츠 관리',
-      children: [
-        { key: '/shorts', label: '캐시 목록' },
-        { key: '/shorts/stats', label: '쇼츠 통계' },
-      ],
-    },
+    ...(isSuperAdmin || canAccessMenu('recipes') || canAccessMenu('ingredients')
+      ? [
+          {
+            key: 'data',
+            icon: <DatabaseOutlined />,
+            label: '데이터 관리',
+            children: [
+              ...(isSuperAdmin
+                ? [{ key: '/seed', label: '시드 데이터 (전체)' }]
+                : []),
+              ...(canAccessMenu('recipes')
+                ? [{ key: '/recipes/bulk-upload', label: '레시피 일괄등록' }]
+                : []),
+              ...(canAccessMenu('ingredients')
+                ? [{ key: '/ingredients/bulk-upload', label: '재료 일괄등록·다운로드' }]
+                : []),
+            ],
+          },
+        ]
+      : []),
     ...(isSuperAdmin
       ? [
           {
@@ -86,7 +89,6 @@ export default function Sidebar() {
         { key: '/stats/users', label: '사용자 통계' },
         { key: '/stats/recipes', label: '레시피 통계' },
         { key: '/stats/ingredients', label: '재료 통계' },
-        { key: '/stats/shorts', label: '쇼츠 통계' },
         { key: '/stats/ranking', label: '등급 통계' },
       ],
     },
