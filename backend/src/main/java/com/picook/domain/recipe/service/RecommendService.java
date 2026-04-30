@@ -24,6 +24,11 @@ import java.util.stream.Collectors;
  *   - 양념(소금/간장/설탕/식초/마늘 등)은 매칭률 계산 제외
  *   - 사용자가 양념을 가졌든 안 가졌든 추천에는 영향 없음. 다만 부족 양념 정보는 응답에 포함.
  *   - 30% 이상 컷오프 → 매칭률 DESC 정렬 → TOP 10
+ *
+ * 상향 매칭 (V26 이후):
+ *   사용자 보유 자식(예: 삼겹살) → 레시피 부모(돼지고기) 매칭 OK
+ *   사용자 보유 자식(삼겹살) → 레시피 sibling(앞다리살) 매칭 X (다른 부위)
+ *   ingredients.parent_id 활용. 1-level chain (육류 부위만 사용 중).
  */
 @Service
 @Transactional(readOnly = true)
@@ -47,7 +52,12 @@ public class RecommendService {
     @Timed("picook.recommend.time")
     public List<RecommendResponse> recommend(RecommendRequest request) {
         meterRegistry.counter("picook.recommend.requests").increment();
-        List<Integer> ingredientIds = request.ingredientIds();
+        List<Integer> userIngredientIds = request.ingredientIds();
+
+        // 상향 매칭: 사용자 보유의 부모 ID 추가 (V26 parent_id 활용)
+        // 예: 사용자 [삼겹살] → expanded [삼겹살, 돼지고기]
+        //     레시피 "돼지고기" 들어간 경우도 매칭 OK
+        List<Integer> ingredientIds = expandWithParents(userIngredientIds);
 
         // 메인재료 기반 매칭률 계산 + 컷오프 + 정렬을 한 SQL로
         StringBuilder sql = new StringBuilder();
@@ -100,6 +110,7 @@ public class RecommendService {
         @SuppressWarnings("unchecked")
         List<Object[]> results = query.getResultList();
 
+        // missing 계산용: expanded ID 사용 (사용자가 자식 보유 시 부모도 "보유"로 간주 — 화면 missing 표시 정확)
         Set<Integer> userIngredientSet = new HashSet<>(ingredientIds);
 
         // 부족 재료 표시용 — 후보 레시피의 모든 재료를 1회 쿼리로 fetch
@@ -155,5 +166,30 @@ public class RecommendService {
         }
 
         return responses;
+    }
+
+    /**
+     * 사용자 보유 ID 목록 + 그 부모(parent_id) ID들로 확장.
+     * 상향 매칭용 (V26): 자식 보유 → 부모 매칭 OK, 다른 자식(sibling)은 X.
+     */
+    @SuppressWarnings("unchecked")
+    private List<Integer> expandWithParents(List<Integer> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return userIds == null ? List.of() : userIds;
+        }
+        Query q = entityManager.createNativeQuery(
+                "SELECT DISTINCT parent_id FROM ingredients " +
+                        "WHERE id IN (:ids) AND parent_id IS NOT NULL"
+        );
+        q.setParameter("ids", userIds);
+        List<Integer> parents = q.getResultList();
+        if (parents.isEmpty()) {
+            return userIds;
+        }
+        List<Integer> expanded = new ArrayList<>(userIds);
+        for (Integer p : parents) {
+            if (!expanded.contains(p)) expanded.add(p);
+        }
+        return expanded;
     }
 }
