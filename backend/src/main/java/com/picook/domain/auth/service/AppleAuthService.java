@@ -43,7 +43,7 @@ public class AppleAuthService {
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
 
-    @Value("${apple.bundle-id:com.picook.app}")
+    @Value("${apple.bundle-id}")
     private String bundleId;
 
     private final Map<String, PublicKey> keyCache = new ConcurrentHashMap<>();

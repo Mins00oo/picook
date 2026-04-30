@@ -12,7 +12,7 @@ public class ClientIpResolver {
     private final List<String> trustedProxies;
 
     public ClientIpResolver(
-            @Value("${security.trusted-proxies:127.0.0.1,0:0:0:0:0:0:0:1}") List<String> trustedProxies) {
+            @Value("${security.trusted-proxies}") List<String> trustedProxies) {
         this.trustedProxies = trustedProxies;
     }
 

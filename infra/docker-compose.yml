@@ -15,13 +15,11 @@ services:
   backend:
     build: ../backend
     container_name: picook-backend
+    env_file:
+      - ../backend/secrets.env
     environment:
+      # 도커 네트워크에서만 다른 값 (secrets.env의 localhost를 override)
       DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: picook_db
-      DB_USERNAME: picook_user
-      DB_PASSWORD: picook_local_pw
-      SPRING_PROFILES_ACTIVE: local
       FILE_UPLOAD_DIR: /data/picook/uploads
     ports:
       - "8080:8080"

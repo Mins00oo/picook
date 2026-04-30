@@ -1,8 +1,15 @@
 spring:
   application:
     name: picook-backend
-  profiles:
-    active: local
+
+  config:
+    import: optional:file:secrets.env[.properties]
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -12,6 +19,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        show_sql: ${HIBERNATE_SHOW_SQL}
         jdbc:
           batch_size: 50
         order_inserts: true
@@ -27,14 +35,22 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
+server:
+  port: 8080
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET}
+  access-expiration: 3600000      # 1h
+  refresh-expiration: 2592000000  # 30d
 
 # File Upload
 file:
-  upload-dir: ${FILE_UPLOAD_DIR:/data/picook/uploads}
+  upload-dir: ${FILE_UPLOAD_DIR}
 
 # Apple Sign-In
 apple:
-  bundle-id: ${APPLE_BUNDLE_ID:com.picook.app}
+  bundle-id: ${APPLE_BUNDLE_ID}
 
 # Actuator / Prometheus (Lighthouse 모니터링)
 management:
@@ -57,9 +73,8 @@ management:
 
 # Lighthouse 모니터링 IP 화이트리스트
 monitoring:
-  allowed-ips:
-    - ${LIGHTHOUSE_IP:127.0.0.1}
+  allowed-ips: ${MONITORING_ALLOWED_IPS}
 
 # Security
 security:
-  trusted-proxies: ${TRUSTED_PROXIES:127.0.0.1,0:0:0:0:0:0:0:1}
+  trusted-proxies: ${TRUSTED_PROXIES}
