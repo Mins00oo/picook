@@ -35,6 +35,16 @@ public class Ingredient {
     @Column(name = "is_seasoning", nullable = false)
     private Boolean isSeasoning = false;
 
+    /**
+     * 부모 재료 (V26 신설). 육류 부위 → 메인 매핑.
+     * 매칭 알고리즘:
+     *   사용자가 자식(삼겹살) 보유 → 레시피 부모(돼지고기) 매칭 OK (상향)
+     *   사용자가 자식(삼겹살) 보유 → 레시피 sibling(앞다리살) 매칭 X
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Ingredient parent;
+
     @BatchSize(size = 100)
     @OneToMany(mappedBy = "ingredient", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<IngredientSynonym> synonyms = new ArrayList<>();
@@ -98,6 +108,9 @@ public class Ingredient {
 
     public Boolean getIsSeasoning() { return isSeasoning; }
     public void setIsSeasoning(Boolean isSeasoning) { this.isSeasoning = isSeasoning; }
+
+    public Ingredient getParent() { return parent; }
+    public void setParent(Ingredient parent) { this.parent = parent; }
 
     public List<IngredientSynonym> getSynonyms() { return synonyms; }
 
