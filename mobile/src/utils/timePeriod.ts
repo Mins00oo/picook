@@ -1,13 +1,13 @@
 import type { TimePeriod } from '../api/recipeApi';
 
-// 5구간 매핑 (확정 정책)
-// 아침 06-10 / 점심 10-14 / 오후 14-17 / 저녁 17-21 / 야식 21-06
+// 4구간 매핑 (확정 정책)
+// 아침 06-10 / 점심 10-15 / 저녁 15-21 / 야식 21-06
+// (오후 구간은 저녁 추천에 흡수 — 사용자가 오후에 미리 저녁 메뉴를 검색하는 패턴 반영)
 export function getCurrentPeriod(now: Date = new Date()): TimePeriod {
   const h = now.getHours();
   if (h >= 6 && h < 10) return 'breakfast';
-  if (h >= 10 && h < 14) return 'lunch';
-  if (h >= 14 && h < 17) return 'afternoon';
-  if (h >= 17 && h < 21) return 'dinner';
+  if (h >= 10 && h < 15) return 'lunch';
+  if (h >= 15 && h < 21) return 'dinner';
   return 'midnight';
 }
 
@@ -30,12 +30,6 @@ export const TIME_COPY: Record<TimePeriod, TimeCopy> = {
     sectionKicker: '점심',
     sectionEmoji: '☀️',
     sectionTitle: '점심에 어울리는 메뉴',
-  },
-  afternoon: {
-    greetingKicker: '지금은 오후예요',
-    sectionKicker: '오후',
-    sectionEmoji: '☕',
-    sectionTitle: '오후에 어울리는 메뉴',
   },
   dinner: {
     greetingKicker: '지금은 저녁 시간이에요',

@@ -80,14 +80,6 @@ export function DailyCheckModal({
                 const on = value === 1;
                 return (
                   <View key={label} style={styles.streakSlot}>
-                    <Text
-                      style={[
-                        styles.streakDayLabel,
-                        isToday && styles.streakDayLabelToday,
-                      ]}
-                    >
-                      {label}
-                    </Text>
                     <View
                       style={[
                         styles.streakStamp,
@@ -95,17 +87,26 @@ export function DailyCheckModal({
                         isToday && !on && styles.streakStampTodayEmpty,
                       ]}
                     >
-                      {on && (
-                        <Svg width={20} height={20} viewBox="0 0 24 24">
+                      {on ? (
+                        <Svg width={18} height={18} viewBox="0 0 24 24">
                           <Path
                             d="M5 12.5l4.2 4.2L19 7"
                             stroke="#fff"
-                            strokeWidth={3.2}
+                            strokeWidth={3.4}
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             fill="none"
                           />
                         </Svg>
+                      ) : (
+                        <Text
+                          style={[
+                            styles.streakDayLabel,
+                            isToday && styles.streakDayLabelToday,
+                          ]}
+                        >
+                          {label}
+                        </Text>
                       )}
                     </View>
                   </View>
@@ -258,12 +259,11 @@ const styles = StyleSheet.create({
   streakSlot: {
     flex: 1,
     alignItems: 'center',
-    gap: 4,
   },
   streakDayLabel: {
     fontFamily: fontFamily.bold,
-    fontSize: 10.5,
-    color: colors.textTertiary,
+    fontSize: 12,
+    color: colors.textSecondary,
     letterSpacing: -0.2,
   },
   streakDayLabelToday: {

@@ -49,8 +49,12 @@ export interface RecipeSummary {
   servings: number;
   imageUrl: string | null;
   thumbnailUrl: string | null;
-  matchingRate: number;
-  missingIngredients: MissingIngredient[];
+  // 추천(/recommend) 응답에만 채워짐 — 일반 카드/카테고리 리스트엔 부재
+  matchingRate?: number;
+  missingIngredients?: MissingIngredient[];
+  // 일반 카드 응답에 추가 (저칼로리/카테고리 리스트용)
+  calories?: number | null;
+  viewCount?: number;
 }
 
 export interface RecommendRequest {
@@ -62,3 +66,19 @@ export interface RecommendRequest {
 
 // Backend returns RecipeSummary[] directly (flat array), not wrapped
 export type RecommendResponse = RecipeSummary[];
+
+// 카테고리 카드용 — 메인 카테고리 그리드
+export interface CategoryCount {
+  category: string;  // 'korean' | 'western' | 'japanese' | 'other'
+  count: number;
+}
+
+// 카테고리 진입 화면 페이징 응답 (Spring PageResponse 형식과 일치)
+export interface RecipePage {
+  content: RecipeSummary[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+}

@@ -23,11 +23,16 @@ import { getLevelForExp } from '../../../src/constants/levels';
 import { useAttendanceToday, useCheckInMutation } from '../../../src/hooks/useAttendance';
 import { usePointBalance } from '../../../src/hooks/usePoints';
 import { useTimeRecipes } from '../../../src/hooks/useTimeRecipes';
+import {
+  useCategoryCounts,
+  useLowCalorieRecipes,
+} from '../../../src/hooks/useCategoryRecipes';
 import { useOutfitMe, useOutfitCatalog, useEquippedImages } from '../../../src/hooks/useOutfits';
 import { useFridge } from '../../../src/hooks/useFridge';
 import { getCurrentPeriod, TIME_COPY } from '../../../src/utils/timePeriod';
 import { formatCookTime, formatDifficulty, toAbsoluteImageUrl } from '../../../src/utils/format';
-import type { RecipeSummary } from '../../../src/types/recipe';
+import type { RecipeSummary, CategoryCount } from '../../../src/types/recipe';
+import type { RecipeCategory } from '../../../src/api/recipeApi';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -46,6 +51,8 @@ export default function HomeScreen() {
   const { data: todayData } = useAttendanceToday(!!user);
   const checkInMutation = useCheckInMutation();
   const { data: timeRecipes, isLoading: timeLoading, error: timeError } = useTimeRecipes(period);
+  const { data: categoryCounts } = useCategoryCounts();
+  const { data: lowCalorieRecipes, isLoading: lowCalLoading, error: lowCalError } = useLowCalorieRecipes();
   const { data: fridge } = useFridge();
   const fridgeCount = fridge?.length ?? 0;
   const [modalOpen, setModalOpen] = useState(false);
@@ -53,27 +60,24 @@ export default function HomeScreen() {
   const notReady = () =>
     Alert.alert('준비 중', '곧 만나요. 다음 업데이트를 기대해주세요 :)');
 
-  // 오늘 미출석이면 모달 자동 오픈 (앱 세션당 최대 1회)
+  // 오늘 미출석이면 모달 자동 오픈 + 체크인을 즉시 호출
+  // 모달은 출석 결과 알림 역할이라 X/확인 어느 쪽으로 닫혀도 포인트는 이미 적립된 상태
   useEffect(() => {
-    if (todayData && !todayData.checkedIn) {
+    if (todayData && !todayData.checkedIn && !checkInMutation.isPending) {
       setModalOpen(true);
+      checkInMutation.mutate(undefined, {
+        onError: (e: any) => {
+          const code = e?.response?.data?.error?.code;
+          // 동시 탭으로 이미 체크인된 경우는 무시 (서버가 이미 처리한 상태)
+          if (code === 'ATTENDANCE_ALREADY_CHECKED') return;
+          // 그 외 실패는 사용자에게 알리고 모달 닫음 — 다음 진입 때 재시도됨
+          setModalOpen(false);
+          Alert.alert('출석체크 실패', '잠시 후 다시 시도해주세요.');
+        },
+      });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todayData?.checkDate, todayData?.checkedIn]);
-
-  const handleConfirmCheckIn = async () => {
-    try {
-      await checkInMutation.mutateAsync();
-      setModalOpen(false);
-    } catch (e: any) {
-      // 이미 체크인된 경우 (동시 탭 등) 모달만 닫고 무시
-      const code = e?.response?.data?.error?.code;
-      if (code === 'ATTENDANCE_ALREADY_CHECKED') {
-        setModalOpen(false);
-        return;
-      }
-      Alert.alert('오류', '출석체크에 실패했어요. 잠시 후 다시 시도해주세요.');
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -240,6 +244,55 @@ export default function HomeScreen() {
             onBrowse={() => router.push('/(tabs)/home/select')}
           />
         </View>
+
+        {/* 카테고리별 둘러보기 */}
+        <View style={styles.catSection}>
+          <View style={styles.secHead}>
+            <Text style={styles.secTitle}>카테고리별 둘러보기</Text>
+          </View>
+          <View style={styles.catGrid}>
+            {CATEGORIES.map((c) => (
+              <CategoryCard
+                key={c.code}
+                code={c.code}
+                label={c.label}
+                emoji={c.emoji}
+                bg={c.bg}
+                accent={c.accent}
+                count={getCount(categoryCounts, c.code)}
+                onPress={() =>
+                  router.push({
+                    pathname: '/category/[name]',
+                    params: { name: c.code },
+                  })
+                }
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* 가볍게 먹고 싶은 날 — 저칼로리 추천 */}
+        <View style={styles.lowCalSection}>
+          <View style={styles.secHead}>
+            <View style={styles.secHeadLeft}>
+              <Text style={styles.secTitle}>가볍게 먹고 싶은 날</Text>
+              <View style={styles.lightPill}>
+                <Text style={styles.lightPillText}>🥗 저칼로리</Text>
+              </View>
+            </View>
+            <View style={styles.topBadge}>
+              <Text style={styles.topBadgeText}>TOP 5</Text>
+            </View>
+          </View>
+
+          <TimeRecipeList
+            recipes={lowCalorieRecipes ?? []}
+            loading={lowCalLoading}
+            errored={!!lowCalError}
+            onRecipePress={(id) => router.push(`/recipe/${id}` as any)}
+            onBrowse={() => router.push('/(tabs)/home/select')}
+          />
+        </View>
       </ScrollView>
 
       {/* 매일 출석체크 모달 */}
@@ -249,7 +302,7 @@ export default function HomeScreen() {
         streakDays={todayData?.streakDays ?? 0}
         recentSevenDays={todayData?.recentSevenDays ?? [0, 0, 0, 0, 0, 0, 0]}
         isChecking={checkInMutation.isPending}
-        onConfirm={handleConfirmCheckIn}
+        onConfirm={() => setModalOpen(false)}
         onClose={() => setModalOpen(false)}
       />
     </SafeAreaView>
@@ -328,6 +381,51 @@ function TimeRecipeCard({ recipe, onPress }: { recipe: RecipeSummary; onPress: (
       <Text style={styles.trMeta} numberOfLines={1}>
         {formatCookTime(recipe.cookingTimeMinutes)} · {formatDifficulty(recipe.difficulty)}
       </Text>
+    </TouchableOpacity>
+  );
+}
+
+// 카테고리 카드 정적 정의 (백엔드 코드와 매칭)
+const CATEGORIES: Array<{
+  code: RecipeCategory;
+  label: string;
+  emoji: string;
+  bg: string;
+  accent: string;
+}> = [
+  { code: 'korean',   label: '한식', emoji: '🍚', bg: colors.peach,      accent: '#C44A1C' },
+  { code: 'western',  label: '양식', emoji: '🍝', bg: colors.blue,       accent: '#2F4E7A' },
+  { code: 'japanese', label: '일식', emoji: '🍣', bg: colors.lilac,      accent: '#5E4683' },
+  { code: 'other',    label: '기타', emoji: '🍴', bg: colors.mint,       accent: '#2E5D2A' },
+];
+
+function getCount(counts: CategoryCount[] | undefined, code: RecipeCategory): number | null {
+  if (!counts) return null;
+  return counts.find((c) => c.category === code)?.count ?? 0;
+}
+
+interface CategoryCardProps {
+  code: RecipeCategory;
+  label: string;
+  emoji: string;
+  count: number | null;
+  bg: string;
+  accent: string;
+  onPress: () => void;
+}
+
+function CategoryCard({ label, emoji, count, bg, accent, onPress }: CategoryCardProps) {
+  return (
+    <TouchableOpacity
+      style={[styles.catCard, { backgroundColor: bg }]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <Text style={styles.catEmoji}>{emoji}</Text>
+      <Text style={[styles.catLabel, { color: accent }]}>{label}</Text>
+      {count != null && (
+        <Text style={[styles.catCount, { color: accent }]}>{count.toLocaleString()}개</Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -632,6 +730,57 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#FFFFFF',
     letterSpacing: -0.2,
+  },
+
+  // Category section (메인 카테고리 진입 카드 그리드)
+  catSection: { marginTop: 6, marginBottom: 18 },
+  catGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  catCard: {
+    width: '48%',
+    minHeight: 92,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    justifyContent: 'space-between',
+    ...shadow.sm,
+  },
+  catEmoji: {
+    fontSize: 28,
+    lineHeight: 32,
+  },
+  catLabel: {
+    fontFamily: fontFamily.bold,
+    fontSize: 15,
+    letterSpacing: -0.4,
+    marginTop: 8,
+  },
+  catCount: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 11,
+    letterSpacing: -0.2,
+    marginTop: 2,
+    opacity: 0.85,
+  },
+
+  // Low calorie section
+  lowCalSection: { marginTop: 6, marginBottom: 10 },
+  lightPill: {
+    backgroundColor: '#E6F1DF',
+    paddingVertical: 3,
+    paddingHorizontal: 9,
+    borderRadius: 100,
+    marginLeft: 4,
+  },
+  lightPillText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 10.5,
+    color: '#3F7A36',
+    letterSpacing: -0.1,
   },
 
   // Time section
