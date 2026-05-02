@@ -54,6 +54,19 @@ public class Recipe {
     @Column(name = "is_deleted")
     private Boolean isDeleted = false;
 
+    @Column(name = "meal_breakfast", nullable = false)
+    private Boolean mealBreakfast = false;
+
+    @Column(name = "meal_lunch", nullable = false)
+    private Boolean mealLunch = false;
+
+    @Column(name = "meal_dinner", nullable = false)
+    private Boolean mealDinner = false;
+
+    /** API 의 midnight 슬롯이 이 컬럼을 사용 (LLM 분류 시 'snack' 카테고리). */
+    @Column(name = "meal_snack", nullable = false)
+    private Boolean mealSnack = false;
+
     @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<RecipeIngredient> ingredients = new LinkedHashSet<>();
 
@@ -155,6 +168,18 @@ public class Recipe {
     public void setStatus(String status) { this.status = status; }
 
     public Boolean getIsDeleted() { return isDeleted; }
+
+    public Boolean getMealBreakfast() { return mealBreakfast; }
+    public void setMealBreakfast(Boolean mealBreakfast) { this.mealBreakfast = mealBreakfast != null && mealBreakfast; }
+
+    public Boolean getMealLunch() { return mealLunch; }
+    public void setMealLunch(Boolean mealLunch) { this.mealLunch = mealLunch != null && mealLunch; }
+
+    public Boolean getMealDinner() { return mealDinner; }
+    public void setMealDinner(Boolean mealDinner) { this.mealDinner = mealDinner != null && mealDinner; }
+
+    public Boolean getMealSnack() { return mealSnack; }
+    public void setMealSnack(Boolean mealSnack) { this.mealSnack = mealSnack != null && mealSnack; }
 
     public Set<RecipeIngredient> getIngredients() { return ingredients; }
 

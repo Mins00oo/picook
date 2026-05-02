@@ -32,6 +32,7 @@ public record RecipeDetailResponse(
             BigDecimal amount,
             String unit,
             boolean isRequired,
+            boolean isSeasoning,
             int sortOrder
     ) {}
 
@@ -39,7 +40,8 @@ public record RecipeDetailResponse(
             Integer id,
             int stepNumber,
             String description,
-            String imageUrl
+            String imageUrl,
+            String tip
     ) {}
 
     public static RecipeDetailResponse of(Recipe recipe) {
@@ -51,6 +53,7 @@ public record RecipeDetailResponse(
                         ri.getAmount(),
                         ri.getUnit(),
                         ri.getIsRequired(),
+                        Boolean.TRUE.equals(ri.getIngredient().getIsSeasoning()),
                         ri.getSortOrder()
                 ))
                 .toList();
@@ -60,7 +63,8 @@ public record RecipeDetailResponse(
                         rs.getId(),
                         rs.getStepNumber(),
                         rs.getDescription(),
-                        rs.getImageUrl()
+                        rs.getImageUrl(),
+                        rs.getTip()
                 ))
                 .toList();
 

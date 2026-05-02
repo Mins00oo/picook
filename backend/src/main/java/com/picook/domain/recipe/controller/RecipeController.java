@@ -1,6 +1,8 @@
 package com.picook.domain.recipe.controller;
 
+import com.picook.domain.recipe.dto.CategoryCountResponse;
 import com.picook.domain.recipe.dto.RecipeDetailResponse;
+import com.picook.domain.recipe.dto.RecipeSummaryResponse;
 import com.picook.domain.recipe.dto.RecommendRequest;
 import com.picook.domain.recipe.dto.RecommendResponse;
 import com.picook.domain.recipe.dto.TimeRecipeResponse;
@@ -8,6 +10,7 @@ import com.picook.domain.recipe.service.RecipeService;
 import com.picook.domain.recipe.service.RecommendService;
 import com.picook.domain.searchhistory.service.SearchHistoryService;
 import com.picook.global.response.ApiResponse;
+import com.picook.global.util.PageResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
@@ -67,6 +70,28 @@ public class RecipeController {
     public ResponseEntity<ApiResponse<List<TimeRecipeResponse>>> recommendByTime(
             @RequestParam String period) {
         return ResponseEntity.ok(ApiResponse.success(recipeService.recommendByTime(period)));
+    }
+
+    /** 카테고리별 published 레시피 수 — 카드 그리드 표시용. 0인 카테고리는 응답에서 제외. */
+    @GetMapping("/category-counts")
+    public ResponseEntity<ApiResponse<List<CategoryCountResponse>>> getCategoryCounts() {
+        return ResponseEntity.ok(ApiResponse.success(recipeService.getCategoryCounts()));
+    }
+
+    /** 카테고리 카드 탭 시 페이지 조회. category 필수. published 만, view_count DESC. */
+    @GetMapping
+    public ResponseEntity<ApiResponse<PageResponse<RecipeSummaryResponse>>> listByCategory(
+            @RequestParam String category,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(recipeService.listByCategory(category, page, size)));
+    }
+
+    /** 저칼로리 추천 — calories ≤ 300 + view_count DESC. limit 기본 5, 최대 20. */
+    @GetMapping("/recommend-low-calorie")
+    public ResponseEntity<ApiResponse<List<RecipeSummaryResponse>>> recommendLowCalorie(
+            @RequestParam(required = false) Integer limit) {
+        return ResponseEntity.ok(ApiResponse.success(recipeService.recommendLowCalorie(limit)));
     }
 
     private UUID getCurrentUserId() {

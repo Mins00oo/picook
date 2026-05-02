@@ -75,7 +75,7 @@ public class SeedImportService {
     }
 
     @Transactional
-    @CacheEvict(value = {"ingredients", "categories"}, allEntries = true)
+    @CacheEvict(value = {"ingredients", "categories", "recipe-category-counts"}, allEntries = true)
     public SeedImportResponse uploadFromExcel(MultipartFile file, boolean dryRun) {
         if (file.isEmpty()) {
             throw new BusinessException("EMPTY_FILE", "파일이 비어있습니다", HttpStatus.BAD_REQUEST);
@@ -386,7 +386,8 @@ public class SeedImportService {
             total++;
             int rowNum = i + 1;
             try {
-                // 컬럼: temp_id | title | category | difficulty | cooking_time | servings | calories | thumbnail | tips | status
+                // 컬럼: temp_id | title | category | difficulty | cooking_time | servings | calories
+                //     | thumbnail | tips | status | meal_breakfast | meal_lunch | meal_dinner | meal_snack
                 String tempId = req(row.getCell(0), "temp_id", "recipes", rowNum);
                 String title = req(row.getCell(1), "title", "recipes", rowNum);
                 String category = req(row.getCell(2), "category", "recipes", rowNum);
@@ -397,6 +398,10 @@ public class SeedImportService {
                 String thumbnail = optStr(row.getCell(7));
                 String tips = optStr(row.getCell(8));
                 String status = optStr(row.getCell(9));
+                boolean mealBreakfast = optBool(row.getCell(10));
+                boolean mealLunch     = optBool(row.getCell(11));
+                boolean mealDinner    = optBool(row.getCell(12));
+                boolean mealSnack     = optBool(row.getCell(13));
 
                 if (cookingTime == null) {
                     errors.add(new SeedError("recipes", rowNum, "cooking_time_minutes 비어있음"));
@@ -410,11 +415,21 @@ public class SeedImportService {
                     failed++; continue;
                 }
 
+                if (!(mealBreakfast || mealLunch || mealDinner || mealSnack)) {
+                    errors.add(new SeedError("recipes", rowNum,
+                            "meal_* 4개 컬럼이 모두 false — 최소 1개는 true 여야 함"));
+                    failed++; continue;
+                }
+
                 Recipe r = new Recipe(title, category, difficulty, cookingTime, servings);
                 r.setCalories(calories);
                 r.setThumbnailUrl(thumbnail);
                 r.setTips(tips);
                 if (status != null && !status.isBlank()) r.setStatus(status);
+                r.setMealBreakfast(mealBreakfast);
+                r.setMealLunch(mealLunch);
+                r.setMealDinner(mealDinner);
+                r.setMealSnack(mealSnack);
 
                 if (!dryRun) r = recipeRepository.save(r);
                 byTempId.put(tempId, r);

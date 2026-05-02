@@ -9,6 +9,7 @@ import com.picook.domain.recipe.entity.RecipeStep;
 import com.picook.domain.recipe.repository.RecipeRepository;
 import com.picook.global.exception.BusinessException;
 import com.picook.global.util.PageResponse;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -46,6 +47,7 @@ public class AdminRecipeService {
     }
 
     @Transactional
+    @CacheEvict(value = "recipe-category-counts", allEntries = true)
     public AdminRecipeResponse createRecipe(AdminRecipeRequest request) {
         // Validate enums
         validateCategory(request.category());
@@ -88,6 +90,7 @@ public class AdminRecipeService {
     }
 
     @Transactional
+    @CacheEvict(value = "recipe-category-counts", allEntries = true)
     public AdminRecipeResponse updateRecipe(Integer id, AdminRecipeRequest request) {
         Recipe recipe = findRecipeOrThrow(id);
 
@@ -130,12 +133,14 @@ public class AdminRecipeService {
     }
 
     @Transactional
+    @CacheEvict(value = "recipe-category-counts", allEntries = true)
     public void deleteRecipe(Integer id) {
         Recipe recipe = findRecipeOrThrow(id);
         recipe.softDelete();
     }
 
     @Transactional
+    @CacheEvict(value = "recipe-category-counts", allEntries = true)
     public AdminRecipeResponse changeStatus(Integer id, RecipeStatusRequest request) {
         Recipe recipe = findRecipeOrThrow(id);
         String status = request.status().toLowerCase();
