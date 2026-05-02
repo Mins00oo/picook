@@ -1,111 +1,392 @@
 # Picook Backend
 
-> Spring Boot 4.0.3 + Java 21 기반 REST API 서버
+> Spring Boot 4.0.3 + Java 21 + PostgreSQL 15 — Picook의 모놀리식 API 서버
 
-## 소개
-
-Picook의 모든 비즈니스 로직을 처리하는 모놀리식 백엔드 서버입니다. 사용자 앱과 백오피스의 API를 단일 서버에서 제공하며, 재료 기반 추천 엔진, 요리 완료 인증(별점·메모·사진), 포인트·레벨·의상 보상 시스템을 핵심 기능으로 합니다.
+사용자 앱과 백오피스의 모든 API를 단일 서버에서 처리합니다. 핵심은 **재료·시간대·카테고리·저칼로리 4가지 추천 엔진**, **요리북 인증 + 보상**, **포인트·레벨·의상 게임화 시스템**입니다.
 
 ---
 
 ## 기술 스택
 
-| 분류 | 기술 | 비고 |
-|------|------|------|
-| 프레임워크 | Spring Boot 4.0.3 | Java 21 LTS |
-| 빌드 | Gradle (Kotlin DSL) | |
-| 데이터베이스 | PostgreSQL 15 | Docker 컨테이너 |
-| ORM | Spring Data JPA + Hibernate | Fetch Join, @BatchSize 최적화 |
-| 마이그레이션 | Flyway | V1~V24 |
-| 인증 | Spring Security + JWT | 액세스 1h, 리프레시 30d |
-| API 문서 | SpringDoc OpenAPI 3.0 | Swagger UI |
-| 캐싱 | Spring Cache | ConcurrentMapCacheManager |
-| 엑셀 | Apache POI | 일괄 등록/템플릿 다운로드 |
-| 외부 통신 | WebFlux WebClient | Apple/카카오 토큰 검증 |
-| 파일 저장 | 로컬 디스크 | `/data/picook/uploads/` |
-| 로깅 | Logback + Logstash Encoder | 구조화 JSON 로깅 |
-| 메트릭 | Micrometer + Prometheus | 비즈니스 메트릭 |
-| 테스트 | JUnit 5 + Mockito | 40개 테스트 파일 |
+| 분류 | 기술 |
+|------|------|
+| 프레임워크 | Spring Boot 4.0.3 (Java 21 LTS) |
+| 빌드 | Gradle (Kotlin DSL) |
+| DB | PostgreSQL 15 (Docker) |
+| ORM | Spring Data JPA + Hibernate |
+| 마이그레이션 | Flyway |
+| 인증 | Spring Security + JWT (액세스 1h / 리프레시 30d) |
+| API 문서 | SpringDoc OpenAPI 3.0 (Swagger UI) |
+| 캐싱 | Spring Cache (`ConcurrentMapCacheManager`) |
+| 엑셀 | Apache POI (시드 일괄 업로드) |
+| 외부 통신 | WebFlux WebClient (Apple/카카오 토큰 검증) |
+| 파일 저장 | 로컬 디스크 (`/data/picook/uploads/`) |
+| 로깅 | Logback + 구조화 JSON |
+| 메트릭 | Micrometer + Prometheus |
+| 테스트 | JUnit 5 + Mockito |
 
 ---
 
-## 패키지 구조
+## 도메인 구조
 
 ```
-src/main/java/com/picook/
-├── config/                        ← 설정
-│   ├── SecurityConfig             ← Spring Security + JWT 필터 체인
-│   ├── JwtProvider                ← JWT 토큰 생성/검증
-│   ├── JwtAuthenticationFilter    ← 요청별 JWT 인증
-│   ├── CorsConfig                 ← CORS 허용 설정
-│   ├── WebConfig                  ← Web MVC 설정
-│   ├── CacheConfig                ← Spring Cache 설정
-│   ├── RateLimitFilter            ← 요청 빈도 제한
-│   ├── ClientIpResolver           ← 프록시 뒤 실제 IP 추출
-│   ├── MonitoringIpFilter         ← 모니터링 IP 필터
-│   ├── RequestLoggingFilter       ← HTTP 요청/응답 로깅 + MDC
-│   ├── PicookMetricsConfig        ← Prometheus 커스텀 메트릭
-│   └── SwaggerConfig              ← OpenAPI/Swagger 설정
+com.picook/
+├── config/                       Security · JWT · Cors · Cache · RateLimit · Logging · Metric
 │
 ├── domain/
-│   ├── auth/                      ← 인증 (Apple, 카카오, JWT)
-│   ├── user/                      ← 사용자 (프로필, 등급)
-│   ├── ingredient/                ← 재료 (카테고리, 서브카테고리, 동의어)
-│   ├── recipe/                    ← 레시피 (CRUD, 추천)
-│   ├── cookbook/                  ← 요리 완료 인증 (별점/메모/사진 최대 4장)
-│   ├── fridge/                    ← 사용자 냉장고 (보유 재료)
-│   ├── favorite/                  ← 즐겨찾기
-│   ├── searchhistory/             ← 검색 이력
-│   ├── feedback/                  ← 피드백 (엔티티만, API는 admin)
-│   ├── point/                     ← 포인트 적립/사용
-│   ├── attendance/                ← 출석체크
-│   ├── outfit/                    ← 의상 카탈로그/구매/장착 (레벨업 시 자동 지급)
-│   ├── monitoring/                ← 운영 모니터링 (DAU/MAU)
-│   ├── file/                      ← 파일 업로드 (LocalFileService)
-│   │
-│   └── admin/                     ← 백오피스 API
-│       ├── auth/                  ← 관리자 인증
-│       ├── dashboard/             ← 대시보드
-│       ├── recipe/                ← 레시피 관리 + 엑셀 벌크
-│       ├── ingredient/            ← 재료 관리 + 엑셀 벌크
-│       ├── category/              ← 카테고리 관리
-│       ├── subcategory/           ← 서브카테고리 관리
-│       ├── outfit/                ← 의상 카탈로그 관리
-│       ├── user/                  ← 유저 관리 (SUPER_ADMIN)
-│       ├── feedback/              ← 피드백 관리
-│       ├── stats/                 ← 통계
-│       └── account/               ← 관리자 계정 (SUPER_ADMIN)
+│   ├── auth/                     Apple · 카카오 · JWT 발급
+│   ├── user/                     사용자 프로필 · 등급(UserLevelService)
+│   ├── ingredient/               재료 · 카테고리 · 서브카테고리 · 동의어 · 단위환산
+│   ├── recipe/                   레시피 · 단계 · 추천 엔진(매칭/시간대/카테고리/저칼로리)
+│   ├── cookbook/                 요리 완료 인증 (별점/메모/사진 4장)
+│   ├── fridge/                   사용자 냉장고 (보유 재료)
+│   ├── favorite/                 즐겨찾기
+│   ├── searchhistory/            검색 이력
+│   ├── feedback/                 피드백
+│   ├── point/                    포인트 적립/사용 (PointLedger)
+│   ├── attendance/               출석체크
+│   ├── outfit/                   의상 카탈로그/구매/장착/레벨 보상
+│   ├── monitoring/               운영 모니터링 (DAU/MAU)
+│   ├── file/                     파일 업로드 (LocalFileService)
+│   └── admin/                    백오피스 API 12개 서브도메인
+│       ├── auth · dashboard · recipe · ingredient · category
+│       ├── subcategory · outfit · seed · user · feedback
+│       └── stats · account
 │
-└── global/                        ← 공통
-    ├── ApiResponse                ← 표준 응답 래퍼
-    ├── PageResponse               ← 페이지네이션 응답
-    ├── GlobalExceptionHandler     ← 중앙 예외 처리
-    ├── BusinessException          ← 커스텀 비즈니스 예외
-    └── PerformanceLoggingAspect   ← AOP 성능 로깅
+└── global/                       ApiResponse · PageResponse · Exception · AOP
 ```
 
 ---
 
-## 실행 방법
+## API 엔드포인트
 
-### 1. 데이터베이스 + 서버 (도커)
+### Auth — 공개
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| POST | `/api/auth/kakao` | 카카오 로그인 |
+| POST | `/api/auth/apple` | Apple 로그인 |
+| POST | `/api/auth/refresh` | JWT 토큰 갱신 |
+| POST | `/api/auth/logout` | 로그아웃 (stateless — 서버 200 응답) |
+
+### User — 인증 필요
+
+#### 사용자 / 재료
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET / PUT / DELETE | `/api/v1/users/me` | 내 프로필 조회 / 수정 / 탈퇴(30일 유예) |
+| GET | `/api/v1/ingredients` | 전체 재료 (캐시) |
+| GET | `/api/v1/ingredients/categories` | 카테고리 목록 |
+
+#### 레시피 — 4가지 추천
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| POST | `/api/v1/recipes/recommend` | **재료 매칭 추천** — 매칭률 30%+ TOP 10 |
+| GET | `/api/v1/recipes/recommend-by-time?period=` | **시간대 추천** — breakfast/lunch/dinner/midnight TOP 5 |
+| GET | `/api/v1/recipes/category-counts` | **카테고리 카드** — published 건수 (캐시) |
+| GET | `/api/v1/recipes?category=&page=&size=` | 카테고리별 페이지 |
+| GET | `/api/v1/recipes/recommend-low-calorie?limit=` | **저칼로리 추천** — ≤300kcal TOP 5 |
+| GET | `/api/v1/recipes/{id}` | 레시피 상세 (재료 + 단계 + 팁) |
+
+#### 활동
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET / POST / DELETE | `/api/v1/favorites` | 즐겨찾기 |
+| POST `entries` / GET / GET `{id}` | `/api/v1/cookbook` | 요리북 인증 (multipart: rating · memo · photos[≤4]) |
+| GET | `/api/v1/cookbook/stats?yearMonth=` | 월별 요리 횟수 |
+| GET / POST / DELETE / PUT | `/api/v1/fridge/ingredients` | 냉장고 재료 관리 |
+| GET / DELETE | `/api/v1/search-history` | 검색 이력 |
+
+#### 게임화
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/api/v1/points/balance` | 포인트 잔액 |
+| GET | `/api/v1/points/history` | 포인트 적립/사용 이력 |
+| GET | `/api/v1/attendance/today` | 오늘 출석 상태 + 7일 스트릭 |
+| POST | `/api/v1/attendance/check-in` | 출석체크 (포인트 +10) |
+| GET | `/api/v1/outfits` | 전체 의상 카탈로그 |
+| GET | `/api/v1/outfits/me` | 내가 보유한 의상 |
+| POST | `/api/v1/outfits/me/purchase` | 의상 구매 (포인트 차감) |
+| PUT | `/api/v1/outfits/me/equip` | 슬롯별 장착 변경 |
+
+#### 파일
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| POST | `/api/v1/files/upload` | 이미지 업로드 (카테고리 화이트리스트) |
+
+### Admin — 역할 기반
+
+| 그룹 | 엔드포인트 | 권한 |
+|------|------------|------|
+| 인증 | `/api/admin/auth/{login,refresh,logout,me,password}` | 공개/인증 |
+| 대시보드 | `/api/admin/dashboard/{summary,charts,rankings}` | CONTENT+ |
+| 레시피 | `/api/admin/recipes/...` (CRUD + 상태변경 + 엑셀 일괄) | CONTENT+ |
+| 재료 | `/api/admin/ingredients/...` (CRUD + 엑셀) | CONTENT+ |
+| 카테고리 | `/api/admin/categories/...` (CRUD + reorder) | CONTENT+ |
+| 서브카테고리 | `/api/admin/subcategories/...` | CONTENT+ |
+| 의상 | `/api/admin/outfits/...` (CRUD) | CONTENT+ |
+| **시드 일괄 업로드** | `/api/admin/seed/upload` (picook_seed.xlsx) | CONTENT+ |
+| 유저 | `/api/admin/users/...` (목록/정지/하위 리소스) | **SUPER** |
+| 피드백 | `/api/admin/feedback/...` (상태/메모) | CONTENT+ |
+| 통계 | `/api/admin/stats/{users,recipes,ingredients,ranking}` | VIEWER+ |
+| 계정 | `/api/admin/accounts/...` (관리자 CRUD) | **SUPER** |
+
+---
+
+## DB 스키마
+
+마이그레이션은 V1~V28의 누적 결과를 **V1/V2 단일 베이스라인으로 통합**한 상태입니다 (테스트 단계라 가능).
+
+```
+src/main/resources/db/migration/
+├── V1__schema.sql               전체 DDL (테이블 22 + 인덱스 + CHECK + FK)
+└── V2__seed_admin_outfits.sql   admin 1건 + 기본 의상 7건
+```
+
+대카테고리/서브카테고리/재료/레시피 시드는 **백오피스 엑셀 업로드**로 들어옵니다.
+
+### 테이블 22개 — 의미별 그룹
+
+```mermaid
+erDiagram
+    users ||--o{ point_ledger : ""
+    users ||--o{ attendance_logs : ""
+    users ||--o{ user_owned_outfits : ""
+    users ||--o{ user_equipped_outfits : ""
+    users ||--o{ level_reward_logs : ""
+    users ||--o{ cookbook_entries : ""
+    users ||--o{ favorites : ""
+    users ||--o{ user_fridge_ingredients : ""
+    users ||--o{ feedback : ""
+    users ||--o{ search_history : ""
+    outfits ||--o{ user_owned_outfits : ""
+    outfits ||--o{ user_equipped_outfits : ""
+
+    cookbook_entries ||--o{ cookbook_photos : ""
+    recipes ||--o{ cookbook_entries : ""
+    recipes ||--o{ favorites : ""
+    recipes ||--o{ feedback : ""
+    recipes ||--o{ recipe_ingredients : ""
+    recipes ||--o{ recipe_steps : ""
+
+    ingredient_categories ||--o{ ingredient_subcategories : ""
+    ingredient_categories ||--o{ ingredients : ""
+    ingredient_subcategories ||--o{ ingredients : ""
+    ingredients ||--o{ ingredient_synonyms : ""
+    ingredients ||--o{ unit_conversions : ""
+    ingredients ||--o{ recipe_ingredients : ""
+    ingredients ||--o{ ingredients : "parent_id"
+    ingredients ||--o{ user_fridge_ingredients : ""
+
+    users {
+        UUID id PK
+        VARCHAR display_name UK
+        VARCHAR oauth_name
+        VARCHAR login_type "KAKAO|APPLE"
+        VARCHAR character_type "MIN|ROO|HARU"
+        BIGINT total_exp
+        INT point_balance
+        INT completed_cooking_count
+        VARCHAR status "ACTIVE|SUSPENDED|DELETED"
+    }
+    admin_users {
+        SERIAL id PK
+        VARCHAR email UK
+        VARCHAR role "SUPER_ADMIN|CONTENT_ADMIN|VIEWER"
+        BOOLEAN is_locked "5회 실패 → 15분 잠금"
+    }
+    ingredient_categories { SERIAL id PK }
+    ingredient_subcategories { SERIAL id PK }
+    ingredients {
+        SERIAL id PK
+        VARCHAR name UK
+        BOOLEAN is_seasoning
+        INT parent_id "상향 매칭"
+    }
+    ingredient_synonyms { SERIAL id PK }
+    unit_conversions { SERIAL id PK }
+    recipes {
+        SERIAL id PK
+        VARCHAR category "korean|western|japanese|other"
+        VARCHAR difficulty "easy|medium|hard"
+        BOOLEAN meal_breakfast
+        BOOLEAN meal_lunch
+        BOOLEAN meal_dinner
+        BOOLEAN meal_snack
+        VARCHAR status "draft|published|hidden"
+    }
+    recipe_ingredients {
+        SERIAL id PK
+        BOOLEAN is_required
+    }
+    recipe_steps {
+        SERIAL id PK
+        TEXT tip "조리 팁"
+    }
+    favorites { SERIAL id PK }
+    feedback { SERIAL id PK }
+    search_history { SERIAL id PK }
+    user_fridge_ingredients { BIGINT id PK }
+    cookbook_entries {
+        BIGINT id PK
+        SMALLINT rating "1~5"
+    }
+    cookbook_photos { BIGINT id PK }
+    point_ledger {
+        BIGINT id PK
+        VARCHAR reason "DAILY_CHECK|COOKBOOK_ENTRY|SHOP_PURCHASE"
+    }
+    attendance_logs { BIGINT id PK }
+    outfits {
+        BIGINT id PK
+        VARCHAR slot "head|top|bottom|shoes|leftHand|rightHand"
+        SMALLINT unlock_level
+    }
+    user_owned_outfits {
+        BIGINT id PK
+        VARCHAR acquired_source "SHOP|LEVEL_REWARD|DEFAULT"
+    }
+    user_equipped_outfits {
+        UUID user_id PK
+        VARCHAR slot PK
+    }
+    level_reward_logs { BIGINT id PK }
+```
+
+---
+
+## 추천 엔진
+
+### 1. 재료 매칭 추천 — `RecommendService`
+
+```
+입력: ingredientIds[], maxTime?, difficulty?, servings?
+1. recipe_ingredients 와 사용자 재료 교집합 계산 (양념 제외 — is_seasoning=false 만)
+2. 매칭률 = 보유 메인재료 / 전체 메인재료
+3. 매칭률 30% 미만 제외 (RecommendService.MIN_MATCH_RATE)
+4. 시간/난이도/인분 필터
+5. 매칭률 DESC → TOP 10
+6. 부족 메인재료 + 부족 양념 별도 응답
+```
+
+**상향 매칭** — 사용자가 자식(예: 삼겹살)을 보유하면 부모(돼지고기)도 매칭 인정. `ingredients.parent_id` 1단계 위로 올라가며 비교 (sibling 매칭은 X).
+
+### 2. 시간대 추천 — `RecipeService.recommendByTime`
+
+LLM(`gpt-5.4-mini`)이 1,498건 레시피를 4슬롯에 사전 분류 → `recipes.meal_*` 4컬럼.
+
+| API period | DB 컬럼 | 시간 범위 (모바일) |
+|------------|---------|---------------------|
+| `breakfast` | `meal_breakfast` | 06–10 |
+| `lunch` | `meal_lunch` | 10–15 |
+| `dinner` | `meal_dinner` | 15–21 |
+| `midnight` | `meal_snack` | 21–06 |
+
+published + view_count DESC TOP 5. 슬롯별 부분 인덱스로 쿼리 가벼움.
+
+### 3. 카테고리 카운트 / 페이지
+
+`@Cacheable("recipe-category-counts")` — 레시피 CRUD / 시드 업로드 시 evict.
+
+### 4. 저칼로리 추천
+
+`calories ≤ 300` + view_count DESC, 기본 5건 (최대 20).
+
+---
+
+## 요리북 인증 — `CookbookService`
+
+```
+입력: recipeId, rating(1~5), memo(≤1,000자), photos[] (최대 4장)
+1. 사진 4장 초과 → PHOTO_LIMIT_EXCEEDED (400)
+2. 레시피 존재 + 미삭제 검증
+3. CookbookEntry 저장 + 사진 LocalFileService.upload(..., "cookbook")
+4. User.completed_cooking_count +1
+5. 사진 1장 이상이면:
+   · 포인트 +50 (PointReason.COOKBOOK_ENTRY)
+   · 경험치 +80 → UserLevelService.awardExp → 레벨업 시 의상 자동 지급
+6. 응답: sequenceNumber, leveledUp, newLevel, grantedOutfits
+```
+
+레벨 산정 — `total_exp` 누적값을 7단계 컷오프로 매핑 (`UserLevelService`).
+
+---
+
+## 인증/인가
+
+### 사용자 (JWT)
+
+```
+[Apple/카카오 로그인]
+   ↓ identityToken | kakaoAccessToken
+[서버: Apple 공개키 | 카카오 /v2/user/me 검증]
+   ↓
+[User 조회/생성 → JWT 발급]
+   ↓ access 1h + refresh 30d
+[클라이언트 Bearer]
+   ↓ 401 → /api/auth/refresh
+```
+
+### 관리자
+
+- 이메일/bcrypt(cost 12) 로그인
+- 3등급: `SUPER_ADMIN` > `CONTENT_ADMIN` > `VIEWER`
+- 5회 실패 → 15분 잠금
+- 액세스 1h, 리프레시 8h
+
+```java
+.requestMatchers("/api/admin/auth/login").permitAll()
+.requestMatchers("/api/admin/accounts/**").hasRole("SUPER_ADMIN")
+.requestMatchers("/api/admin/users/**").hasRole("SUPER_ADMIN")
+.requestMatchers(GET, "/api/admin/stats/**").hasAnyRole("SUPER_ADMIN","CONTENT_ADMIN","VIEWER")
+.requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN","CONTENT_ADMIN")
+.requestMatchers("/api/v1/**").authenticated()
+```
+
+---
+
+## 시드 데이터 업로드 — `SeedImportService`
+
+`picook_seed.xlsx` 한 파일에 7시트:
+
+| 시트 | 컬럼 |
+|------|------|
+| `categories` | id, name, sort_order, emoji |
+| `subcategories` | category, name, sort_order |
+| `ingredients` | name, category, subcategory, parent_name, is_seasoning, default_unit, aliases |
+| `unit_conversions` | ingredient_name, from_unit, to_unit, conversion |
+| `recipes` | temp_id, title, category, difficulty, cooking_time, servings, calories, thumbnail, tips, status, meal_breakfast, meal_lunch, meal_dinner, meal_snack |
+| `recipe_ingredients` | recipe_temp_id, ingredient_name, amount, unit, is_required, sort_order |
+| `recipe_steps` | recipe_temp_id, step_number, description, image_url, tip |
+
+처리 순서: categories → subcategories → ingredients (+ synonyms + parent 2-pass) → unit_conversions → recipes → recipe_ingredients → recipe_steps. **단일 트랜잭션** — 어느 시트든 치명 에러 시 전체 롤백.
+
+재료 이름 해석은 7단계 폴백 — 정확 매칭 → 괄호 제거 → 공백 제거 → 처리상태 prefix(잘게 다진/불린/...) 제거 → 첫 단어 → 마지막 단어. `물/얼음/쌀뜨물` 등은 의도적 SKIP.
+
+---
+
+## 실행
+
+### 도커 (DB + 백엔드 동시)
 
 ```bash
 cd ../infra
 docker compose up -d
-# PostgreSQL 15 → localhost:5432
-# Backend → localhost:8080
+# postgres → localhost:5432
+# backend  → localhost:8080
 ```
 
-### 2. 백엔드만 IDE에서 (도커는 PostgreSQL만 띄우는 경우)
+### IDE / Gradle (DB만 도커, 백엔드는 로컬)
 
 ```bash
+cd ../infra
+docker compose up -d postgres
+cd ../backend
 ./gradlew bootRun
-# API → http://localhost:8080
 # Swagger UI → http://localhost:8080/swagger-ui.html
 ```
 
-### 3. 테스트
+### 테스트
 
 ```bash
 ./gradlew test
@@ -113,320 +394,50 @@ docker compose up -d
 
 ### 환경 프로필
 
-| 프로필 | 용도 | DB | 특징 |
-|--------|------|----|----|
-| `local` | 로컬 개발 | localhost:5432 | 디버그 로깅, Swagger 활성화 |
-| `prod` | 운영 | 외부 호스트 | 구조화 JSON 로깅, 메트릭 활성화 |
+| 프로필 | 용도 | 특징 |
+|--------|------|------|
+| `local` | 로컬 개발 | 디버그 로깅, Swagger 활성화 |
+| `prod` | 운영 | 구조화 JSON 로깅, 메트릭 활성화 |
 
-### 주요 환경변수
+### 환경변수
 
-모든 환경변수는 `backend/secrets.env` 한 파일에서 관리합니다 (gitignore).
-로컬 IDE bootRun 시 `application.yml`의 `spring.config.import`로 자동 로드되고,
-도커 배포 시 `infra/docker-compose.yml`의 `env_file:`로 컨테이너에 주입됩니다.
-운영 서버에는 별도의 `secrets.env`를 직접 배치합니다.
+`backend/secrets.env` 한 파일로 통합 (gitignore). 도커는 `infra/docker-compose.yml`의 `env_file:`로 주입, 로컬 IDE는 `application.yml`의 `spring.config.import`로 자동 로드.
 
 | 변수 | 설명 |
 |------|------|
-| `SPRING_PROFILES_ACTIVE` | Spring 프로파일 (`local`/`prod`) — logback의 LOG_DIR 분기에 사용 |
-| `JWT_SECRET` | JWT 서명 키 (32바이트 이상 권장) |
-| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USERNAME` / `DB_PASSWORD` | PostgreSQL 접속 정보 |
-| `HIBERNATE_SHOW_SQL` | Hibernate SQL 로그 출력 (`true`/`false`) |
-| `FILE_UPLOAD_DIR` | 업로드 파일 저장 디렉토리 |
-| `APPLE_BUNDLE_ID` | Apple Sign-In 검증용 번들 ID |
-| `MONITORING_ALLOWED_IPS` | 모니터링 엔드포인트 허용 IP (콤마 구분) |
-| `TRUSTED_PROXIES` | 프록시 신뢰 IP (콤마 구분) — 클라이언트 IP 추출에 사용 |
+| `SPRING_PROFILES_ACTIVE` | `local` / `prod` |
+| `JWT_SECRET` | 32바이트 이상 |
+| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USERNAME` / `DB_PASSWORD` | PostgreSQL 접속 |
+| `FILE_UPLOAD_DIR` | 업로드 디렉토리 (기본 `/data/picook/uploads`) |
+| `APPLE_BUNDLE_ID` | Apple Sign-In 검증용 |
+| `MONITORING_ALLOWED_IPS` | 모니터링 엔드포인트 허용 IP (콤마) |
+| `TRUSTED_PROXIES` | 신뢰 프록시 IP (콤마) |
 
 ---
 
-## 인증/인가 흐름
+## 로깅 / 메트릭
 
-### 사용자 인증 (JWT)
+### 로그 파일 (`prod` 프로필)
 
-```
-[Apple/카카오 로그인]
-    │
-    ▼
-클라이언트: identityToken / kakaoAccessToken 전송
-    │
-    ▼
-서버: Apple 공개키 검증 or 카카오 API (/v2/user/me) 검증
-    │
-    ▼
-서버: User 조회 or 생성 → JWT 발급 (access 1h + refresh 30d)
-    │
-    ▼
-클라이언트: Bearer 토큰으로 API 호출
-    │
-    ▼
-401 발생 시: /api/auth/refresh → 새 토큰 발급
-```
+| 파일 | 레벨 | 보관 |
+|------|------|------|
+| `/var/log/picook/app.log` | INFO+ | 30일, 1GB |
+| `/var/log/picook/error.log` | ERROR | 90일, 500MB |
+| `/var/log/picook/perf.log` | INFO | 30일 (서비스 메서드 1초+ WARN) |
+| `/var/log/picook/sql.log` | OFF (필요 시 활성화) | 7일 |
 
-### 관리자 인증
+`RequestLoggingFilter` + MDC로 요청별 컨텍스트, AOP `PerformanceLoggingAspect`로 서비스 메서드 성능 측정. Vector 컨테이너가 로그를 수집해 외부로 전송.
 
-- 이메일/비밀번호 로그인 (bcrypt)
-- 3등급 역할: `SUPER_ADMIN` > `CONTENT_ADMIN` > `VIEWER`
-- 로그인 실패 5회 → 15분 잠금
-- 액세스 토큰 1h, 리프레시 8h
+### 메트릭
+
+`PicookMetricsConfig`에서 비즈니스 메트릭 (추천 호출, 시드 업로드, 인증 실패 등) Prometheus 노출.
 
 ---
 
-## API 엔드포인트 전체 목록
+## 캐시 무효화 매트릭스
 
-### Auth API — 공개
-
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| POST | `/api/auth/kakao` | 카카오 소셜 로그인 |
-| POST | `/api/auth/apple` | Apple 소셜 로그인 |
-| POST | `/api/auth/refresh` | JWT 토큰 갱신 |
-| POST | `/api/auth/logout` | 로그아웃 |
-
-### User API — 인증 필요
-
-#### 사용자 (`/api/v1/users`)
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/api/v1/users/me` | 내 프로필 조회 |
-| PUT | `/api/v1/users/me` | 프로필 수정 |
-| DELETE | `/api/v1/users/me` | 회원 탈퇴 (30일 유예) |
-
-#### 재료 (`/api/v1/ingredients`)
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/api/v1/ingredients` | 전체 재료 목록 (카테고리/서브카테고리/동의어 포함, 캐시) |
-| GET | `/api/v1/ingredients/categories` | 카테고리 목록 |
-
-#### 레시피 (`/api/v1/recipes`)
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| POST | `/api/v1/recipes/recommend` | 재료 기반 추천 (매칭률 30%+ TOP 10) |
-| GET | `/api/v1/recipes/{id}` | 레시피 상세 (재료 + 조리 단계) |
-
-#### 즐겨찾기 (`/api/v1/favorites`)
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/api/v1/favorites` | 즐겨찾기 목록 |
-| POST | `/api/v1/favorites` | 즐겨찾기 추가 |
-| DELETE | `/api/v1/favorites/{id}` | 즐겨찾기 삭제 |
-
-#### 요리북 (`/api/v1/cookbook`) — 요리 완료 인증
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| POST | `/api/v1/cookbook/entries` | 등록 (multipart: rating 1~5, memo ≤1000자, photos 최대 4장) |
-| GET | `/api/v1/cookbook/entries` | 본인 기록 목록 (페이징) |
-| GET | `/api/v1/cookbook/entries/{id}` | 본인 기록 상세 |
-| GET | `/api/v1/cookbook/stats?yearMonth=YYYY-MM` | 월별 요리 횟수 |
-
-#### 냉장고 (`/api/v1/fridge`)
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/api/v1/fridge/ingredients` | 보유 재료 목록 |
-| POST | `/api/v1/fridge/ingredients/{ingredientId}` | 재료 추가 |
-| DELETE | `/api/v1/fridge/ingredients/{ingredientId}` | 재료 제거 |
-| PUT | `/api/v1/fridge/ingredients` | 재료 일괄 갱신 |
-
-#### 포인트 (`/api/v1/points`)
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/api/v1/points/balance` | 현재 잔액 |
-| GET | `/api/v1/points/history` | 적립/사용 이력 |
-
-#### 출석체크 (`/api/v1/attendance`)
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/api/v1/attendance/today` | 오늘 출석 상태 |
-| POST | `/api/v1/attendance/check-in` | 출석체크 (포인트 지급) |
-| GET | `/api/v1/attendance/history` | 출석 이력 |
-
-#### 의상 (`/api/v1/outfits`)
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/api/v1/outfits` | 전체 의상 카탈로그 |
-| GET | `/api/v1/outfits/me` | 내가 보유한 의상 |
-| POST | `/api/v1/outfits/me/purchase` | 의상 구매 (포인트 차감) |
-| PUT | `/api/v1/outfits/me/equip` | 장착 의상 변경 |
-
-#### 검색 이력 (`/api/v1/search-history`)
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/api/v1/search-history` | 검색 이력 |
-| DELETE | `/api/v1/search-history/{id}` | 이력 삭제 |
-| DELETE | `/api/v1/search-history` | 전체 이력 삭제 |
-
-#### 파일 (`/api/v1/files`)
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| POST | `/api/v1/files/upload` | 이미지 업로드 (카테고리 화이트리스트) |
-
-### Admin API — 역할 기반
-
-#### 관리자 인증 (`/api/admin/auth`)
-| Method | Endpoint | 역할 | 설명 |
-|--------|----------|------|------|
-| POST | `/api/admin/auth/login` | 공개 | 관리자 로그인 |
-| POST | `/api/admin/auth/refresh` | 인증 | 토큰 갱신 |
-| POST | `/api/admin/auth/logout` | 인증 | 로그아웃 |
-| GET | `/api/admin/auth/me` | 인증 | 내 정보 |
-| PUT | `/api/admin/auth/password` | 인증 | 비밀번호 변경 |
-
-#### 대시보드 (`/api/admin/dashboard`)
-| Method | Endpoint | 역할 | 설명 |
-|--------|----------|------|------|
-| GET | `/api/admin/dashboard/summary` | 전체 | 핵심 지표 |
-| GET | `/api/admin/dashboard/charts` | 전체 | 차트 데이터 (?period=7d/30d/90d) |
-| GET | `/api/admin/dashboard/rankings` | 전체 | 인기 레시피/재료 랭킹 |
-
-#### 레시피 관리 (`/api/admin/recipes`)
-| Method | Endpoint | 역할 | 설명 |
-|--------|----------|------|------|
-| GET | `/api/admin/recipes` | CONTENT+ | 목록 (필터: status, category, difficulty) |
-| GET | `/api/admin/recipes/{id}` | CONTENT+ | 상세 |
-| POST | `/api/admin/recipes` | CONTENT+ | 생성 |
-| PUT | `/api/admin/recipes/{id}` | CONTENT+ | 수정 |
-| DELETE | `/api/admin/recipes/{id}` | CONTENT+ | 삭제 (soft) |
-| PATCH | `/api/admin/recipes/{id}/status` | CONTENT+ | 상태 변경 (draft/published/hidden) |
-| POST | `/api/admin/recipes/bulk-upload` | CONTENT+ | 엑셀 일괄 등록 |
-| GET | `/api/admin/recipes/bulk-template` | CONTENT+ | 엑셀 템플릿 다운로드 |
-
-#### 재료 관리 (`/api/admin/ingredients`)
-| Method | Endpoint | 역할 | 설명 |
-|--------|----------|------|------|
-| GET | `/api/admin/ingredients` | CONTENT+ | 목록 (필터: categoryId, keyword) |
-| GET | `/api/admin/ingredients/{id}` | CONTENT+ | 상세 |
-| POST | `/api/admin/ingredients` | CONTENT+ | 생성 |
-| PUT | `/api/admin/ingredients/{id}` | CONTENT+ | 수정 |
-| DELETE | `/api/admin/ingredients/{id}` | CONTENT+ | 삭제 |
-| POST | `/api/admin/ingredients/bulk-upload` | CONTENT+ | 엑셀 일괄 등록 |
-| GET | `/api/admin/ingredients/bulk-template` | CONTENT+ | 엑셀 템플릿 다운로드 |
-
-#### 카테고리 관리 (`/api/admin/categories`)
-| Method | Endpoint | 역할 | 설명 |
-|--------|----------|------|------|
-| GET | `/api/admin/categories` | CONTENT+ | 전체 목록 |
-| POST | `/api/admin/categories` | CONTENT+ | 생성 |
-| PUT | `/api/admin/categories/{id}` | CONTENT+ | 수정 |
-| DELETE | `/api/admin/categories/{id}` | CONTENT+ | 삭제 |
-| PUT | `/api/admin/categories/reorder` | CONTENT+ | 정렬 순서 변경 |
-
-#### 서브카테고리 관리 (`/api/admin/subcategories`)
-| Method | Endpoint | 역할 | 설명 |
-|--------|----------|------|------|
-| GET | `/api/admin/subcategories` | CONTENT+ | 목록 (?categoryId 필터) |
-| POST | `/api/admin/subcategories` | CONTENT+ | 생성 |
-| PUT | `/api/admin/subcategories/{id}` | CONTENT+ | 수정 |
-| DELETE | `/api/admin/subcategories/{id}` | CONTENT+ | 삭제 |
-| PUT | `/api/admin/subcategories/reorder` | CONTENT+ | 정렬 순서 변경 |
-
-#### 의상 카탈로그 관리 (`/api/admin/outfits`)
-| Method | Endpoint | 역할 | 설명 |
-|--------|----------|------|------|
-| GET | `/api/admin/outfits` | CONTENT+ | 의상 목록 |
-| POST | `/api/admin/outfits` | CONTENT+ | 등록 |
-| PUT | `/api/admin/outfits/{id}` | CONTENT+ | 수정 |
-| DELETE | `/api/admin/outfits/{id}` | CONTENT+ | 삭제 |
-
-#### 유저 관리 (`/api/admin/users`)
-| Method | Endpoint | 역할 | 설명 |
-|--------|----------|------|------|
-| GET | `/api/admin/users` | SUPER | 유저 목록 (필터: status, loginType, level) |
-| GET | `/api/admin/users/{id}` | SUPER | 유저 상세 |
-| PATCH | `/api/admin/users/{id}/suspend` | SUPER | 계정 정지 |
-| PATCH | `/api/admin/users/{id}/activate` | SUPER | 계정 활성화 |
-| GET | `/api/admin/users/{id}/completions` | SUPER | 요리 완료 이력 |
-| GET | `/api/admin/users/{id}/favorites` | SUPER | 즐겨찾기 |
-| GET | `/api/admin/users/{id}/search-history` | SUPER | 검색 이력 |
-
-#### 피드백 관리 (`/api/admin/feedback`)
-| Method | Endpoint | 역할 | 설명 |
-|--------|----------|------|------|
-| GET | `/api/admin/feedback` | CONTENT+ | 목록 (필터: status, rating) |
-| GET | `/api/admin/feedback/{id}` | CONTENT+ | 상세 |
-| PATCH | `/api/admin/feedback/{id}/status` | CONTENT+ | 상태 변경 |
-| PUT | `/api/admin/feedback/{id}/note` | CONTENT+ | 관리자 메모 수정 |
-| GET | `/api/admin/feedback/summary` | CONTENT+ | 피드백 요약 통계 |
-
-#### 통계 (`/api/admin/stats`)
-| Method | Endpoint | 역할 | 설명 |
-|--------|----------|------|------|
-| GET | `/api/admin/stats/users` | VIEWER+ | 유저 통계 (가입 추이, DAU/MAU) |
-| GET | `/api/admin/stats/recipes` | VIEWER+ | 레시피 통계 (카테고리별, TOP 20) |
-| GET | `/api/admin/stats/ingredients` | VIEWER+ | 재료 통계 (인기 TOP 20, 미사용) |
-| GET | `/api/admin/stats/ranking` | VIEWER+ | 랭킹 통계 (레벨 분포) |
-
-#### 관리자 계정 (`/api/admin/accounts`)
-| Method | Endpoint | 역할 | 설명 |
-|--------|----------|------|------|
-| GET | `/api/admin/accounts` | SUPER | 계정 목록 |
-| POST | `/api/admin/accounts` | SUPER | 계정 생성 |
-| PUT | `/api/admin/accounts/{id}` | SUPER | 역할 변경 |
-| DELETE | `/api/admin/accounts/{id}` | SUPER | 계정 삭제 |
-| PATCH | `/api/admin/accounts/{id}/unlock` | SUPER | 잠금 해제 |
-
-### Monitoring API — 내부
-
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/api/monitoring/users` | DAU/WAU/MAU, 신규 가입 |
-| GET | `/api/monitoring/dashboard` | 레시피/재료 현황 |
-
----
-
-## DB 마이그레이션 (Flyway)
-
-| 버전 | 내용 |
-|------|------|
-| V1~V3 | 초기 스키마, 카테고리 시드, 트리거 |
-| V5~V7 | 피드백 updated_at, enum 보정, 시드 데이터 |
-| V13 | 관리자 비밀번호 갱신 |
-| V14 | 포인트 시스템 |
-| V15 | 출석체크 |
-| V16 | 요리북 |
-| V17 | v1.0 정리 마이그레이션 (폐기 기능 테이블 일괄 DROP — 코칭/쇼츠 관련) + 냉장고 |
-| V18 | 칼로리/경험치/의상 리뉴얼 |
-| V19 | users.display_name UNIQUE |
-| V20 | 재료 서브카테고리 + 이모지 |
-| V21 | 재료 시드 (전체) |
-| V22 | users.oauth_name |
-| V23 | recipe_steps 폐기 컬럼 DROP |
-| V24 | 양념(seasoning)/메인재료 분리 |
-
-> V4, V8, V9, V12는 v1.0 이전 시점에 추가됐다가 V17의 cleanup에서 함께 DROP되었습니다. 파일 자체는 Flyway 체크섬 호환을 위해 남겨져 있습니다.
-
----
-
-## 테스트
-
-```bash
-./gradlew test
-```
-
-40개 테스트 파일. 주요 커버리지:
-
-- **인증**: AuthService, KakaoAuthService, AppleAuthService, JwtProvider, JwtAuthenticationFilter
-- **사용자**: UserService, User, UserRank
-- **레시피**: RecommendService (매칭률 알고리즘)
-- **즐겨찾기/검색이력**: FavoriteService, SearchHistoryService
-- **파일**: LocalFileService
-- **관리자**: AdminAuthService, AdminRecipeService, RecipeBulkUploadService, IngredientBulkUploadService, AdminCategoryService, AdminSubcategoryService, AdminUserController 등
-- **설정/필터**: ClientIpResolver, RateLimitFilter
-- **모니터링**: MonitoringController
-- **재료 유틸**: EmojiResolver
-
----
-
-## 주요 설계 결정
-
-### 추천 알고리즘
-양념(`is_seasoning=true`)은 매칭률 계산에서 제외. 메인재료 기준 30% 이상 + 매칭률 DESC + TOP 10. 한 SQL로 매칭/필터/정렬/제한을 처리해 N+1 회피.
-
-### 캐싱 전략
-재료/카테고리는 변경이 드물고 읽기가 빈번 → `@Cacheable` + `@CacheEvict` 패턴으로 관리자 수정 시에만 무효화.
-
-### N+1 해결
-`fetch join`으로 연관 엔티티 단일 쿼리 로딩. 다중 컬렉션은 `@BatchSize(100)`으로 IN 절 배치 쿼리.
-
-### Rate Limiting
-인증/추천 등 민감 엔드포인트에 슬라이딩 윈도우 + Semaphore 기반 제한.
-
-### 보안
-파일 업로드 경로 정규화(Path Traversal 방지), JWT 비밀키 32바이트 강제, X-Forwarded-For 신뢰 프록시만 허용, 업로드 카테고리 화이트리스트.
+| 캐시 키 | Cacheable | CacheEvict |
+|---------|-----------|------------|
+| `ingredients` | `IngredientService.getAllIngredients` | AdminIngredientService(create/update/delete), IngredientBulkUploadService, SeedImportService |
+| `categories` | `IngredientService.getCategories` | AdminCategoryService(create/update/delete/reorder), SeedImportService |
+| `recipe-category-counts` | `RecipeService.getCategoryCounts` | AdminRecipeService(create/update/delete/changeStatus), SeedImportService |
