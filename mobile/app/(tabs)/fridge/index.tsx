@@ -8,18 +8,16 @@ import {
   TextInput,
   Modal,
   Pressable,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import Svg, { Path, Circle } from 'react-native-svg';
 import {
   colors,
   typography,
   shadow,
   fontFamily,
-  getIngredientEmoji,
-  getCategoryEmoji,
 } from '../../../src/constants/theme';
 import { Loading } from '../../../src/components/common/Loading';
 import { ErrorScreen } from '../../../src/components/common/ErrorScreen';
@@ -41,7 +39,6 @@ const IngredientRow = React.memo(function IngredientRow({
   held,
   onToggle,
 }: IngredientRowProps) {
-  const emoji = useMemo(() => getIngredientEmoji(ingredient.name), [ingredient.name]);
   const onPress = useCallback(() => onToggle(ingredient.id, held), [onToggle, ingredient.id, held]);
   return (
     <TouchableOpacity
@@ -49,7 +46,7 @@ const IngredientRow = React.memo(function IngredientRow({
       onPress={onPress}
       activeOpacity={0.75}
     >
-      <Text style={styles.irEmo}>{emoji}</Text>
+      <Text style={styles.irEmo}>{ingredient.resolvedEmoji ?? ''}</Text>
       <Text style={styles.irName} numberOfLines={1}>{ingredient.name}</Text>
       <View style={[styles.cb, held && styles.cbSelected]}>
         {held && (
@@ -69,11 +66,18 @@ export default function FridgeScreen() {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const listRef = useRef<FlashListRef<Ingredient>>(null);
+  const listRef = useRef<FlatList<Ingredient>>(null);
 
   const handleSearchChange = useCallback((text: string) => {
     setSearchInput(text);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    if (!text) {
+      setSearchQuery('');
+      return;
+    }
     debounceRef.current = setTimeout(() => setSearchQuery(text), 300);
   }, []);
 
@@ -116,9 +120,12 @@ export default function FridgeScreen() {
     return list;
   }, [ingredients, activeCategory, searchQuery]);
 
-  // 카테고리/검색 변경 시 패널 스크롤 최상단으로
+  // 카테고리/검색 변경 시 패널 스크롤 최상단으로 (RAF로 미뤄야 layout 재계산 후 적용됨)
   useEffect(() => {
-    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    const raf = requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    });
+    return () => cancelAnimationFrame(raf);
   }, [activeCategory, searchQuery]);
 
   const activeCatName = useMemo(() => {
@@ -193,7 +200,16 @@ export default function FridgeScreen() {
           autoCorrect={false}
         />
         {searchInput.length > 0 && (
-          <TouchableOpacity onPress={() => { setSearchInput(''); setSearchQuery(''); }}>
+          <TouchableOpacity
+            onPress={() => {
+              if (debounceRef.current) {
+                clearTimeout(debounceRef.current);
+                debounceRef.current = null;
+              }
+              setSearchInput('');
+              setSearchQuery('');
+            }}
+          >
             <Text style={styles.searchClear}>✕</Text>
           </TouchableOpacity>
         )}
@@ -230,7 +246,7 @@ export default function FridgeScreen() {
               if (!ing) return null;
               return (
                 <View key={item.ingredientId} style={styles.previewChip}>
-                  <Text style={{ fontSize: 13 }}>{getIngredientEmoji(ing.name)}</Text>
+                  <Text style={{ fontSize: 13 }}>{ing.resolvedEmoji ?? ''}</Text>
                   <Text style={styles.previewChipText}>{ing.name}</Text>
                 </View>
               );
@@ -271,7 +287,7 @@ export default function FridgeScreen() {
                 activeOpacity={0.8}
               >
                 <View style={[styles.rEmo, isActive && { backgroundColor: colors.primary }]}>
-                  <Text style={styles.rEmoText}>{getCategoryEmoji(cat.name)}</Text>
+                  <Text style={styles.rEmoText}>{cat.emoji ?? ''}</Text>
                 </View>
                 <Text style={[styles.rName, isActive && styles.rNameActive]} numberOfLines={1}>
                   {cat.name}
@@ -288,7 +304,7 @@ export default function FridgeScreen() {
 
         {/* Panel */}
         <View style={styles.panel}>
-          <FlashList
+          <FlatList
             ref={listRef}
             data={displayedList}
             keyExtractor={(item) => String(item.id)}
@@ -317,6 +333,9 @@ export default function FridgeScreen() {
             }
             contentContainerStyle={{ paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
+            initialNumToRender={20}
+            windowSize={10}
+            removeClippedSubviews
           />
         </View>
       </View>
@@ -364,7 +383,7 @@ function ViewSheet({
               <View key={g.category!.id} style={{ marginBottom: 20 }}>
                 <View style={styles.groupHead}>
                   <View style={styles.groupEmoBox}>
-                    <Text style={{ fontSize: 13 }}>{getCategoryEmoji(g.category!.name)}</Text>
+                    <Text style={{ fontSize: 13 }}>{g.category!.emoji ?? ''}</Text>
                   </View>
                   <Text style={styles.groupName}>{g.category!.name}</Text>
                   <Text style={styles.groupCount}>{g.items.length}</Text>
@@ -372,7 +391,7 @@ function ViewSheet({
                 <View style={styles.groupChips}>
                   {g.items.map((ing) => (
                     <View key={ing.id} style={styles.chipLight}>
-                      <Text style={{ fontSize: 13 }}>{getIngredientEmoji(ing.name)}</Text>
+                      <Text style={{ fontSize: 13 }}>{ing.resolvedEmoji ?? ''}</Text>
                       <Text style={styles.chipLightText}>{ing.name}</Text>
                     </View>
                   ))}

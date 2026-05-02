@@ -8,19 +8,17 @@ import {
   ScrollView,
   Modal,
   Pressable,
+  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import Svg, { Path, Circle } from 'react-native-svg';
 import {
   colors,
   typography,
   shadow,
   fontFamily,
-  getIngredientEmoji,
-  getCategoryEmoji,
 } from '../../../src/constants/theme';
 import { Loading } from '../../../src/components/common/Loading';
 import { ErrorScreen } from '../../../src/components/common/ErrorScreen';
@@ -41,14 +39,13 @@ const IngredientRow = React.memo(function IngredientRow({
   const selected = useSelectionStore((s) => s.selectedIds.has(ingredient.id));
   const toggle = useSelectionStore((s) => s.toggle);
   const onPress = useCallback(() => toggle(ingredient.id), [toggle, ingredient.id]);
-  const emoji = useMemo(() => getIngredientEmoji(ingredient.name), [ingredient.name]);
   return (
     <TouchableOpacity
       style={[styles.ingRow, selected && styles.ingRowSelected]}
       onPress={onPress}
       activeOpacity={0.75}
     >
-      <Text style={styles.irEmo}>{emoji}</Text>
+      <Text style={styles.irEmo}>{ingredient.resolvedEmoji ?? ''}</Text>
       <Text style={styles.irName} numberOfLines={1}>{ingredient.name}</Text>
       <View style={[styles.cb, selected && styles.cbSelected]}>
         {selected && (
@@ -78,11 +75,16 @@ export default function SelectScreen() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const listRef = useRef<FlashListRef<Ingredient>>(null);
+  const listRef = useRef<FlatList<Ingredient>>(null);
 
-  // 카테고리/검색어 변경 시 패널 스크롤 최상단으로
+  // 카테고리/검색어 변경 시 패널 스크롤 최상단으로.
+  // RAF로 한 프레임 미뤄야 FlashList가 새 data 길이로 layout 재계산 후 스크롤됨.
+  // (즉시 호출하면 1개→200개 전환 시 첫 행들이 가시 영역 밖에 그려지는 이슈)
   useEffect(() => {
-    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    const raf = requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    });
+    return () => cancelAnimationFrame(raf);
   }, [activeCategory, searchQuery]);
 
   // 화면 fresh mount마다 1회: 이전 선택 폐기 + 냉장고 재료를 기본으로 세팅
@@ -102,7 +104,15 @@ export default function SelectScreen() {
 
   const handleSearchChange = useCallback((text: string) => {
     setSearchInput(text);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    // 빈 텍스트는 즉시 반영 — 디바운스 두면 backspace로 다 지운 직후 300ms간 빈 결과 화면이 노출됨
+    if (!text) {
+      setSearchQuery('');
+      return;
+    }
     debounceRef.current = setTimeout(() => setSearchQuery(text), 300);
   }, []);
 
@@ -210,7 +220,16 @@ export default function SelectScreen() {
           autoCorrect={false}
         />
         {searchInput.length > 0 && (
-          <TouchableOpacity onPress={() => { setSearchInput(''); setSearchQuery(''); }}>
+          <TouchableOpacity
+            onPress={() => {
+              if (debounceRef.current) {
+                clearTimeout(debounceRef.current);
+                debounceRef.current = null;
+              }
+              setSearchInput('');
+              setSearchQuery('');
+            }}
+          >
             <Text style={styles.searchClear}>✕</Text>
           </TouchableOpacity>
         )}
@@ -262,7 +281,7 @@ export default function SelectScreen() {
                 activeOpacity={0.8}
               >
                 <View style={[styles.rEmo, isActive && { backgroundColor: colors.primary }]}>
-                  <Text style={styles.rEmoText}>{getCategoryEmoji(cat.name)}</Text>
+                  <Text style={styles.rEmoText}>{cat.emoji ?? ''}</Text>
                 </View>
                 <Text
                   style={[styles.rName, isActive && styles.rNameActive]}
@@ -282,7 +301,7 @@ export default function SelectScreen() {
 
         {/* Panel */}
         <View style={styles.panel}>
-          <FlashList
+          <FlatList
             ref={listRef}
             data={displayedList}
             keyExtractor={(item) => String(item.id)}
@@ -305,6 +324,9 @@ export default function SelectScreen() {
             }
             contentContainerStyle={{ paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
+            initialNumToRender={20}
+            windowSize={10}
+            removeClippedSubviews
           />
         </View>
       </View>
@@ -381,7 +403,7 @@ function FloatingCart({ count, items, onRemove, onExpand, onSubmit, bottomInset 
               onPress={() => onRemove(ing.id)}
               activeOpacity={0.8}
             >
-              <Text style={styles.cartChipEmo}>{getIngredientEmoji(ing.name)}</Text>
+              <Text style={styles.cartChipEmo}>{ing.resolvedEmoji ?? ''}</Text>
               <Text style={styles.cartChipText}>{ing.name}</Text>
               <Text style={styles.cartChipX}>×</Text>
             </TouchableOpacity>
@@ -501,7 +523,7 @@ function SelectedSheet({
                 <View key={g.category!.id} style={styles.group}>
                   <View style={styles.groupHead}>
                     <View style={styles.gEmo}>
-                      <Text style={{ fontSize: 13 }}>{getCategoryEmoji(g.category!.name)}</Text>
+                      <Text style={{ fontSize: 13 }}>{g.category!.emoji ?? ''}</Text>
                     </View>
                     <Text style={styles.gName}>{g.category!.name}</Text>
                     <Text style={styles.gCount}>{g.items.length}</Text>
@@ -514,7 +536,7 @@ function SelectedSheet({
                         onPress={() => onRemove(ing.id)}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.exChipEmo}>{getIngredientEmoji(ing.name)}</Text>
+                        <Text style={styles.exChipEmo}>{ing.resolvedEmoji ?? ''}</Text>
                         <Text style={styles.exChipText}>{ing.name}</Text>
                         <View style={styles.exChipX}>
                           <Svg width={8} height={8} viewBox="0 0 24 24">

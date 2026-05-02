@@ -13,7 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fontFamily, shadow, getIngredientEmoji } from '../../src/constants/theme';
+import { colors, fontFamily, shadow } from '../../src/constants/theme';
 import { Loading } from '../../src/components/common/Loading';
 import { ErrorScreen } from '../../src/components/common/ErrorScreen';
 import { ImageLightbox } from '../../src/components/common/ImageLightbox';
@@ -245,7 +245,7 @@ function IngredientChip({
       required ? styles.ingChipReq : styles.ingChipOpt,
       missing && styles.ingChipMissing,
     ]}>
-      <Text style={{ fontSize: 13 }}>{getIngredientEmoji(ing.ingredientName)}</Text>
+      {/* RecipeDetailResponse.IngredientItem엔 emoji 필드 없음 — 백엔드 추가 시 표기 */}
       <Text style={[
         styles.ingChipText,
         required ? styles.ingChipTextReq : styles.ingChipTextOpt,

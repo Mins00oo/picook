@@ -19,8 +19,6 @@ import {
   typography,
   fontFamily,
   shadow,
-  getIngredientEmoji,
-  getCategoryEmoji,
 } from '../../../src/constants/theme';
 import { Loading } from '../../../src/components/common/Loading';
 import { ErrorScreen } from '../../../src/components/common/ErrorScreen';
@@ -170,7 +168,7 @@ export default function ResultsScreen() {
               key={ing.id}
               style={[styles.summaryEmoji, { marginLeft: i === 0 ? 0 : -8, zIndex: 3 - i }]}
             >
-              <Text style={{ fontSize: 14 }}>{getIngredientEmoji(ing.name)}</Text>
+              <Text style={{ fontSize: 14 }}>{ing.resolvedEmoji ?? ''}</Text>
             </View>
           ))}
         </View>
@@ -487,7 +485,7 @@ function IngredientSummarySheet({ visible, onClose, ingredients, categories, onE
               <View key={g.cat!.id} style={{ marginBottom: 18 }}>
                 <View style={styles.groupHead}>
                   <View style={styles.groupEmoBox}>
-                    <Text style={{ fontSize: 13 }}>{getCategoryEmoji(g.cat!.name)}</Text>
+                    <Text style={{ fontSize: 13 }}>{g.cat!.emoji ?? ''}</Text>
                   </View>
                   <Text style={styles.groupName}>{g.cat!.name}</Text>
                   <Text style={styles.groupCount}>{g.items.length}</Text>
@@ -495,7 +493,7 @@ function IngredientSummarySheet({ visible, onClose, ingredients, categories, onE
                 <View style={styles.groupChips}>
                   {g.items.map((ing) => (
                     <View key={ing.id} style={styles.chipDark}>
-                      <Text style={{ fontSize: 13 }}>{getIngredientEmoji(ing.name)}</Text>
+                      <Text style={{ fontSize: 13 }}>{ing.resolvedEmoji ?? ''}</Text>
                       <Text style={styles.chipDarkText}>{ing.name}</Text>
                     </View>
                   ))}
