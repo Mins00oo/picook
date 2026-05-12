@@ -122,6 +122,11 @@ export default function AttendanceScreen() {
                       isToday && !isChecked && styles.cellToday,
                     ]}
                   >
+                    {isChecked && (
+                      <Svg width={9} height={9} viewBox="0 0 24 24" style={styles.cellCheck}>
+                        <Path d="M5 12l5 5L20 7" stroke="#fff" strokeWidth={4.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      </Svg>
+                    )}
                     <Text style={[
                       styles.cellText,
                       isChecked && styles.cellTextChecked,
@@ -139,7 +144,11 @@ export default function AttendanceScreen() {
         {/* Legend */}
         <View style={styles.legend}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+            <View style={[styles.legendDot, styles.legendDotChecked]}>
+              <Svg width={6} height={6} viewBox="0 0 24 24">
+                <Path d="M5 12l5 5L20 7" stroke="#fff" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+              </Svg>
+            </View>
             <Text style={styles.legendText}>출석 완료</Text>
           </View>
           <View style={styles.legendItem}>
@@ -261,6 +270,8 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 2,
   },
   cellChecked: {
     backgroundColor: colors.primary,
@@ -268,6 +279,9 @@ const styles = StyleSheet.create({
   cellToday: {
     borderWidth: 1.5,
     borderColor: colors.primary,
+  },
+  cellCheck: {
+    marginRight: -1,
   },
   cellText: {
     fontFamily: fontFamily.semibold,
@@ -285,6 +299,11 @@ const styles = StyleSheet.create({
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
+  legendDotChecked: {
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   legendText: {
     fontFamily: fontFamily.medium,
     fontSize: 11,
