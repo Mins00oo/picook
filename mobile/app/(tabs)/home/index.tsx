@@ -57,9 +57,6 @@ export default function HomeScreen() {
   const fridgeCount = fridge?.length ?? 0;
   const [modalOpen, setModalOpen] = useState(false);
 
-  const notReady = () =>
-    Alert.alert('준비 중', '곧 만나요. 다음 업데이트를 기대해주세요 :)');
-
   // 오늘 미출석이면 모달 자동 오픈 + 체크인을 즉시 호출
   // 모달은 출석 결과 알림 역할이라 X/확인 어느 쪽으로 닫혀도 포인트는 이미 적립된 상태
   useEffect(() => {
@@ -208,14 +205,14 @@ export default function HomeScreen() {
             bg={colors.sun}
             stroke="#8B6B00"
             label="인기 요리"
-            onPress={notReady}
+            onPress={() => router.push('/popular')}
             iconType="pop"
           />
           <MenuItem
             bg={colors.blue}
             stroke="#2F4E7A"
             label="찜한 요리"
-            onPress={() => router.push('/(tabs)/mypage/favorites')}
+            onPress={() => router.push('/favorites')}
             iconType="save"
           />
         </View>
@@ -223,14 +220,7 @@ export default function HomeScreen() {
         {/* 시간대별 추천 */}
         <View style={styles.timeSection}>
           <View style={styles.secHead}>
-            <View style={styles.secHeadLeft}>
-              <Text style={styles.secTitle}>{copy.sectionTitle}</Text>
-              <View style={styles.timePill}>
-                <Text style={styles.timePillText}>
-                  {copy.sectionEmoji} {copy.sectionKicker}
-                </Text>
-              </View>
-            </View>
+            <Text style={styles.secTitle}>{copy.sectionTitle}</Text>
             <View style={styles.topBadge}>
               <Text style={styles.topBadgeText}>TOP 5</Text>
             </View>
@@ -241,7 +231,28 @@ export default function HomeScreen() {
             loading={timeLoading}
             errored={!!timeError}
             onRecipePress={(id) => router.push(`/recipe/${id}` as any)}
-            onBrowse={() => router.push('/(tabs)/home/select')}
+          />
+        </View>
+
+        {/* 가볍게 먹고 싶은 날 — 저칼로리 추천 */}
+        <View style={styles.lowCalSection}>
+          <View style={styles.secHead}>
+            <View style={styles.secHeadLeft}>
+              <Text style={styles.secTitle}>가볍게 먹고 싶은 날</Text>
+              <View style={styles.lightPill}>
+                <Text style={styles.lightPillText}>🥗 저칼로리</Text>
+              </View>
+            </View>
+            <View style={styles.topBadge}>
+              <Text style={styles.topBadgeText}>TOP 5</Text>
+            </View>
+          </View>
+
+          <TimeRecipeList
+            recipes={lowCalorieRecipes ?? []}
+            loading={lowCalLoading}
+            errored={!!lowCalError}
+            onRecipePress={(id) => router.push(`/recipe/${id}` as any)}
           />
         </View>
 
@@ -270,29 +281,6 @@ export default function HomeScreen() {
             ))}
           </View>
         </View>
-
-        {/* 가볍게 먹고 싶은 날 — 저칼로리 추천 */}
-        <View style={styles.lowCalSection}>
-          <View style={styles.secHead}>
-            <View style={styles.secHeadLeft}>
-              <Text style={styles.secTitle}>가볍게 먹고 싶은 날</Text>
-              <View style={styles.lightPill}>
-                <Text style={styles.lightPillText}>🥗 저칼로리</Text>
-              </View>
-            </View>
-            <View style={styles.topBadge}>
-              <Text style={styles.topBadgeText}>TOP 5</Text>
-            </View>
-          </View>
-
-          <TimeRecipeList
-            recipes={lowCalorieRecipes ?? []}
-            loading={lowCalLoading}
-            errored={!!lowCalError}
-            onRecipePress={(id) => router.push(`/recipe/${id}` as any)}
-            onBrowse={() => router.push('/(tabs)/home/select')}
-          />
-        </View>
       </ScrollView>
 
       {/* 매일 출석체크 모달 */}
@@ -314,10 +302,9 @@ interface TimeRecipeListProps {
   loading: boolean;
   errored: boolean;
   onRecipePress: (id: number) => void;
-  onBrowse: () => void;
 }
 
-function TimeRecipeList({ recipes, loading, errored, onRecipePress, onBrowse }: TimeRecipeListProps) {
+function TimeRecipeList({ recipes, loading, errored, onRecipePress }: TimeRecipeListProps) {
   if (loading) {
     return (
       <View style={styles.trSkeletonRow}>
@@ -332,7 +319,6 @@ function TimeRecipeList({ recipes, loading, errored, onRecipePress, onBrowse }: 
       <View style={styles.emptyRec}>
         <Text style={styles.emptyRecEmoji}>⚠️</Text>
         <Text style={styles.emptyRecTitle}>추천을 불러오지 못했어요</Text>
-        <Text style={styles.emptyRecDesc}>잠시 후 다시 시도해주세요</Text>
       </View>
     );
   }
@@ -340,15 +326,7 @@ function TimeRecipeList({ recipes, loading, errored, onRecipePress, onBrowse }: 
     return (
       <View style={styles.emptyRec}>
         <Text style={styles.emptyRecEmoji}>🍲</Text>
-        <Text style={styles.emptyRecTitle}>준비된 추천이 없어요</Text>
-        <Text style={styles.emptyRecDesc}>재료를 골라 직접 추천받아볼까요?</Text>
-        <TouchableOpacity
-          style={styles.emptyRecBtn}
-          onPress={onBrowse}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.emptyRecBtnText}>재료 고르기</Text>
-        </TouchableOpacity>
+        <Text style={styles.emptyRecTitle}>준비된 추천 요리가 없어요</Text>
       </View>
     );
   }
@@ -799,19 +777,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     letterSpacing: -0.35,
   },
-  timePill: {
-    backgroundColor: colors.accentSoft,
-    paddingVertical: 3,
-    paddingHorizontal: 9,
-    borderRadius: 100,
-    marginLeft: 4,
-  },
-  timePillText: {
-    fontFamily: fontFamily.semibold,
-    fontSize: 10.5,
-    color: colors.primary,
-    letterSpacing: -0.1,
-  },
   topBadge: {
     borderWidth: 1,
     borderColor: colors.line,
@@ -842,27 +807,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textPrimary,
     letterSpacing: -0.3,
-    marginBottom: 4,
-  },
-  emptyRecDesc: {
-    fontFamily: fontFamily.medium,
-    fontSize: 12,
-    color: colors.textSecondary,
-    letterSpacing: -0.1,
-    textAlign: 'center',
-    marginBottom: 14,
-  },
-  emptyRecBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 100,
-    backgroundColor: colors.primary,
-  },
-  emptyRecBtnText: {
-    fontFamily: fontFamily.bold,
-    fontSize: 12,
-    color: '#FFFFFF',
-    letterSpacing: -0.2,
   },
 
   // Time recipe list
