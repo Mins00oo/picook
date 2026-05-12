@@ -103,7 +103,6 @@ export default function ClosetScreen() {
             equipped={equippedImages}
             size={160}
           />
-          <Text style={styles.characterName}>{getCharacterName(characterType)}</Text>
         </LinearGradient>
 
         {/* Character switcher */}
@@ -274,13 +273,6 @@ const styles = StyleSheet.create({
     borderRadius: 110,
     backgroundColor: 'rgba(255,107,74,0.12)',
     top: 20,
-  },
-  characterName: {
-    fontFamily: fontFamily.bold,
-    fontSize: 13,
-    color: colors.textPrimary,
-    letterSpacing: -0.2,
-    marginTop: 10,
   },
 
   // Character switcher

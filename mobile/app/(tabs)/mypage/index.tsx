@@ -7,7 +7,6 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fontFamily, shadow, typography } from '../../../src/constants/theme';
 import { useAuthStore } from '../../../src/stores/authStore';
 import { getLevelForExp, getNextLevel, getLevelExpSpan } from '../../../src/constants/levels';
-import { getCharacterName } from '../../../src/constants/characters';
 import { CharacterOutfit } from '../../../src/components/brand/CharacterOutfit';
 import { EggIcon } from '../../../src/components/points/EggIcon';
 import { usePointBalance } from '../../../src/hooks/usePoints';
@@ -138,9 +137,8 @@ export default function MypageScreen() {
             </Text>
             <View style={styles.profileMetaRow}>
               <View style={styles.lvPill}>
-                <Text style={styles.lvPillText}>Lv.{level.level}</Text>
+                <Text style={styles.lvPillText}>Lv.{level.level} · {level.title}</Text>
               </View>
-              <Text style={styles.characterName}>{getCharacterName(characterType)}</Text>
             </View>
             <View style={styles.xpHeaderRow}>
               <Text style={styles.xpHeaderLabel}>
@@ -326,11 +324,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: 10,
     color: '#fff',
-  },
-  characterName: {
-    fontFamily: fontFamily.semibold,
-    fontSize: 11.5,
-    color: colors.textSecondary,
   },
   xpHeaderRow: {
     flexDirection: 'row',

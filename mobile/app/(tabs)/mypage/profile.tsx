@@ -9,7 +9,7 @@ import { useAuthStore } from '../../../src/stores/authStore';
 import { userApi } from '../../../src/api/userApi';
 import { Config } from '../../../src/constants/config';
 import { Character } from '../../../src/components/brand/Character';
-import { CHARACTERS, getCharacterName } from '../../../src/constants/characters';
+import { CHARACTERS } from '../../../src/constants/characters';
 import type { CharacterType } from '../../../src/types/user';
 
 export default function ProfileScreen() {
@@ -67,9 +67,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>
-            캐릭터 <Text style={{ fontSize: 12, color: Colors.textSecondary }}>· {getCharacterName(characterType)}</Text>
-          </Text>
+          <Text style={styles.label}>캐릭터</Text>
           <View style={styles.charRow}>
             {CHARACTERS.map((c) => {
               const isSel = characterType === c.type;

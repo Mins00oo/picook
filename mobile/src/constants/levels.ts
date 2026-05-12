@@ -5,17 +5,14 @@ export interface Level {
   minExp: number; // v1.0부터 EXP 누적 기준
 }
 
-// v1.0 리뉴얼: 레벨 기준을 completedCookingCount → totalExp 로 전환.
-// 환산 규칙: 기존 min(요리 횟수) × 80 EXP/회 (요리 완료+사진 인증 1회 보상).
-// 출석체크(+10 EXP)가 추가로 쌓이므로 실제 레벨업은 요리 횟수 기준보다 약간 빨라짐 — 의도된 완화.
+// v1.0 리뉴얼: 레벨 기준 totalExp (요리+사진 인증 80 EXP/회, 출석 +10 EXP).
+// 4티어로 축소 (이전 7레벨 → 브론즈/실버/골드/다이아).
+// 백엔드의 outfit_unlock_level(1~7)과는 별개로 클라이언트 표시 단계만 4개로 통합.
 export const LEVELS: Level[] = [
-  { level: 1, title: '요리 병아리',    emoji: '🐣', minExp:    0 },
-  { level: 2, title: '주방 탐험가',    emoji: '🔍', minExp:  240 },
-  { level: 3, title: '냉장고 파이터',  emoji: '💪', minExp:  480 },
-  { level: 4, title: '집밥 장인',      emoji: '🍳', minExp:  880 },
-  { level: 5, title: '요리 마스터',    emoji: '👨‍🍳', minExp: 1680 },
-  { level: 6, title: '셀프 셰프',      emoji: '⭐', minExp: 2880 },
-  { level: 7, title: '전설의 요리사',  emoji: '🏆', minExp: 4080 },
+  { level: 1, title: '브론즈', emoji: '🥉', minExp:    0 },
+  { level: 2, title: '실버',   emoji: '🥈', minExp:  480 },
+  { level: 3, title: '골드',   emoji: '🥇', minExp: 1680 },
+  { level: 4, title: '다이아', emoji: '💎', minExp: 4080 },
 ];
 
 export function getLevelForExp(totalExp: number): Level {
