@@ -11,10 +11,10 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fontFamily, shadow, typography } from '../../../src/constants/theme';
-import { useFavorites } from '../../../src/hooks/useFavorites';
-import { formatCookTime, formatDifficulty, toAbsoluteImageUrl } from '../../../src/utils/format';
-import type { FavoriteItem } from '../../../src/api/favoriteApi';
+import { colors, fontFamily, shadow, typography } from '../src/constants/theme';
+import { useFavorites } from '../src/hooks/useFavorites';
+import { formatCookTime, formatDifficulty, toAbsoluteImageUrl } from '../src/utils/format';
+import type { FavoriteItem } from '../src/api/favoriteApi';
 
 export default function FavoritesScreen() {
   const router = useRouter();

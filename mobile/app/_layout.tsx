@@ -79,6 +79,7 @@ export default function RootLayout() {
           <Stack.Screen name="points" />
           <Stack.Screen name="shop" />
           <Stack.Screen name="category" />
+          <Stack.Screen name="favorites" />
         </Stack>
       </QueryClientProvider>
     </AppErrorBoundary>

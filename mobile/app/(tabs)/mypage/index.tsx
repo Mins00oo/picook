@@ -70,7 +70,7 @@ export default function MypageScreen() {
     },
     {
       icon: <Text style={{ fontSize: 18 }}>❤️</Text>, bg: colors.accentSoft,
-      label: '찜한 레시피', route: '/(tabs)/mypage/favorites',
+      label: '찜한 레시피', route: '/favorites',
     },
   ];
 
@@ -185,7 +185,7 @@ export default function MypageScreen() {
             value={favoritesCount}
             label="찜한 레시피"
             accent={false}
-            onPress={() => router.push('/(tabs)/mypage/favorites')}
+            onPress={() => router.push('/favorites')}
           />
           <View style={styles.statsDivider} />
           <StatCell
