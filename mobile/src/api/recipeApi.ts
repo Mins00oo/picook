@@ -6,6 +6,7 @@ import type {
   RecipeSummary,
   CategoryCount,
   RecipePage,
+  PopularRecipe,
 } from '../types/recipe';
 
 export type TimePeriod = 'breakfast' | 'lunch' | 'dinner' | 'midnight';
@@ -37,5 +38,11 @@ export const recipeApi = {
   byCategory: (category: RecipeCategory, page = 0, size = 20) =>
     api.get<ApiResponse<RecipePage>>('/api/v1/recipes', {
       params: { category, page, size },
+    }),
+
+  // 인기 요리 — 요리북 인증(cookbook_entries) 횟수 기준 정렬
+  popular: (limit = 30) =>
+    api.get<ApiResponse<PopularRecipe[]>>('/api/v1/recipes/popular', {
+      params: { limit },
     }),
 };

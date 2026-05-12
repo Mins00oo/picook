@@ -73,6 +73,11 @@ export interface CategoryCount {
   count: number;
 }
 
+// 인기 요리 — 요리북 인증 횟수 기준 정렬, cookCount 카드에 표시
+export interface PopularRecipe extends RecipeSummary {
+  cookCount: number;
+}
+
 // 카테고리 진입 화면 페이징 응답 (Spring PageResponse 형식과 일치)
 export interface RecipePage {
   content: RecipeSummary[];
