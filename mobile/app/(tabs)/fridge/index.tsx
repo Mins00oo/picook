@@ -115,8 +115,12 @@ export default function FridgeScreen() {
 
   const displayedList = useMemo(() => {
     let list = ingredients;
-    if (searchQuery.trim()) return searchIngredients(searchQuery, list);
-    if (activeCategory !== null) return list.filter((ing) => ing.categoryId === activeCategory);
+    if (activeCategory !== null) {
+      list = list.filter((ing) => ing.categoryId === activeCategory);
+    }
+    if (searchQuery.trim()) {
+      list = searchIngredients(searchQuery, list);
+    }
     return list;
   }, [ingredients, activeCategory, searchQuery]);
 
@@ -129,20 +133,22 @@ export default function FridgeScreen() {
   }, [activeCategory, searchQuery]);
 
   const activeCatName = useMemo(() => {
-    if (searchQuery.trim()) return `"${searchQuery}" 검색 결과`;
-    if (activeCategory === null) return '전체';
-    return categories.find((c) => c.id === activeCategory)?.name ?? '전체';
+    const catName =
+      activeCategory === null
+        ? null
+        : categories.find((c) => c.id === activeCategory)?.name ?? null;
+    const q = searchQuery.trim();
+    if (q && catName) return `${catName}에서 "${q}"`;
+    if (q) return `"${q}" 검색 결과`;
+    if (catName) return catName;
+    return '전체';
   }, [activeCategory, categories, searchQuery]);
 
-  const catTotal = useMemo(() => {
-    if (activeCategory === null) return ingredients.length;
-    return ingredients.filter((ing) => ing.categoryId === activeCategory).length;
-  }, [ingredients, activeCategory]);
-
-  const catHeldCount = useMemo(() => {
-    if (activeCategory === null) return fridgeIds.size;
-    return countsByCategory.get(activeCategory) ?? 0;
-  }, [activeCategory, countsByCategory, fridgeIds]);
+  const catTotal = displayedList.length;
+  const catHeldCount = useMemo(
+    () => displayedList.filter((ing) => fridgeIds.has(ing.id)).length,
+    [displayedList, fridgeIds],
+  );
 
   // Preview (최대 8개, 최근 추가 순)
   const previewItems = useMemo(
@@ -263,7 +269,7 @@ export default function FridgeScreen() {
         <ScrollView style={styles.rail} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           <TouchableOpacity
             style={[styles.railItem, activeCategory === null && styles.railItemActive]}
-            onPress={() => { setActiveCategory(null); setSearchInput(''); setSearchQuery(''); }}
+            onPress={() => setActiveCategory(null)}
             activeOpacity={0.8}
           >
             <View style={[styles.rEmo, activeCategory === null && { backgroundColor: colors.primary }]}>
@@ -283,7 +289,7 @@ export default function FridgeScreen() {
               <TouchableOpacity
                 key={cat.id}
                 style={[styles.railItem, isActive && styles.railItemActive]}
-                onPress={() => { setActiveCategory(cat.id); setSearchInput(''); setSearchQuery(''); }}
+                onPress={() => setActiveCategory(cat.id)}
                 activeOpacity={0.8}
               >
                 <View style={[styles.rEmo, isActive && { backgroundColor: colors.primary }]}>
@@ -329,6 +335,15 @@ export default function FridgeScreen() {
                 <Text style={styles.emptyPanelText}>
                   {searchQuery ? '검색 결과가 없어요' : '이 카테고리엔 재료가 없어요'}
                 </Text>
+                {searchQuery && activeCategory !== null && (
+                  <TouchableOpacity
+                    style={styles.emptyFallbackBtn}
+                    onPress={() => setActiveCategory(null)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.emptyFallbackBtnText}>전체에서 찾기</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             }
             contentContainerStyle={{ paddingBottom: 20 }}
@@ -621,6 +636,21 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: 12,
     color: colors.textTertiary,
+  },
+  emptyFallbackBtn: {
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: 'transparent',
+  },
+  emptyFallbackBtnText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 11.5,
+    color: colors.primary,
+    letterSpacing: -0.2,
   },
 
   // Sheet
