@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
@@ -36,6 +36,54 @@ type SortMode = 'latest' | 'oldest' | 'rating-desc' | 'rating-asc';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
+// TODO: 디자인 검증용 더미. __DEV__ + 빈 데이터일 때만 폴백. 실 인증이 쌓이면 자동 비활성.
+const NOW_MS = Date.now();
+const DAY_MS = 86400000;
+function mockEntry(
+  id: number,
+  title: string,
+  category: string,
+  difficulty: string,
+  cookingTimeMinutes: number,
+  rating: number,
+  daysAgo: number,
+  memo: string | null,
+): CookbookEntry {
+  const iso = new Date(NOW_MS - daysAgo * DAY_MS).toISOString();
+  return {
+    id,
+    recipeId: id,
+    recipeTitle: title,
+    recipeThumbnailUrl: null,
+    recipeCategory: category,
+    recipeDifficulty: difficulty,
+    cookingTimeMinutes,
+    rating,
+    memo,
+    photoUrls: [],
+    cookedAt: iso,
+    createdAt: iso,
+    pointsEarned: null,
+    expEarned: null,
+    sequenceNumber: null,
+    leveledUp: false,
+    newLevel: null,
+    grantedOutfits: [],
+  };
+}
+const MOCK_ENTRIES: CookbookEntry[] = [
+  mockEntry(9001, '김치찌개',       'korean',   'EASY',   30, 5, 2,   '매콤하게 끓였어요. 두부 추가 신의 한수!'),
+  mockEntry(9002, '까르보나라',     'western',  'MEDIUM', 25, 4, 5,   '크림 농도 딱 좋았음'),
+  mockEntry(9003, '비빔밥',         'korean',   'MEDIUM', 25, 5, 10,  null),
+  mockEntry(9004, '제육볶음',       'korean',   'EASY',   20, 3, 15,  '다음엔 양념 더 강하게'),
+  mockEntry(9005, '토마토 파스타',  'western',  'EASY',   20, 4, 25,  null),
+  mockEntry(9006, '연어 초밥',      'japanese', 'HARD',   40, 5, 35,  '연어 신선했고 밥도 잘 됐음'),
+  mockEntry(9007, '떡볶이',         'korean',   'EASY',   25, 2, 50,  '너무 매웠다'),
+  mockEntry(9008, '미소시루',       'japanese', 'EASY',   12, 4, 65,  null),
+  mockEntry(9009, '규동',           'japanese', 'EASY',   18, 3, 95,  null),
+  mockEntry(9010, '마르게리타 피자', 'western', 'MEDIUM', 45, 4, 120, '도우 잘 늘어남'),
+];
+
 export default function CookbookListScreen() {
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
@@ -55,10 +103,11 @@ export default function CookbookListScreen() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const allEntries = useMemo<CookbookEntry[]>(
-    () => data?.pages.flatMap((p) => p.content) ?? [],
-    [data],
-  );
+  const allEntries = useMemo<CookbookEntry[]>(() => {
+    const real = data?.pages.flatMap((p) => p.content) ?? [];
+    if (__DEV__ && real.length === 0) return MOCK_ENTRIES;
+    return real;
+  }, [data]);
 
   // 사용자가 기록을 남긴 연도(최신순). 없으면 현재 연도 폴백.
   const years = useMemo(() => {
@@ -81,6 +130,19 @@ export default function CookbookListScreen() {
       setYear(years[0]);
     }
   }, [years, year]);
+
+  // 화면이 focus 될 때마다 필터/검색/뷰모드 초기화.
+  // 다른 탭 갔다가 돌아오거나 상세에서 뒤로가기 했을 때 깨끗한 상태로 시작.
+  useFocusEffect(
+    useCallback(() => {
+      setSearch('');
+      setSort('latest');
+      setView('card');
+      setYear(CURRENT_YEAR);
+      setMonth(null);
+      setSheetOpen(false);
+    }, []),
+  );
 
   const yearEntries = useMemo(
     () => allEntries.filter((e) => new Date(e.cookedAt).getFullYear() === year),
@@ -159,12 +221,6 @@ export default function CookbookListScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.nav}>
-        <View style={styles.iconBtn} />
-        <Text style={styles.navTitle}>요리북</Text>
-        <View style={styles.iconBtn} />
-      </View>
-
       {allEntries.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>📖</Text>
@@ -172,12 +228,6 @@ export default function CookbookListScreen() {
           <Text style={styles.emptyDesc}>
             요리 완료 후 평가를 남기면 여기에 쌓여요
           </Text>
-          <TouchableOpacity
-            style={styles.emptyBtn}
-            onPress={() => router.push('/(tabs)/home')}
-          >
-            <Text style={styles.emptyBtnText}>재료 골라보기</Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <ScrollView
@@ -813,24 +863,6 @@ function DateFilterSheet({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
-  // Nav
-  nav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: PAD,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  navTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontFamily: fontFamily.bold,
-    fontSize: 16,
-    color: colors.textPrimary,
-    letterSpacing: -0.4,
-  },
-
   // Empty
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 40 },
   emptyEmoji: { fontSize: 48 },
@@ -846,26 +878,24 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  emptyBtn: {
-    marginTop: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 100,
-    backgroundColor: colors.primary,
-  },
-  emptyBtnText: { fontFamily: fontFamily.bold, fontSize: 13, color: '#fff' },
 
   // Stats grid
   statsGrid: {
     flexDirection: 'row',
     paddingHorizontal: PAD,
-    paddingTop: 8,
+    paddingTop: 16,
     paddingBottom: 16,
   },
-  statCell: { flex: 1, position: 'relative', paddingHorizontal: 4 },
+  statCell: {
+    flex: 1,
+    position: 'relative',
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
   statValueRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    justifyContent: 'center',
     gap: 3,
     marginBottom: 6,
   },
@@ -876,6 +906,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
     lineHeight: 22,
     marginBottom: 6,
+    textAlign: 'center',
   },
   statValueKr: {
     fontFamily: fontFamily.bold,
@@ -884,6 +915,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     lineHeight: 22,
     marginBottom: 6,
+    textAlign: 'center',
   },
   statStar: {
     color: STAR_COLOR,
@@ -895,6 +927,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textTertiary,
     letterSpacing: -0.1,
+    textAlign: 'center',
   },
   statDivider: {
     position: 'absolute',
