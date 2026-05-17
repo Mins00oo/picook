@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test:ux": "node scripts/test-cookbook-review-leave.js && node scripts/test-recipe-search.js && node scripts/test-category-search-status.js && node scripts/test-cooking-navigation-guard.js"
   },
   "dependencies": {
     "@expo/config-plugins": "~54.0.4",
