@@ -42,9 +42,9 @@ class LocalFileServiceTest {
     void PNG_이미지_업로드_성공() throws IOException {
         MultipartFile file = mockFile("screenshot.png", "image/png", 2048);
 
-        String url = localFileService.upload(file, "coaching");
+        String url = localFileService.upload(file, "cookbook");
 
-        assertThat(url).startsWith("/uploads/coaching/");
+        assertThat(url).startsWith("/uploads/cookbook/");
         assertThat(url).endsWith(".png");
     }
 
