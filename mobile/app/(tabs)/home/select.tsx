@@ -67,7 +67,7 @@ const IngredientRow = React.memo(function IngredientRow({
 export default function SelectScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { selectedIds, toggle, count, clear, addMultiple } = useSelectionStore();
+  const { selectedIds, toggle, remove, count, clear, addMultiple } = useSelectionStore();
   const { data: fridgeItems } = useFridge();
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -335,7 +335,7 @@ export default function SelectScreen() {
       <FloatingCart
         count={count()}
         items={selectedList}
-        onRemove={(id) => toggle(id)}
+        onRemove={(id) => remove(id)}
         onExpand={() => setSheetOpen(true)}
         onSubmit={() => router.push('/(tabs)/home/results')}
         bottomInset={insets.bottom}
@@ -347,7 +347,7 @@ export default function SelectScreen() {
         onClose={() => setSheetOpen(false)}
         items={selectedList}
         categories={categories}
-        onRemove={(id) => toggle(id)}
+        onRemove={(id) => remove(id)}
         onClearAll={clear}
         onSubmit={() => {
           setSheetOpen(false);
@@ -408,6 +408,15 @@ function FloatingCart({ count, items, onRemove, onExpand, onSubmit, bottomInset 
               <Text style={styles.cartChipX}>×</Text>
             </TouchableOpacity>
           ))}
+          {items.length > 10 && (
+            <TouchableOpacity
+              style={styles.cartMoreChip}
+              onPress={onExpand}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.cartMoreChipText}>+{items.length - 10}</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       )}
 
@@ -861,6 +870,21 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.45)',
     fontFamily: fontFamily.bold,
     marginLeft: 2,
+  },
+  cartMoreChip: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(255,107,74,0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,74,0.35)',
+    borderRadius: 100,
+  },
+  cartMoreChipText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 11,
+    color: '#fff',
   },
   cartCta: {
     flexDirection: 'row',

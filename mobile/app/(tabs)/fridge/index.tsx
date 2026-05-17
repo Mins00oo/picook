@@ -222,23 +222,24 @@ export default function FridgeScreen() {
       </View>
 
       {/* Preview card — tap to open sheet */}
-      <TouchableOpacity
+      <View
         style={styles.previewCard}
-        activeOpacity={0.85}
-        onPress={() => setSheetOpen(true)}
-        disabled={fridgeIds.size === 0}
       >
         <View style={styles.previewTop}>
           <Text style={styles.previewCount}>
             <Text style={styles.previewCountNum}>{fridgeIds.size}</Text>개 재료
           </Text>
           {fridgeIds.size > 0 && (
-            <View style={styles.seeAll}>
+            <TouchableOpacity
+              style={styles.seeAll}
+              onPress={() => setSheetOpen(true)}
+              activeOpacity={0.75}
+            >
               <Text style={styles.seeAllText}>모두 보기</Text>
               <Svg width={12} height={12} viewBox="0 0 24 24">
                 <Path d="M9 18l6-6-6-6" stroke={colors.primary} strokeWidth={2.2} strokeLinecap="round" fill="none" />
               </Svg>
-            </View>
+            </TouchableOpacity>
           )}
         </View>
         {fridgeIds.size > 0 ? (
@@ -251,17 +252,32 @@ export default function FridgeScreen() {
               const ing = ingredients.find((i) => i.id === item.ingredientId);
               if (!ing) return null;
               return (
-                <View key={item.ingredientId} style={styles.previewChip}>
+                <TouchableOpacity
+                  key={item.ingredientId}
+                  style={styles.previewChip}
+                  onPress={() => remove.mutate(item.ingredientId)}
+                  activeOpacity={0.8}
+                >
                   <Text style={{ fontSize: 13 }}>{ing.resolvedEmoji ?? ''}</Text>
                   <Text style={styles.previewChipText}>{ing.name}</Text>
-                </View>
+                  <Text style={styles.previewChipRemove}>×</Text>
+                </TouchableOpacity>
               );
             })}
+            {fridgeIds.size > previewItems.length && (
+              <TouchableOpacity
+                style={styles.moreChip}
+                onPress={() => setSheetOpen(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.moreChipText}>+{fridgeIds.size - previewItems.length}</Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
         ) : (
           <Text style={styles.emptyHint}>아래에서 자주 쓰는 재료를 체크해주세요</Text>
         )}
-      </TouchableOpacity>
+      </View>
 
       {/* Split */}
       <View style={styles.split}>
@@ -361,6 +377,7 @@ export default function FridgeScreen() {
         onClose={() => setSheetOpen(false)}
         grouped={grouped}
         total={fridgeIds.size}
+        onRemove={(ingredientId) => remove.mutate(ingredientId)}
       />
     </SafeAreaView>
   );
@@ -368,12 +385,13 @@ export default function FridgeScreen() {
 
 // ---------- View Sheet ----------
 function ViewSheet({
-  visible, onClose, grouped, total,
+  visible, onClose, grouped, total, onRemove,
 }: {
   visible: boolean;
   onClose: () => void;
   grouped: { category: IngredientCategory | undefined; items: Ingredient[] }[];
   total: number;
+  onRemove: (ingredientId: number) => void;
 }) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -394,25 +412,46 @@ function ViewSheet({
           <Text style={styles.sheetSub}>카테고리별로 묶어서 보여드려요</Text>
 
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 22, paddingTop: 0 }}>
-            {grouped.map((g) => (
-              <View key={g.category!.id} style={{ marginBottom: 20 }}>
-                <View style={styles.groupHead}>
-                  <View style={styles.groupEmoBox}>
-                    <Text style={{ fontSize: 13 }}>{g.category!.emoji ?? ''}</Text>
-                  </View>
-                  <Text style={styles.groupName}>{g.category!.name}</Text>
-                  <Text style={styles.groupCount}>{g.items.length}</Text>
-                </View>
-                <View style={styles.groupChips}>
-                  {g.items.map((ing) => (
-                    <View key={ing.id} style={styles.chipLight}>
-                      <Text style={{ fontSize: 13 }}>{ing.resolvedEmoji ?? ''}</Text>
-                      <Text style={styles.chipLightText}>{ing.name}</Text>
-                    </View>
-                  ))}
-                </View>
+            {grouped.length === 0 ? (
+              <View style={styles.sheetEmpty}>
+                <Text style={styles.sheetEmptyText}>담긴 재료가 없어요</Text>
               </View>
-            ))}
+            ) : (
+              grouped.map((g) => (
+                <View key={g.category!.id} style={{ marginBottom: 20 }}>
+                  <View style={styles.groupHead}>
+                    <View style={styles.groupEmoBox}>
+                      <Text style={{ fontSize: 13 }}>{g.category!.emoji ?? ''}</Text>
+                    </View>
+                    <Text style={styles.groupName}>{g.category!.name}</Text>
+                    <Text style={styles.groupCount}>{g.items.length}</Text>
+                  </View>
+                  <View style={styles.groupChips}>
+                    {g.items.map((ing) => (
+                      <TouchableOpacity
+                        key={ing.id}
+                        style={styles.chipLight}
+                        onPress={() => onRemove(ing.id)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={{ fontSize: 13 }}>{ing.resolvedEmoji ?? ''}</Text>
+                        <Text style={styles.chipLightText}>{ing.name}</Text>
+                        <View style={styles.chipRemoveDot}>
+                          <Svg width={8} height={8} viewBox="0 0 24 24">
+                            <Path
+                              d="M6 6l12 12M6 18l12-12"
+                              stroke={colors.textSecondary}
+                              strokeWidth={3}
+                              strokeLinecap="round"
+                            />
+                          </Svg>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ))
+            )}
           </ScrollView>
         </View>
       </View>
@@ -499,7 +538,7 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingVertical: 6,
     paddingLeft: 9,
-    paddingRight: 11,
+    paddingRight: 8,
     backgroundColor: colors.lineSoft,
     borderRadius: 100,
   },
@@ -507,6 +546,25 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semibold,
     fontSize: 11.5,
     color: colors.textPrimary,
+  },
+  previewChipRemove: {
+    marginLeft: 2,
+    fontFamily: fontFamily.bold,
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
+  moreChip: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: colors.accentSoft,
+    borderRadius: 100,
+  },
+  moreChipText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 11.5,
+    color: colors.primary,
   },
   emptyHint: {
     fontFamily: fontFamily.medium,
@@ -700,6 +758,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textTertiary,
   },
+  sheetEmpty: {
+    alignItems: 'center',
+    paddingVertical: 42,
+  },
+  sheetEmptyText: {
+    fontFamily: fontFamily.medium,
+    fontSize: 13,
+    color: colors.textTertiary,
+  },
 
   groupHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
   groupEmoBox: {
@@ -727,7 +794,7 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingVertical: 6,
     paddingLeft: 9,
-    paddingRight: 11,
+    paddingRight: 6,
     backgroundColor: colors.lineSoft,
     borderRadius: 100,
   },
@@ -735,5 +802,14 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semibold,
     fontSize: 11.5,
     color: colors.textPrimary,
+  },
+  chipRemoveDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 2,
   },
 });

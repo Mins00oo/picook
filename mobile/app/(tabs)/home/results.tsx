@@ -61,6 +61,8 @@ const SORT_LABELS: Record<SortKey, string> = {
   easy: '쉬운 순',
 };
 
+const getMatchingRate = (recipe: RecipeSummary) => recipe.matchingRate ?? 0;
+
 export default function ResultsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -110,7 +112,7 @@ export default function ResultsScreen() {
   const recipes = rawRecipes ?? [];
   const sortedRecipes = useMemo(() => {
     const list = [...recipes];
-    if (sortKey === 'matchRate') list.sort((a, b) => b.matchingRate - a.matchingRate);
+    if (sortKey === 'matchRate') list.sort((a, b) => getMatchingRate(b) - getMatchingRate(a));
     if (sortKey === 'time') list.sort((a, b) => a.cookingTimeMinutes - b.cookingTimeMinutes);
     if (sortKey === 'easy') {
       const order: Record<string, number> = { EASY: 0, MEDIUM: 1, HARD: 2 };
@@ -123,11 +125,11 @@ export default function ResultsScreen() {
 
   // 프리셋: "바로 가능" 은 클라 사이드 (matchingRate >= 100)
   const instantCount = useMemo(
-    () => sortedRecipes.filter((r) => r.matchingRate >= 100).length,
+    () => sortedRecipes.filter((r) => getMatchingRate(r) >= 100).length,
     [sortedRecipes],
   );
   const displayedRecipes = presetInstant
-    ? sortedRecipes.filter((r) => r.matchingRate >= 100)
+    ? sortedRecipes.filter((r) => getMatchingRate(r) >= 100)
     : sortedRecipes;
 
   const isAllPreset = !presetInstant && activeFilterCount === 0;
@@ -343,11 +345,12 @@ function RecipeResultCard({ recipe, onPress }: { recipe: RecipeSummary; onPress:
   const { data: favorites } = useFavorites();
   const { toggle } = useFavoriteToggle();
   const favorite = favorites?.find((f) => f.recipeId === recipe.id);
+  const matchingRate = getMatchingRate(recipe);
 
   const matchColor =
-    recipe.matchingRate >= 100 ? colors.success
-    : recipe.matchingRate >= 70 ? colors.primary
-    : recipe.matchingRate >= 50 ? '#F0A040'
+    matchingRate >= 100 ? colors.success
+    : matchingRate >= 70 ? colors.primary
+    : matchingRate >= 50 ? '#F0A040'
     : colors.textTertiary;
 
   const missingText = (() => {
@@ -357,7 +360,7 @@ function RecipeResultCard({ recipe, onPress }: { recipe: RecipeSummary; onPress:
     return `${missing[0].name}, ${missing[1].name} 외 ${missing.length - 2}개`;
   })();
 
-  const isPerfect = recipe.matchingRate >= 100;
+  const isPerfect = matchingRate >= 100;
   const thumb = toAbsoluteImageUrl(recipe.thumbnailUrl ?? recipe.imageUrl);
 
   return (
@@ -408,14 +411,14 @@ function RecipeResultCard({ recipe, onPress }: { recipe: RecipeSummary; onPress:
           <View style={styles.matchHead}>
             <Text style={styles.matchLabel}>재료 매칭률</Text>
             <Text style={[styles.matchRate, { color: matchColor }]}>
-              {Math.round(recipe.matchingRate)}%
+              {Math.round(matchingRate)}%
             </Text>
           </View>
           <View style={styles.matchBar}>
             <View
               style={[
                 styles.matchFill,
-                { width: `${Math.min(100, recipe.matchingRate)}%`, backgroundColor: matchColor },
+                { width: `${Math.min(100, matchingRate)}%`, backgroundColor: matchColor },
               ]}
             />
           </View>
