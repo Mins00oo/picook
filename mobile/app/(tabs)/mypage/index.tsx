@@ -7,6 +7,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fontFamily, shadow, typography } from '../../../src/constants/theme';
 import { useAuthStore } from '../../../src/stores/authStore';
 import { getLevelForExp, getNextLevel, getLevelExpSpan } from '../../../src/constants/levels';
+import { normalizeCharacterType } from '../../../src/constants/characters';
 import { CharacterOutfit } from '../../../src/components/brand/CharacterOutfit';
 import { EggIcon } from '../../../src/components/points/EggIcon';
 import { usePointBalance } from '../../../src/hooks/usePoints';
@@ -32,7 +33,7 @@ export default function MypageScreen() {
   const nextLevel = getNextLevel(level);
   const { current: expInLevel, span: expSpan } = getLevelExpSpan(totalExp);
   const progress = expSpan > 0 ? Math.round((expInLevel / expSpan) * 100) : 100;
-  const characterType = user?.characterType ?? 'MIN';
+  const characterType = normalizeCharacterType(user?.characterType);
 
   const { data: balance = 0 } = usePointBalance();
   const { data: favorites } = useFavorites();

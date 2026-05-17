@@ -19,14 +19,14 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { userApi } from '../../src/api/userApi';
 import { Config } from '../../src/constants/config';
 import { Character } from '../../src/components/brand/Character';
-import { CHARACTERS } from '../../src/constants/characters';
+import { CHARACTERS, normalizeCharacterType } from '../../src/constants/characters';
 import type { CharacterType } from '../../src/types/user';
 
 export default function SetupScreen() {
   const router = useRouter();
   const { user, setUser } = useAuthStore();
   const insets = useSafeAreaInsets();
-  const [selectedChar, setSelectedChar] = useState<CharacterType>(user?.characterType ?? 'MIN');
+  const [selectedChar, setSelectedChar] = useState<CharacterType>(normalizeCharacterType(user?.characterType));
   // setup 진입은 신규 가입자(=displayName 미설정)만 허용되므로 빈칸으로 시작.
   const [nickname, setNickname] = useState(user?.displayName ?? '');
   const [focused, setFocused] = useState(false);
@@ -102,11 +102,9 @@ export default function SetupScreen() {
 
           {/* 헤더 */}
           <View style={styles.head}>
-            <Text style={styles.headTitle}>
-              함께 요리할{'\n'}<Text style={styles.headAccent}>캐릭터</Text>를 골라주세요.
-            </Text>
+            <Text style={styles.headTitle}>캐릭터를 선택해 주세요</Text>
             <Text style={styles.headDesc}>
-              캐릭터와 닉네임 모두 언제든 마이페이지에서 바꿀 수 있어요.
+              프로필에서 사용할 캐릭터를 골라 주세요.
             </Text>
           </View>
 
@@ -273,9 +271,6 @@ const styles = StyleSheet.create({
     lineHeight: 34,
     color: colors.textPrimary,
     marginBottom: 6,
-  },
-  headAccent: {
-    color: colors.primary,
   },
   headDesc: {
     ...typography.caption,

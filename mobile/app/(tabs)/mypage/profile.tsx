@@ -9,7 +9,7 @@ import { useAuthStore } from '../../../src/stores/authStore';
 import { userApi } from '../../../src/api/userApi';
 import { Config } from '../../../src/constants/config';
 import { Character } from '../../../src/components/brand/Character';
-import { CHARACTERS } from '../../../src/constants/characters';
+import { CHARACTERS, normalizeCharacterType } from '../../../src/constants/characters';
 import type { CharacterType } from '../../../src/types/user';
 
 export default function ProfileScreen() {
@@ -17,7 +17,7 @@ export default function ProfileScreen() {
   const { user, setUser } = useAuthStore();
   const [nickname, setNickname] = useState(user?.displayName ?? '');
   const [characterType, setCharacterType] = useState<CharacterType>(
-    (user?.characterType ?? 'MIN') as CharacterType,
+    normalizeCharacterType(user?.characterType),
   );
   const [saving, setSaving] = useState(false);
 

@@ -26,17 +26,17 @@ import {
 import { OUTFIT_SLOTS, SLOT_LABEL } from '../../../src/types/outfit';
 import type { Outfit, OutfitSlot } from '../../../src/types/outfit';
 import type { CharacterType } from '../../../src/types/user';
-import { getCharacterName } from '../../../src/constants/characters';
+import { CHARACTERS, getCharacterName, normalizeCharacterType } from '../../../src/constants/characters';
 import { toAbsoluteImageUrl } from '../../../src/utils/format';
 
-const CHARACTERS: CharacterType[] = ['MIN', 'ROO', 'HARU'];
+const CHARACTER_TYPES: CharacterType[] = CHARACTERS.map((c) => c.type);
 
 export default function ClosetScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
-  const characterType = user?.characterType ?? 'MIN';
+  const characterType = normalizeCharacterType(user?.characterType);
 
   const [selectedSlot, setSelectedSlot] = useState<OutfitSlot>('top');
 
@@ -107,7 +107,7 @@ export default function ClosetScreen() {
 
         {/* Character switcher */}
         <View style={styles.charSwitch}>
-          {CHARACTERS.map((c) => {
+          {CHARACTER_TYPES.map((c) => {
             const active = c === characterType;
             return (
               <TouchableOpacity
