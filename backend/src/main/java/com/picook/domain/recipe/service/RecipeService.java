@@ -17,7 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Random;
 import java.util.Set;
 
 @Service
@@ -30,6 +33,9 @@ public class RecipeService {
     public static final int LOW_CALORIE_THRESHOLD = 300;
     public static final int DEFAULT_LOW_CALORIE_LIMIT = 5;
     public static final int MAX_LOW_CALORIE_LIMIT = 20;
+    public static final int DEFAULT_TIME_RECIPE_LIMIT = 5;
+    public static final int MAX_TIME_RECIPE_LIMIT = 50;
+    public static final int MAX_RECIPE_PAGE_SIZE = 50;
 
     private final RecipeRepository recipeRepository;
 
@@ -60,12 +66,30 @@ public class RecipeService {
      *   midnight  -> meal_snack  (LLM 은 'snack' 카테고리로 분류, 시간대 슬롯은 야식)
      */
     public List<TimeRecipeResponse> recommendByTime(String period) {
+        return recommendByTime(period, null, null);
+    }
+
+    public List<TimeRecipeResponse> recommendByTime(String period, Integer limit) {
+        return recommendByTime(period, limit, null);
+    }
+
+    public List<TimeRecipeResponse> recommendByTime(String period, Integer limit, String seed) {
         if (period == null || !VALID_PERIODS.contains(period)) {
             throw new BusinessException("INVALID_PERIOD",
                     "period는 breakfast/lunch/dinner/midnight 중 하나여야 합니다", HttpStatus.BAD_REQUEST);
         }
         String column = "midnight".equals(period) ? "snack" : period;
-        return recipeRepository.findTopByMealTime(column, PageRequest.of(0, 5)).stream()
+        int safeLimit = limit == null ? DEFAULT_TIME_RECIPE_LIMIT
+                : Math.min(Math.max(limit, 1), MAX_TIME_RECIPE_LIMIT);
+        String normalizedSeed = normalize(seed);
+        List<Recipe> candidates = normalizedSeed == null
+                ? recipeRepository.findTopByMealTime(column, PageRequest.of(0, safeLimit))
+                : new ArrayList<>(recipeRepository.findPublishedByMealTime(column));
+        if (normalizedSeed != null) {
+            Collections.shuffle(candidates, new Random(Objects.hash(period, normalizedSeed)));
+        }
+        return candidates.stream()
+                .limit(safeLimit)
                 .map(TimeRecipeResponse::of)
                 .toList();
     }
@@ -97,6 +121,17 @@ public class RecipeService {
         return PageResponse.from(mapped);
     }
 
+    /** 레시피 목록/검색 (published 만, view_count DESC 정렬). */
+    public PageResponse<RecipeSummaryResponse> searchRecipes(String category, String keyword, int page, int size) {
+        int safeSize = Math.min(Math.max(size, 1), MAX_RECIPE_PAGE_SIZE);
+        PageRequest pageable = PageRequest.of(Math.max(page, 0), safeSize,
+                Sort.by(Sort.Direction.DESC, "viewCount").and(Sort.by("id")));
+        Page<RecipeSummaryResponse> mapped = recipeRepository
+                .searchRecipes("published", normalize(category), null, normalize(keyword), pageable)
+                .map(RecipeSummaryResponse::of);
+        return PageResponse.from(mapped);
+    }
+
     /** 저칼로리 추천 — calories ≤ 400, view_count DESC 정렬. */
     public List<RecipeSummaryResponse> recommendLowCalorie(Integer limit) {
         int safeLimit = limit == null ? DEFAULT_LOW_CALORIE_LIMIT
@@ -106,5 +141,12 @@ public class RecipeService {
                 .stream()
                 .map(RecipeSummaryResponse::of)
                 .toList();
+    }
+
+    private String normalize(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 }

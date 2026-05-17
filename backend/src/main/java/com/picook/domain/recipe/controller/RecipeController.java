@@ -68,8 +68,10 @@ public class RecipeController {
 
     @GetMapping("/recommend-by-time")
     public ResponseEntity<ApiResponse<List<TimeRecipeResponse>>> recommendByTime(
-            @RequestParam String period) {
-        return ResponseEntity.ok(ApiResponse.success(recipeService.recommendByTime(period)));
+            @RequestParam String period,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String seed) {
+        return ResponseEntity.ok(ApiResponse.success(recipeService.recommendByTime(period, limit, seed)));
     }
 
     /** 카테고리별 published 레시피 수 — 카드 그리드 표시용. 0인 카테고리는 응답에서 제외. */
@@ -78,13 +80,14 @@ public class RecipeController {
         return ResponseEntity.ok(ApiResponse.success(recipeService.getCategoryCounts()));
     }
 
-    /** 카테고리 카드 탭 시 페이지 조회. category 필수. published 만, view_count DESC. */
+    /** 레시피 목록/검색. category, keyword 선택 필터. published 만, view_count DESC. */
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<RecipeSummaryResponse>>> listByCategory(
-            @RequestParam String category,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(ApiResponse.success(recipeService.listByCategory(category, page, size)));
+        return ResponseEntity.ok(ApiResponse.success(recipeService.searchRecipes(category, keyword, page, size)));
     }
 
     /** 저칼로리 추천 — calories ≤ 300 + view_count DESC. limit 기본 5, 최대 20. */

@@ -82,6 +82,15 @@ public interface RecipeRepository extends JpaRepository<Recipe, Integer> {
             "  OR (:column = 'lunch'     AND r.mealLunch     = true) " +
             "  OR (:column = 'dinner'    AND r.mealDinner    = true) " +
             "  OR (:column = 'snack'     AND r.mealSnack     = true)) " +
-            "ORDER BY r.viewCount DESC")
+            "ORDER BY r.viewCount DESC, r.id ASC")
     List<Recipe> findTopByMealTime(@Param("column") String column, Pageable pageable);
+
+    @Query("SELECT r FROM Recipe r " +
+            "WHERE r.isDeleted = false AND r.status = 'published' " +
+            "AND ((:column = 'breakfast' AND r.mealBreakfast = true) " +
+            "  OR (:column = 'lunch'     AND r.mealLunch     = true) " +
+            "  OR (:column = 'dinner'    AND r.mealDinner    = true) " +
+            "  OR (:column = 'snack'     AND r.mealSnack     = true)) " +
+            "ORDER BY r.id ASC")
+    List<Recipe> findPublishedByMealTime(@Param("column") String column);
 }
