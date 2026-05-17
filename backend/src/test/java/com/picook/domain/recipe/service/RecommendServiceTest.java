@@ -38,6 +38,9 @@ class RecommendServiceTest {
     @Mock
     private Query nativeQuery;
 
+    @Mock
+    private Query parentQuery;
+
     private RecommendService recommendService;
 
     @BeforeEach
@@ -56,13 +59,12 @@ class RecommendServiceTest {
         // Recipe 2: 2/3 = 66.7%
         queryResults.add(new Object[]{2, "된장찌개", "korean", "medium", 40, 2, null, null, 2L, 3L});
 
-        when(entityManager.createNativeQuery(anyString())).thenReturn(nativeQuery);
-        when(nativeQuery.setParameter(eq("ingredientIds"), any())).thenReturn(nativeQuery);
-        when(nativeQuery.getResultList()).thenReturn(queryResults);
+        mockRecommendationQuery(queryResults);
 
         // Mock missing ingredients
         mockRecipeIngredients(1, List.of(1, 2, 3));
         mockRecipeIngredients(2, List.of(1, 2, 4));
+        mockRecipeIngredientLookup();
 
         // When
         List<RecommendResponse> results = recommendService.recommend(request);
@@ -79,9 +81,7 @@ class RecommendServiceTest {
         // so if the query returns results, they all have >= 30%
         RecommendRequest request = new RecommendRequest(List.of(1), null, null, null);
 
-        when(entityManager.createNativeQuery(anyString())).thenReturn(nativeQuery);
-        when(nativeQuery.setParameter(eq("ingredientIds"), any())).thenReturn(nativeQuery);
-        when(nativeQuery.getResultList()).thenReturn(List.of());
+        mockRecommendationQuery(List.of());
 
         List<RecommendResponse> results = recommendService.recommend(request);
 
@@ -92,10 +92,7 @@ class RecommendServiceTest {
     void recommend_shouldFilterByMaxTime() {
         RecommendRequest request = new RecommendRequest(List.of(1, 2), 20, null, null);
 
-        when(entityManager.createNativeQuery(anyString())).thenReturn(nativeQuery);
-        when(nativeQuery.setParameter(eq("ingredientIds"), any())).thenReturn(nativeQuery);
-        when(nativeQuery.setParameter(eq("maxTime"), eq(20))).thenReturn(nativeQuery);
-        when(nativeQuery.getResultList()).thenReturn(List.of());
+        mockRecommendationQuery(List.of());
 
         List<RecommendResponse> results = recommendService.recommend(request);
 
@@ -107,10 +104,7 @@ class RecommendServiceTest {
     void recommend_shouldFilterByDifficulty() {
         RecommendRequest request = new RecommendRequest(List.of(1, 2), null, "easy", null);
 
-        when(entityManager.createNativeQuery(anyString())).thenReturn(nativeQuery);
-        when(nativeQuery.setParameter(eq("ingredientIds"), any())).thenReturn(nativeQuery);
-        when(nativeQuery.setParameter(eq("difficulty"), eq("easy"))).thenReturn(nativeQuery);
-        when(nativeQuery.getResultList()).thenReturn(List.of());
+        mockRecommendationQuery(List.of());
 
         List<RecommendResponse> results = recommendService.recommend(request);
 
@@ -122,10 +116,7 @@ class RecommendServiceTest {
     void recommend_shouldFilterByServings() {
         RecommendRequest request = new RecommendRequest(List.of(1, 2), null, null, 4);
 
-        when(entityManager.createNativeQuery(anyString())).thenReturn(nativeQuery);
-        when(nativeQuery.setParameter(eq("ingredientIds"), any())).thenReturn(nativeQuery);
-        when(nativeQuery.setParameter(eq("servings"), eq(4))).thenReturn(nativeQuery);
-        when(nativeQuery.getResultList()).thenReturn(List.of());
+        mockRecommendationQuery(List.of());
 
         List<RecommendResponse> results = recommendService.recommend(request);
 
@@ -140,11 +131,10 @@ class RecommendServiceTest {
         // Recipe has 3 required ingredients (1, 2, 3), user has 1, 2 → missing 3
         queryResults.add(new Object[]{1, "김치찌개", "korean", "easy", 30, 2, null, null, 2L, 3L});
 
-        when(entityManager.createNativeQuery(anyString())).thenReturn(nativeQuery);
-        when(nativeQuery.setParameter(eq("ingredientIds"), any())).thenReturn(nativeQuery);
-        when(nativeQuery.getResultList()).thenReturn(queryResults);
+        mockRecommendationQuery(queryResults);
 
         mockRecipeIngredients(1, List.of(1, 2, 3));
+        mockRecipeIngredientLookup();
 
         List<RecommendResponse> results = recommendService.recommend(request);
 
@@ -159,10 +149,7 @@ class RecommendServiceTest {
         // Verified by checking the SQL string contains these conditions
         RecommendRequest request = new RecommendRequest(List.of(1), null, null, null);
 
-        when(entityManager.createNativeQuery(contains("status = 'published' AND r.is_deleted = false")))
-                .thenReturn(nativeQuery);
-        when(nativeQuery.setParameter(eq("ingredientIds"), any())).thenReturn(nativeQuery);
-        when(nativeQuery.getResultList()).thenReturn(List.of());
+        mockRecommendationQuery(List.of());
 
         recommendService.recommend(request);
 
@@ -173,9 +160,7 @@ class RecommendServiceTest {
     void recommend_shouldReturnEmptyWhenNoMatch() {
         RecommendRequest request = new RecommendRequest(List.of(999), null, null, null);
 
-        when(entityManager.createNativeQuery(anyString())).thenReturn(nativeQuery);
-        when(nativeQuery.setParameter(eq("ingredientIds"), any())).thenReturn(nativeQuery);
-        when(nativeQuery.getResultList()).thenReturn(List.of());
+        mockRecommendationQuery(List.of());
 
         List<RecommendResponse> results = recommendService.recommend(request);
 
@@ -183,6 +168,15 @@ class RecommendServiceTest {
     }
 
     private final List<RecipeIngredient> allRecipeIngredients = new ArrayList<>();
+
+    private void mockRecommendationQuery(List<Object[]> queryResults) {
+        when(entityManager.createNativeQuery(contains("SELECT DISTINCT parent_id"))).thenReturn(parentQuery);
+        when(parentQuery.setParameter(eq("ids"), any())).thenReturn(parentQuery);
+        when(parentQuery.getResultList()).thenReturn(List.of());
+
+        when(entityManager.createNativeQuery(contains("FROM recipes r"))).thenReturn(nativeQuery);
+        when(nativeQuery.getResultList()).thenReturn(queryResults);
+    }
 
     private void mockRecipeIngredients(Integer recipeId, List<Integer> ingredientIds) {
         IngredientCategory category = new IngredientCategory("채소", 0);
@@ -202,7 +196,10 @@ class RecommendServiceTest {
             }
         }
 
-        when(recipeIngredientRepository.findRequiredByRecipeIds(any())).thenReturn(allRecipeIngredients);
+    }
+
+    private void mockRecipeIngredientLookup() {
+        when(recipeIngredientRepository.findAllByRecipeIds(any())).thenReturn(allRecipeIngredients);
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {
