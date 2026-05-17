@@ -12,25 +12,30 @@ export function getCurrentPeriod(now: Date = new Date()): TimePeriod {
 }
 
 export interface TimeCopy {
-  greetingKicker: string;     // 홈 캐릭터 인사말 (완성형 문장)
+  greetingQuestion: string;   // 홈 캐릭터 인삿말
+  recommendationHint: string; // 시간대별 추천 안내 문장
   sectionTitle: string;       // 시간대별 추천 섹션 타이틀
 }
 
 export const TIME_COPY: Record<TimePeriod, TimeCopy> = {
   breakfast: {
-    greetingKicker: '지금은 아침 시간이에요',
-    sectionTitle: '아침에 어울리는 메뉴',
+    greetingQuestion: '오늘 아침은 정하셨나요',
+    recommendationHint: '아침에 어울리는 메뉴를 골라보세요',
+    sectionTitle: '아침 추천 메뉴',
   },
   lunch: {
-    greetingKicker: '지금은 점심 시간이에요',
-    sectionTitle: '점심에 어울리는 메뉴',
+    greetingQuestion: '오늘 점심은 정하셨나요',
+    recommendationHint: '점심에 어울리는 메뉴를 골라보세요',
+    sectionTitle: '점심 추천 메뉴',
   },
   dinner: {
-    greetingKicker: '지금은 저녁 시간이에요',
-    sectionTitle: '저녁에 어울리는 메뉴',
+    greetingQuestion: '오늘 저녁은 정하셨나요',
+    recommendationHint: '저녁에 어울리는 메뉴를 골라보세요',
+    sectionTitle: '저녁 추천 메뉴',
   },
   midnight: {
-    greetingKicker: '지금은 야식 시간이에요',
-    sectionTitle: '야식에 어울리는 메뉴',
+    greetingQuestion: '오늘 야식은 정하셨나요',
+    recommendationHint: '야식에 어울리는 메뉴를 골라보세요',
+    sectionTitle: '야식 추천 메뉴',
   },
 };

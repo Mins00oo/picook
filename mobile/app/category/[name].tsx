@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +16,8 @@ import { colors, fontFamily, shadow } from '../../src/constants/theme';
 import { Loading } from '../../src/components/common/Loading';
 import { ErrorScreen } from '../../src/components/common/ErrorScreen';
 import { useCategoryRecipes } from '../../src/hooks/useCategoryRecipes';
+import { getCategorySearchStatusText } from '../../src/utils/categorySearchStatus';
+import { filterRecipesByTitle } from '../../src/utils/recipeSearch';
 import {
   formatCookTime,
   formatDifficulty,
@@ -37,24 +40,43 @@ function isValidCategory(v: string | undefined): v is RecipeCategory {
 export default function CategoryScreen() {
   const router = useRouter();
   const { name } = useLocalSearchParams<{ name: string }>();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const category = isValidCategory(name) ? name : null;
   const meta = category ? META[category] : null;
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const {
     data,
     isLoading,
+    isFetching,
     error,
     refetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useCategoryRecipes(category);
+  } = useCategoryRecipes(category, 50, debouncedSearchQuery);
 
   const recipes = useMemo<RecipeSummary[]>(
     () => data?.pages.flatMap((p) => p.content) ?? [],
     [data],
   );
   const totalElements = data?.pages[0]?.totalElements ?? 0;
+  const isSearching = searchQuery.trim().length > 0;
+  const isSearchPending = searchQuery.trim() !== debouncedSearchQuery.trim();
+  const displayedRecipes = useMemo(
+    () => filterRecipesByTitle(recipes, debouncedSearchQuery),
+    [recipes, debouncedSearchQuery],
+  );
+  const searchStatusText = getCategorySearchStatusText({
+    query: debouncedSearchQuery,
+    count: displayedRecipes.length,
+    isFetching: isSearchPending || (isFetching && !isFetchingNextPage),
+  });
 
   if (!category || !meta) {
     return (
@@ -68,7 +90,7 @@ export default function CategoryScreen() {
     );
   }
 
-  if (isLoading) return <Loading />;
+  if (isLoading && !data) return <Loading />;
   if (error) return <ErrorScreen onRetry={() => refetch()} />;
 
   return (
@@ -86,14 +108,53 @@ export default function CategoryScreen() {
         </View>
       </View>
 
-      {recipes.length === 0 ? (
+      <View style={styles.searchBar}>
+        <Svg width={16} height={16} viewBox="0 0 24 24">
+          <Path
+            d="M10.5 17a6.5 6.5 0 1 1 0-13 6.5 6.5 0 0 1 0 13zM16 16l4 4"
+            stroke={colors.textTertiary}
+            strokeWidth={2}
+            strokeLinecap="round"
+            fill="none"
+          />
+        </Svg>
+        <TextInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={`${meta.label} 요리 검색`}
+          placeholderTextColor={colors.textTertiary}
+          style={styles.searchInput}
+          autoCorrect={false}
+          returnKeyType="search"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+            <Text style={styles.searchClear}>×</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {searchStatusText && (
+        <View style={styles.searchMetaRow}>
+          <Text style={styles.searchMetaText}>{searchStatusText}</Text>
+        </View>
+      )}
+
+      {isSearching && displayedRecipes.length === 0 ? (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyEmoji}>🔍</Text>
+          <Text style={styles.emptyTitle}>
+            {isSearchPending || isFetching ? '검색 중이에요' : '검색 결과가 없어요'}
+          </Text>
+        </View>
+      ) : recipes.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyEmoji}>🍽️</Text>
           <Text style={styles.emptyTitle}>아직 등록된 요리가 없어요</Text>
         </View>
       ) : (
         <FlatList
-          data={recipes}
+          data={displayedRecipes}
           keyExtractor={(r) => String(r.id)}
           renderItem={({ item }) => (
             <RecipeCard
@@ -210,6 +271,44 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
     marginTop: 4,
     opacity: 0.85,
+  },
+
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    height: 46,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadow.sm,
+  },
+  searchInput: {
+    flex: 1,
+    padding: 0,
+    fontFamily: fontFamily.medium,
+    fontSize: 13,
+    color: colors.textPrimary,
+  },
+  searchClear: {
+    padding: 4,
+    fontFamily: fontFamily.bold,
+    fontSize: 17,
+    color: colors.textTertiary,
+    lineHeight: 18,
+  },
+  searchMetaRow: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  searchMetaText: {
+    fontFamily: fontFamily.medium,
+    fontSize: 11.5,
+    color: colors.textSecondary,
   },
 
   listContent: { paddingHorizontal: 16, paddingBottom: 32, gap: 10 },

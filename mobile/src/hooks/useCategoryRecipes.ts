@@ -1,11 +1,11 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { recipeApi, type RecipeCategory } from '../api/recipeApi';
 
 export const categoryRecipeKeys = {
   all: ['recipes', 'category'] as const,
   counts: () => ['recipes', 'category-counts'] as const,
-  list: (category: RecipeCategory) =>
-    [...categoryRecipeKeys.all, category] as const,
+  list: (category: RecipeCategory, size: number, keyword: string) =>
+    [...categoryRecipeKeys.all, category, size, keyword] as const,
   lowCalorie: () => ['recipes', 'low-calorie'] as const,
 };
 
@@ -25,14 +25,17 @@ export function useLowCalorieRecipes() {
   });
 }
 
-export function useCategoryRecipes(category: RecipeCategory | null) {
+export function useCategoryRecipes(category: RecipeCategory | null, size = 20, keyword = '') {
+  const normalizedKeyword = keyword.trim();
+
   return useInfiniteQuery({
-    queryKey: category ? categoryRecipeKeys.list(category) : ['noop'],
+    queryKey: category ? categoryRecipeKeys.list(category, size, normalizedKeyword) : ['noop'],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) =>
-      (await recipeApi.byCategory(category!, pageParam as number, 20)).data
+      (await recipeApi.byCategory(category!, pageParam as number, size, normalizedKeyword || undefined)).data
         .data,
     getNextPageParam: (last) => (last.last ? undefined : last.page + 1),
     enabled: !!category,
+    placeholderData: keepPreviousData,
   });
 }

@@ -18,6 +18,7 @@ import { PicookLogo } from '../../../src/components/brand/PicookLogo';
 import { CharacterOutfit } from '../../../src/components/brand/CharacterOutfit';
 import { EggIcon } from '../../../src/components/points/EggIcon';
 import { DailyCheckModal } from '../../../src/components/attendance/DailyCheckModal';
+import { normalizeCharacterType } from '../../../src/constants/characters';
 import { useAuthStore } from '../../../src/stores/authStore';
 import { getLevelForExp } from '../../../src/constants/levels';
 import { useAttendanceToday, useCheckInMutation } from '../../../src/hooks/useAttendance';
@@ -30,9 +31,12 @@ import {
 import { useOutfitMe, useOutfitCatalog, useEquippedImages } from '../../../src/hooks/useOutfits';
 import { useFridge } from '../../../src/hooks/useFridge';
 import { getCurrentPeriod, TIME_COPY } from '../../../src/utils/timePeriod';
+import { getTimeRecipeSessionSeed } from '../../../src/utils/timeRecipeSessionSeed';
 import { formatCookTime, formatDifficulty, toAbsoluteImageUrl } from '../../../src/utils/format';
 import type { RecipeSummary, CategoryCount } from '../../../src/types/recipe';
 import type { RecipeCategory } from '../../../src/api/recipeApi';
+
+const TIME_RECIPE_PREVIEW_SIZE = 5;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -41,7 +45,8 @@ export default function HomeScreen() {
   const level = getLevelForExp(totalExp);
   const period = useMemo(() => getCurrentPeriod(), []);
   const copy = TIME_COPY[period];
-  const characterType = user?.characterType ?? 'MIN';
+  const timeRecipeSeed = useMemo(() => getTimeRecipeSessionSeed(), []);
+  const characterType = normalizeCharacterType(user?.characterType);
 
   const { data: outfitMe } = useOutfitMe();
   const { data: catalog } = useOutfitCatalog();
@@ -50,7 +55,11 @@ export default function HomeScreen() {
   const { data: balance = 0 } = usePointBalance();
   const { data: todayData } = useAttendanceToday(!!user);
   const checkInMutation = useCheckInMutation();
-  const { data: timeRecipes, isLoading: timeLoading, error: timeError } = useTimeRecipes(period);
+  const { data: timeRecipes, isLoading: timeLoading, error: timeError } = useTimeRecipes(
+    period,
+    TIME_RECIPE_PREVIEW_SIZE,
+    timeRecipeSeed,
+  );
   const { data: categoryCounts } = useCategoryCounts();
   const { data: lowCalorieRecipes, isLoading: lowCalLoading, error: lowCalError } = useLowCalorieRecipes();
   const { data: fridge } = useFridge();
@@ -128,8 +137,9 @@ export default function HomeScreen() {
           <View style={styles.charTextArea}>
             <Text style={styles.charGreet}>
               {user?.displayName ? `${user.displayName}님, ` : ''}
-              <Text style={styles.charGreetAccent}>{copy.greetingKicker}</Text>
+              {copy.greetingQuestion}
             </Text>
+            <Text style={styles.charPrompt}>{copy.recommendationHint}</Text>
             <View style={styles.charMetaRow}>
               <View style={styles.pulseDot} />
               <Text style={styles.charMetaText}>{level.emoji} {level.title}</Text>
@@ -138,6 +148,49 @@ export default function HomeScreen() {
               </View>
             </View>
           </View>
+        </View>
+
+        {/* 시간대별 추천 */}
+        <View style={styles.timeSection}>
+          <View style={styles.secHead}>
+            <View style={styles.secHeadLeft}>
+              <Text style={styles.secTitle}>{copy.sectionTitle}</Text>
+              <View style={styles.topBadge}>
+                <Text style={styles.topBadgeText}>추천 5</Text>
+              </View>
+            </View>
+            <View style={styles.timeActions}>
+              <TouchableOpacity
+                style={styles.moreButton}
+                onPress={() =>
+                  router.push({
+                    pathname: '/time-recipes',
+                    params: { period },
+                  } as any)
+                }
+                activeOpacity={0.75}
+              >
+                <Text style={styles.moreButtonText}>더보기</Text>
+                <Svg width={13} height={13} viewBox="0 0 24 24">
+                  <Path
+                    d="M9 18l6-6-6-6"
+                    stroke={colors.textSecondary}
+                    strokeWidth={2.2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                </Svg>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TimeRecipeList
+            recipes={timeRecipes ?? []}
+            loading={timeLoading}
+            errored={!!timeError}
+            onRecipePress={(id) => router.push(`/recipe/${id}` as any)}
+          />
         </View>
 
         {/* CTA Hero */}
@@ -214,23 +267,6 @@ export default function HomeScreen() {
             label="찜한 요리"
             onPress={() => router.push('/favorites')}
             iconType="save"
-          />
-        </View>
-
-        {/* 시간대별 추천 */}
-        <View style={styles.timeSection}>
-          <View style={styles.secHead}>
-            <Text style={styles.secTitle}>{copy.sectionTitle}</Text>
-            <View style={styles.topBadge}>
-              <Text style={styles.topBadgeText}>TOP 5</Text>
-            </View>
-          </View>
-
-          <TimeRecipeList
-            recipes={timeRecipes ?? []}
-            loading={timeLoading}
-            errored={!!timeError}
-            onRecipePress={(id) => router.push(`/recipe/${id}` as any)}
           />
         </View>
 
@@ -525,7 +561,7 @@ const styles = StyleSheet.create({
   charWidget: {
     marginHorizontal: 20,
     marginTop: 4,
-    marginBottom: 16,
+    marginBottom: 8,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -552,11 +588,15 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     letterSpacing: -0.3,
     lineHeight: 20,
-    marginBottom: 6,
+    marginBottom: 2,
   },
-  charGreetAccent: {
-    color: colors.primary,
-    fontFamily: fontFamily.bold,
+  charPrompt: {
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
+    color: colors.textSecondary,
+    letterSpacing: -0.2,
+    lineHeight: 18,
+    marginBottom: 7,
   },
   charMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   pulseDot: {
@@ -762,7 +802,7 @@ const styles = StyleSheet.create({
   },
 
   // Time section
-  timeSection: { marginBottom: 10 },
+  timeSection: { marginBottom: 18 },
   secHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -790,6 +830,24 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.textTertiary,
     letterSpacing: 0.8,
+  },
+  timeActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  moreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 4,
+    paddingLeft: 8,
+  },
+  moreButtonText: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 12,
+    color: colors.textSecondary,
+    letterSpacing: -0.2,
   },
   emptyRec: {
     marginHorizontal: 16,

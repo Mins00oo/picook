@@ -21,9 +21,9 @@ export const recipeApi = {
   getDetail: (id: number) =>
     api.get<ApiResponse<Recipe>>(`/api/v1/recipes/${id}`),
 
-  recommendByTime: (period: TimePeriod) =>
+  recommendByTime: (period: TimePeriod, limit?: number, seed?: string) =>
     api.get<ApiResponse<RecipeSummary[]>>('/api/v1/recipes/recommend-by-time', {
-      params: { period },
+      params: { period, ...(limit ? { limit } : {}), ...(seed ? { seed } : {}) },
     }),
 
   // 메인의 카테고리 카드용 — 카테고리별 등록 건수
@@ -35,9 +35,9 @@ export const recipeApi = {
     api.get<ApiResponse<RecipeSummary[]>>('/api/v1/recipes/recommend-low-calorie'),
 
   // 카테고리 진입 후 페이징된 리스트
-  byCategory: (category: RecipeCategory, page = 0, size = 20) =>
+  byCategory: (category: RecipeCategory, page = 0, size = 20, keyword?: string) =>
     api.get<ApiResponse<RecipePage>>('/api/v1/recipes', {
-      params: { category, page, size },
+      params: { category, page, size, ...(keyword ? { keyword } : {}) },
     }),
 
   // 인기 요리 — 요리북 인증(cookbook_entries) 횟수 기준 정렬
