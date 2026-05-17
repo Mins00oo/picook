@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { usePreventRemove } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
@@ -27,9 +28,11 @@ import { EggIcon } from '../../src/components/points/EggIcon';
 import { ConfettiLane } from '../../src/components/common/ConfettiLane';
 import { LevelUpModal } from '../../src/components/level/LevelUpModal';
 import { useAuthStore } from '../../src/stores/authStore';
+import { normalizeCharacterType } from '../../src/constants/characters';
 import { useOutfitMe, useOutfitCatalog, useEquippedImages } from '../../src/hooks/useOutfits';
 import { toAbsoluteImageUrl } from '../../src/utils/format';
 import { resizeManyForUpload } from '../../src/utils/image';
+import { shouldPromptCookbookReviewLeave } from '../../src/utils/cookbookReviewLeave';
 import type { CookbookEntry } from '../../src/api/cookbookApi';
 import type { Outfit } from '../../src/types/outfit';
 
@@ -58,9 +61,12 @@ export default function CookbookReviewScreen() {
   const [success, setSuccess] = useState<CookbookEntry | null>(null);
   const [levelUp, setLevelUp] = useState<null | { newLevel: number | null; grantedOutfits: Outfit[] }>(null);
   const [pendingNav, setPendingNav] = useState<null | 'home' | 'cookbook'>(null);
+  const savedEntryRef = useRef(false);
+  const discardingRef = useRef(false);
+  const leaveAlertOpenRef = useRef(false);
 
   const authUser = useAuthStore((s) => s.user);
-  const characterType = authUser?.characterType ?? 'MIN';
+  const characterType = normalizeCharacterType(authUser?.characterType);
   const { data: outfitMe } = useOutfitMe();
   const { data: catalog } = useOutfitCatalog();
   const equippedImages = useEquippedImages(outfitMe?.equipped, catalog);
@@ -75,46 +81,65 @@ export default function CookbookReviewScreen() {
 
   const canSubmit = rating > 0 && !createMutation.isPending;
   const hasUnsaved = rating > 0 || photos.length > 0 || memo.trim().length > 0;
+  const shouldPreventLeave = shouldPromptCookbookReviewLeave({
+    hasDraft: hasUnsaved,
+    hasSavedEntry: savedEntryRef.current || success != null,
+    isSubmitting: createMutation.isPending,
+    isDiscarding: discardingRef.current,
+  });
 
-  /**
-   * 입력 중 이탈 방지 — 별점/사진/메모 중 하나라도 있으면 확인 다이얼로그.
-   * 제출 성공(success != null) 후엔 스킵. submitting 중에도 스킵해서 네비게이션 락 피함.
-   */
-  useEffect(() => {
-    if (success != null || !hasUnsaved) return;
-    const unsub = navigation.addListener('beforeRemove', (e: any) => {
-      if (createMutation.isPending) return;
-      e.preventDefault();
-      Alert.alert(
-        '저장 안 된 기록이 있어요',
-        '나가면 입력한 별점·사진·메모가 사라져요. 정말 나갈까요?',
-        [
-          { text: '계속 작성', style: 'cancel' },
-          {
-            text: '나가기',
-            style: 'destructive',
-            onPress: () => navigation.dispatch(e.data.action),
-          },
-        ],
-      );
+  const confirmLeave = useCallback((leave: () => void) => {
+    const shouldPrompt = shouldPromptCookbookReviewLeave({
+      hasDraft: hasUnsaved,
+      hasSavedEntry: savedEntryRef.current || success != null,
+      isSubmitting: createMutation.isPending,
+      isDiscarding: discardingRef.current,
     });
-    return unsub;
-  }, [navigation, hasUnsaved, success, createMutation.isPending]);
 
-  /** 닫기 버튼 (X) 탭 — 같은 확인 */
-  const handleClose = () => {
-    if (!hasUnsaved || success != null) {
-      router.back();
+    if (!shouldPrompt) {
+      leave();
       return;
     }
+    if (leaveAlertOpenRef.current) return;
+
+    leaveAlertOpenRef.current = true;
     Alert.alert(
       '저장 안 된 기록이 있어요',
       '나가면 입력한 별점·사진·메모가 사라져요. 정말 나갈까요?',
       [
-        { text: '계속 작성', style: 'cancel' },
-        { text: '나가기', style: 'destructive', onPress: () => router.back() },
+        {
+          text: '계속 작성',
+          style: 'cancel',
+          onPress: () => {
+            leaveAlertOpenRef.current = false;
+          },
+        },
+        {
+          text: '나가기',
+          style: 'destructive',
+          onPress: () => {
+            leaveAlertOpenRef.current = false;
+            discardingRef.current = true;
+            leave();
+          },
+        },
       ],
+      {
+        cancelable: true,
+        onDismiss: () => {
+          leaveAlertOpenRef.current = false;
+        },
+      },
     );
+  }, [createMutation.isPending, hasUnsaved, success]);
+
+  usePreventRemove(shouldPreventLeave, ({ data }) => {
+    confirmLeave(() => navigation.dispatch(data.action));
+  });
+
+  /** 닫기 버튼 (X) 탭 — 같은 확인 */
+  const handleClose = () => {
+    confirmLeave(() => router.back());
   };
 
   const pickImage = async () => {
@@ -151,6 +176,7 @@ export default function CookbookReviewScreen() {
         memo: memo.trim() || undefined,
         photoUris: photos,
       });
+      savedEntryRef.current = true;
       setSuccess(result);
     } catch (e: any) {
       const msg = e?.response?.data?.error?.message ?? '저장에 실패했어요';

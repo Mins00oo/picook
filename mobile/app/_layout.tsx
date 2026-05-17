@@ -75,7 +75,13 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="cooking" />
+          <Stack.Screen
+            name="cooking"
+            options={{
+              gestureEnabled: false,
+              headerBackButtonMenuEnabled: false,
+            }}
+          />
           <Stack.Screen name="points" />
           <Stack.Screen name="shop" />
           <Stack.Screen name="category" />
